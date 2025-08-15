@@ -1,0 +1,8 @@
+# NestJS app .gitignore
+dist/
+build/
+node_modules/
+.env
+.env.*
+*.log
+coverage/

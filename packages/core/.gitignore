@@ -1,0 +1,5 @@
+# Core package .gitignore
+node_modules/
+dist/
+build/
+coverage/

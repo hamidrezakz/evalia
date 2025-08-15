@@ -1,0 +1,24 @@
+# Root .gitignore for monorepo
+node_modules/
+dist/
+.env
+.env.*
+*.log
+pnpm-debug.log
+yarn-debug.log
+yarn-error.log
+.DS_Store
+.idea/
+.vscode/
+coverage/
+*.local
+*.swp
+*.swo
+*.tmp
+*.bak
+*.cache
+.next/
+out/
+build/
+# Ignore OS junk
+Thumbs.db

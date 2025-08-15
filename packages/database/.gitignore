@@ -1,0 +1,8 @@
+# Database package .gitignore
+node_modules/
+dist/
+build/
+prisma/dev.db
+prisma/dev.db-journal
+.env
+.env.*

@@ -1,0 +1,9 @@
+# Next.js app .gitignore
+.next/
+out/
+build/
+node_modules/
+.env
+.env.*
+*.log
+coverage/
