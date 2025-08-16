@@ -12,7 +12,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         <SiteHeader />
         <div className="flex flex-1">
           <AppSidebar />
-          <SidebarInset>{children}</SidebarInset>
+          <SidebarInset >{children}</SidebarInset>
         </div>
       </SidebarProvider>
     </div>

@@ -43,7 +43,6 @@ export function SiteHeader() {
           onClick={toggleSidebar}>
           <SidebarIcon />
         </Button>
-
         <Separator orientation="vertical" className="md:ml-2 h-4" />
         <Breadcrumb className="hidden sm:block text-xs">
           <BreadcrumbList>
