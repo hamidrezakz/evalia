@@ -25,12 +25,33 @@ export function SiteHeader() {
 
   // مپ فارسی برای نمایش breadcrumb
   const labels: Record<string, string> = {
+    // لایه اصلی داشبورد
     dashboard: "داشبورد سازمانی",
-    test: "مدیریت کارکنان",
+
+    // کارکنان
     employees: "کارکنان",
+    list: "لیست",
+    add: "افزودن",
+    approve: "تأیید",
+
+    // سازمان
+    organization: "سازمان",
+    info: "اطلاعات",
+    teams: "تیم‌ها",
+
+    // گزارش و تحلیل
     reports: "گزارش‌ها",
-    analysis: "تحلیل منابع انسانی",
-    // مسیرهای دیگر را اینجا اضافه کنید
+    analysis: "تحلیل",
+
+    // سایر بخش‌ها
+    support: "پشتیبانی",
+    feedback: "بازخورد",
+    docs: "مستندات",
+
+    // مستندات UI داخلی
+    ui: "راهنمای UI",
+    buttons: "دکمه‌ها",
+    forms: "فرم‌ها",
   };
 
   return (

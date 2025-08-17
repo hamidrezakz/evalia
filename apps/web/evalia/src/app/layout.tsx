@@ -17,7 +17,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
     <>
       <html lang="fa" dir="rtl"  suppressHydrationWarning>
         <head />
-        <body className="bg-background text-primary antialiased">
+        <body className="bg-background text-foreground antialiased">
           <ThemeProvider
             attribute="class"
             defaultTheme="system"

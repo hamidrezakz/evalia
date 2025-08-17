@@ -86,17 +86,21 @@ const data = {
       ],
     },
     {
-      title: "مستندات و راهنما",
-      url: "/dashboard/docs",
+      title: "مستندات ui",
+      url: "/dashboard/ui",
       icon: BookOpen,
       items: [
         {
-          title: "راهنمای استفاده",
-          url: "/dashboard/docs/guide",
+          title: "دکمه‌ها",
+          url: "/dashboard/ui/buttons",
         },
         {
-          title: "سوالات متداول",
-          url: "/dashboard/docs/faq",
+          title: "فرم ها",
+          url: "/dashboard/ui/forms",
+        },
+        {
+          title: "بازخورد",
+          url: "/dashboard/ui/feedback",
         },
       ],
     },
@@ -142,7 +146,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-              <Link href="/dashboard">
+              <Link href="/">
                 <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
                   <Command className="size-4" />
                 </div>
