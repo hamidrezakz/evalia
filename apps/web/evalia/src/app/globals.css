@@ -1,3 +1,18 @@
+[data-slot="sidebar-menu-sub-button"] {
+  font-size: 0.8rem !important;
+}
+/* --- Sidebar submenu RTL and icon size overrides --- */
+/* Make sidebar submenu border appear on right in RTL, and chevron icon smaller */
+[data-slot="sidebar-menu-sub"] {
+  border-left: none !important;
+  border-right: 1px solid var(--sidebar-border, #e5e7eb) !important;
+}
+
+[dir="ltr"] [data-slot="sidebar-menu-sub"] {
+  border-right: none !important;
+  border-left: 1px solid var(--sidebar-border, #e5e7eb) !important;
+}
+
 @import "tailwindcss";
 @import "tw-animate-css";
 @custom-variant dark (&:where(.dark, .dark *));
@@ -54,6 +69,9 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+}
+@theme {
+  --color-panel: var(--panel);
 }
 
 :root {

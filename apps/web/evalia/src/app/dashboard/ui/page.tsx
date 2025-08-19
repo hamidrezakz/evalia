@@ -17,6 +17,16 @@ export default function UIShowcaseIndex() {
       title: "بازخورد و منوها",
       desc: "Dropdown, Tooltip, Skeleton",
     },
+    {
+      href: "/dashboard/ui/card",
+      title: "کارت‌ها",
+      desc: "Card, CardHeader, CardContent",
+    },
+    {
+      href: "/dashboard/ui/panel",
+      title: "پنل‌ها",
+      desc: "Panel, PanelHeader, PanelContent",
+    },
   ];
   return (
     <div className="flex flex-col gap-6 p-4 md:p-8">

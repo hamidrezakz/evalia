@@ -27,6 +27,8 @@ module.exports = {
           "Noto Color Emoji",
         ],
       },
+      // رنگ panel از طریق @theme در globals.css تعریف شده است
+      // و کلاس‌های Tailwind مانند bg-panel به صورت خودکار ساخته می‌شوند.
     },
   },
   plugins: [],
