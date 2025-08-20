@@ -15,7 +15,7 @@ type RootLayoutProps = {
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <>
-      <html lang="fa" dir="rtl"  suppressHydrationWarning>
+      <html lang="fa-IR" dir="rtl"  suppressHydrationWarning>
         <head />
         <body className="bg-background text-foreground antialiased">
           <ThemeProvider

@@ -46,7 +46,7 @@ function PanelDescription({
   return (
     <div
       data-slot="panel-description"
-      className={cn("text-muted-foreground text-sm", className)}
+      className={cn("text-muted-foreground text-[12px]", className)}
       {...props}
     />
   );
@@ -69,7 +69,7 @@ function PanelContent({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="panel-content"
-      className={cn("px-5 text-sm", className)}
+      className={cn("px-5 text-sm flex", className)}
       {...props}
     />
   );
