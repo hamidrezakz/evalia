@@ -16,6 +16,7 @@ import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { ModeToggle } from "@/components/modetoggle";
 import { useSidebar } from "@/components/ui/sidebar";
 
 export function SiteHeader() {
@@ -96,6 +97,9 @@ export function SiteHeader() {
           </BreadcrumbList>
         </Breadcrumb>
         <SearchForm className="w-full sm:ml-auto sm:w-auto" />
+        <div className="ml-auto rtl:mr-auto rtl:ml-0">
+          <ModeToggle />
+        </div>
       </div>
     </header>
   );
