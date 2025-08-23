@@ -93,7 +93,7 @@ import { avgBy, calcDelta, formatFa, sumBy } from "@/lib/metrics";
 // داشبورد سازمان ایولیا: نسخه حرفه‌ای و واقعی
 export default function DashboardOverviewPage() {
   // فیلترها و کنترل‌ها
-  const [range, setRange] = React.useState<3 | 6 | 12>(6);
+  const [range, setRange] = React.useState<3 | 6 | 12>(12);
   const [showTotal, setShowTotal] = React.useState(true);
   const [showActive, setShowActive] = React.useState(true);
   const [settingsOpen, setSettingsOpen] = React.useState(false);
@@ -348,7 +348,7 @@ export default function DashboardOverviewPage() {
   }, []);
 
   return (
-    <div className="min-h-[100svh] space-y-8 p-6 relative">
+    <div className="min-h-[100svh] space-y-8 p-4 md:p-6 relative">
       {/* دکمه تنظیمات شناور + دیالوگ تنظیمات صفحه */}
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
         <Button
@@ -361,7 +361,7 @@ export default function DashboardOverviewPage() {
         <DialogContent className="max-w-md w-full p-6" showCloseButton>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 mt-4">
-              <UsersRound className="h-4 w-4" /> تنظیمات صفحه مدرسه
+              <UsersRound className="h-4 w-4" /> تنظیمات صفحه داشبورد
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-6">
@@ -411,7 +411,7 @@ export default function DashboardOverviewPage() {
               </p>
             </div>
             <div>
-              <div className="mb-2 font-medium text-sm">خلاصه وضعیت مدرسه</div>
+              <div className="mb-2 font-medium text-sm">خلاصه وضعیت سازمان</div>
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="secondary">
                   پرسنل: {formatFa(summaryForRange.headcount)}

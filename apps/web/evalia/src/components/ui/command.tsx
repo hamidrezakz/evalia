@@ -1,17 +1,19 @@
-"use client"
+//customized
+//add a searchIconClassName prop for searchinput icon in CommandInput component
+"use client";
 
-import * as React from "react"
-import { Command as CommandPrimitive } from "cmdk"
-import { SearchIcon } from "lucide-react"
+import * as React from "react";
+import { Command as CommandPrimitive } from "cmdk";
+import { SearchIcon } from "lucide-react";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 
 function Command({
   className,
@@ -26,7 +28,7 @@ function Command({
       )}
       {...props}
     />
-  )
+  );
 }
 
 function CommandDialog({
@@ -37,10 +39,10 @@ function CommandDialog({
   showCloseButton = true,
   ...props
 }: React.ComponentProps<typeof Dialog> & {
-  title?: string
-  description?: string
-  className?: string
-  showCloseButton?: boolean
+  title?: string;
+  description?: string;
+  className?: string;
+  showCloseButton?: boolean;
 }) {
   return (
     <Dialog {...props}>
@@ -50,26 +52,30 @@ function CommandDialog({
       </DialogHeader>
       <DialogContent
         className={cn("overflow-hidden p-0", className)}
-        showCloseButton={showCloseButton}
-      >
+        showCloseButton={showCloseButton}>
         <Command className="[&_[cmdk-group-heading]]:text-muted-foreground **:data-[slot=command-input-wrapper]:h-12 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group]]:px-2 [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5">
           {children}
         </Command>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
 
+// اضافه کردن prop برای کلاس آیکون سرچ
 function CommandInput({
   className,
+  searchIconClassName,
   ...props
-}: React.ComponentProps<typeof CommandPrimitive.Input>) {
+}: React.ComponentProps<typeof CommandPrimitive.Input> & {
+  searchIconClassName?: string;
+}) {
   return (
     <div
       data-slot="command-input-wrapper"
-      className="flex h-9 items-center gap-2 border-b px-3"
-    >
-      <SearchIcon className="size-4 shrink-0 opacity-50" />
+      className="flex h-9 items-center gap-2 border-b px-3">
+      <SearchIcon
+        className={cn("size-4 shrink-0 opacity-50", searchIconClassName)}
+      />
       <CommandPrimitive.Input
         data-slot="command-input"
         className={cn(
@@ -79,7 +85,7 @@ function CommandInput({
         {...props}
       />
     </div>
-  )
+  );
 }
 
 function CommandList({
@@ -95,7 +101,7 @@ function CommandList({
       )}
       {...props}
     />
-  )
+  );
 }
 
 function CommandEmpty({
@@ -107,7 +113,7 @@ function CommandEmpty({
       className="py-6 text-center text-sm"
       {...props}
     />
-  )
+  );
 }
 
 function CommandGroup({
@@ -123,7 +129,7 @@ function CommandGroup({
       )}
       {...props}
     />
-  )
+  );
 }
 
 function CommandSeparator({
@@ -136,7 +142,7 @@ function CommandSeparator({
       className={cn("bg-border -mx-1 h-px", className)}
       {...props}
     />
-  )
+  );
 }
 
 function CommandItem({
@@ -152,7 +158,7 @@ function CommandItem({
       )}
       {...props}
     />
-  )
+  );
 }
 
 function CommandShortcut({
@@ -168,7 +174,7 @@ function CommandShortcut({
       )}
       {...props}
     />
-  )
+  );
 }
 
 export {
@@ -181,4 +187,4 @@ export {
   CommandItem,
   CommandShortcut,
   CommandSeparator,
-}
+};

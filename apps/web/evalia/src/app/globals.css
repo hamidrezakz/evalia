@@ -153,3 +153,7 @@
     @apply bg-background text-foreground;
   }
 }
+
+body{
+  max-width: 1600px;
+}

@@ -1,4 +1,5 @@
 //customized
+//add some cursor-pointer and runded-full style
 import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
@@ -23,10 +24,10 @@ const buttonVariants = cva(
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
-        default: "h-9 px-4 py-2 has-[>svg]:px-3",
-        sm: "h-8 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5",
-        lg: "h-10 rounded-md px-6 has-[>svg]:px-4",
-        icon: "size-9",
+        default: "h-9 px-4 py-2 has-[>svg]:px-3 rounded-full",
+        sm: "h-8 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5 rounded-full",
+        lg: "h-10 rounded-md px-6 has-[>svg]:px-4 rounded-full",
+        icon: "size-9 rounded-full",
       },
     },
     defaultVariants: {

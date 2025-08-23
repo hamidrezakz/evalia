@@ -1,3 +1,6 @@
+//customized
+//change text-left classes to text-right classname for fit rtl design error
+
 "use client"
 
 import * as React from "react"

@@ -28,7 +28,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 
-const data = {
+export const sidebarNavData = {
   user: {
     name: "مدیر سازمان",
     email: "manager@company.com",
@@ -160,12 +160,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent className="mt-2">
-        <NavMain items={data.navMain} />
-        <NavProjects projects={data.projects} />
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
+        <NavMain items={sidebarNavData.navMain} />
+        <NavProjects projects={sidebarNavData.projects} />
+        <NavSecondary items={sidebarNavData.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter dir="ltr">
-        <NavUser user={data.user} />
+        <NavUser user={sidebarNavData.user} />
       </SidebarFooter>
     </Sidebar>
   );
