@@ -7,7 +7,7 @@ import {
   ChartLegendContent,
   ChartTooltip,
   ChartTooltipContent,
-} from "@/components/ui/chart";
+} from "@/components/ui/shadcn-chart-recharts-v3";
 import {
   Panel,
   PanelContent,
@@ -145,7 +145,7 @@ export default function DashboardOverviewPage() {
     [range]
   );
 
-  // KPI ها (مدرسه)
+  // KPI های سازمان
   const avgTotalCurrent = avgBy<EmployeePoint>(dataSlice, (d) => d.total);
   const avgActiveCurrent = avgBy<EmployeePoint>(dataSlice, (d) => d.active);
   const sumHiredCurrent = sumBy<EmployeePoint>(dataSlice, (d) => d.hired);
@@ -159,7 +159,7 @@ export default function DashboardOverviewPage() {
     [avgActiveCurrent, avgTotalCurrent]
   );
 
-  // خلاصه وضعیت برای بازه انتخابی
+  // خلاصه وضعیت برای بازه انتخابی سازمان
   const summaryForRange = React.useMemo(
     () => ({
       headcount: Math.round(avgTotalCurrent),
@@ -207,31 +207,31 @@ export default function DashboardOverviewPage() {
     [avgActiveCurrent, avgTotalCurrent]
   );
 
-  // بینش‌های سریع (مدرسه)
+  // بینش‌های سریع سازمان
   const quickInsights = React.useMemo(() => {
     const insights: string[] = [];
     if (hiredDelta.diff >= 0)
       insights.push(
-        `ثبت‌نام‌ها نسبت به دوره قبل ${Math.abs(
+        `استخدام‌ها نسبت به دوره قبل ${Math.abs(
           hiredDelta.pct
         )}% افزایش یافته است.`
       );
     else
       insights.push(
-        `ثبت‌نام‌ها نسبت به دوره قبل ${Math.abs(
+        `استخدام‌ها نسبت به دوره قبل ${Math.abs(
           hiredDelta.pct
         )}% کاهش یافته است.`
       );
     if (leftDelta.diff >= 0)
       insights.push(
-        `انصراف ${Math.abs(
+        `ترک خدمت ${Math.abs(
           leftDelta.pct
-        )}% بیشتر شده؛ بررسی علل پیشنهاد می‌شود.`
+        )}% بیشتر شده؛ بررسی دلایل توصیه می‌شود.`
       );
-    else insights.push(`انصراف کاهش یافته که نشانه پایداری مدرسه است.`);
+    else insights.push(`ترک خدمت کاهش یافته که نشانه پایداری سازمان است.`);
     if (engagementDelta.diff >= 0)
-      insights.push(`مشارکت کلاسی روند مثبتی دارد.`);
-    else insights.push(`مشارکت کلاسی افت کرده؛ نیاز به پایش.`);
+      insights.push(`مشارکت سازمانی روند مثبتی دارد.`);
+    else insights.push(`مشارکت سازمانی افت کرده؛ نیاز به بررسی.`);
     return insights;
   }, [hiredDelta, leftDelta, engagementDelta]);
 
@@ -353,7 +353,7 @@ export default function DashboardOverviewPage() {
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
         <Button
           aria-label="تنظیمات صفحه"
-          className="fixed z-50 bottom-4 left-6 size-9 rounded-full shadow-lg"
+          className="fixed z-50 bottom-1 size-9 rounded-full shadow-lg"
           onClick={() => setSettingsOpen(true)}
           variant="outline">
           <Settings2 className="size-4.5" />
@@ -438,7 +438,7 @@ export default function DashboardOverviewPage() {
                 </label>
                 <Select
                   value={exportTarget}
-                  onValueChange={(v) =>
+                  onValueChange={(v: string) =>
                     setExportTarget(v as typeof exportTarget)
                   }>
                   <SelectTrigger className="w-full text-right" dir="rtl">
@@ -528,7 +528,7 @@ export default function DashboardOverviewPage() {
         <PanelContent className="h-[320px] w-full justify-center items-center">
           <ChartContainer config={chartConfig} className="h-full w-full">
             <BarChart data={dataSlice}>
-              <CartesianGrid strokeDasharray="3 3" />
+              <CartesianGrid strokeDasharray="12 12" />
               <XAxis dataKey="name" />
               <YAxis />
               <ChartLegend content={<ChartLegendContent />} />

@@ -234,7 +234,7 @@ export function GlobalSearch() {
         onOpenChange={setOpen}
         title="جستجو"
         description="پالت فرمان و جستجو"
-        className="sm:max-w-xl lg:max-w-2xl xl:max-w-3xl w-full max-h-[90vh] h-[60vh] top-[36vh] md:top-[40vh] md:h-[70vh] 2xl:top-[50vh] 2xl:h-[90vh]">
+        className="sm:max-w-xl md:max-w-2xl xl:max-w-3xl w-full max-h-[90vh] h-[60vh] top-[36vh] md:top-[40vh] md:h-[70vh] 2xl:top-[50vh] 2xl:h-[90vh]">
         <CommandInput
           className="mr-6"
           searchIconClassName="hidden"
@@ -255,7 +255,7 @@ export function GlobalSearch() {
                   className="flex items-center gap-2">
                   {iconForItem(item)}
                   <div className="flex flex-col gap-0.5 overflow-hidden">
-                    <span className="truncate text-[12px] font-medium">
+                    <span className="truncate text-[12px] md:text-[13px] font-medium">
                       {item.title}
                     </span>
                     {item.subtitle && (
