@@ -27,7 +27,7 @@ export default function PanelShowcase() {
           <PanelHeader>
             <PanelTitle>وضعیت سازمان</PanelTitle>
             <PanelAction>
-              <Button variant="ghost" size="sm" className="gap-1.5">
+              <Button variant="ghost" size="sm">
                 <MoreHorizontal className="size-4" />
                 بیشتر
               </Button>

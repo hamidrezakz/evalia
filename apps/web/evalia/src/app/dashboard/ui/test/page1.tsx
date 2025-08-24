@@ -74,7 +74,6 @@ import {
 } from "@/components/ui/select";
 
 import { chartConfig } from "@/config/chart-config";
-import { EmployeeHeadcountChartPanel } from "./components/employee-headcount-chart-panel";
 import {
   employeesMonthly,
   engagementMonthly,
@@ -523,12 +522,42 @@ export default function DashboardOverviewPage() {
         />
       </div>
 
-      {/* چارت‌های اصلی با پنل قابل شخصی‌سازی */}
-      <EmployeeHeadcountChartPanel
-        range={range}
-        onRangeChange={(m) => setRange(m as 3 | 6 | 12)}
-        data={dataSlice}
-      />
+      {/* چارت‌های اصلی */}
+      <Panel className="overflow-hidden">
+        <PanelHeader>
+          <PanelTitle>روند تعداد پرسنل و فعال‌ها</PanelTitle>
+          <PanelDescription>نمایش {range} ماه اخیر</PanelDescription>
+        </PanelHeader>
+        <PanelContent className=" pl-0 ml-0 justify-center items-center align-middle w-full">
+          <ChartContainer
+            config={chartConfig}
+            className="pl-0 ml-0 h-full min-h-[300px] md:min-h-[320px] max-h-[400px] w-full">
+            <BarChart
+              data={dataSlice}
+              margin={{ top: 10, right: 0, bottom: 10, left: -8 }}>
+              <CartesianGrid vertical={false} />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <ChartLegend content={<ChartLegendContent />} />
+              <ChartTooltip content={<ChartTooltipContent />} />
+              {showTotal && (
+                <Bar
+                  dataKey="total"
+                  fill="var(--color-total)"
+                  radius={[6, 6, 0, 0]}
+                />
+              )}
+              {showActive && (
+                <Bar
+                  dataKey="active"
+                  fill="var(--color-active)"
+                  radius={[6, 6, 0, 0]}
+                />
+              )}
+            </BarChart>
+          </ChartContainer>
+        </PanelContent>
+      </Panel>
 
       <div className="grid grid-cols-1 gap-8 xl:grid-cols-3">
         <Panel>

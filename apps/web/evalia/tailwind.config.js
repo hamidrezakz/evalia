@@ -31,5 +31,7 @@ module.exports = {
       // و کلاس‌های Tailwind مانند bg-panel به صورت خودکار ساخته می‌شوند.
     },
   },
-  plugins: [],
+  plugins: [
+    require('tailwind-scrollbar-hide'),
+  ],
 };

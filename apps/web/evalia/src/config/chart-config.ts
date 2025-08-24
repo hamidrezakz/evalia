@@ -1,4 +1,6 @@
-export const chartConfig = {
+import { type ChartConfig } from "@/components/ui/chart"
+
+export const chartConfig: ChartConfig = {
   total: { label: "کل پرسنل", color: "var(--chart-1)" },
   active: { label: "پرسنل فعال", color: "var(--chart-2)" },
   hired: { label: "استخدام", color: "var(--chart-3)" },
