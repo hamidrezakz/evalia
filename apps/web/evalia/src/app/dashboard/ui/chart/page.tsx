@@ -539,7 +539,7 @@ export default function DashboardOverviewPage() {
               <XAxis dataKey="name" />
               <YAxis />
               <ChartLegend content={<ChartLegendContent />} />
-              <ChartTooltip content={<ChartTooltipContent />} />
+              <ChartTooltip content={<ChartTooltipContent  indicator="dashed"/>} />
               {showTotal && (
                 <Bar
                   dataKey="total"
@@ -571,7 +571,7 @@ export default function DashboardOverviewPage() {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" hide />
                 <YAxis domain={[0, 100]} />
-                <ChartTooltip content={<ChartTooltipContent />} />
+                <ChartTooltip content={<ChartTooltipContent/>} />
                 <Area
                   type="monotone"
                   dataKey="value"
