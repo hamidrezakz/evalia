@@ -491,7 +491,7 @@ export function EmployeeHeadcountChartPanel({
       <PanelContent className="pl-0 ml-0 justify-center items-center align-middle w-full">
         <ChartContainer
           config={chartConfig}
-          className="pl-0 ml-0 h-full min-h-[300px] md:min-h-[320px] max-h-[400px] w-full">
+          className="pl-0 ml-0 h-full min-h-[300px] md:min-h-[320px] max-h-[600px] lg:max-h-[440px] w-full">
           <BarChart
             data={chartData}
             margin={{ top: 10, right: 0, bottom: 10, left: -6 }}

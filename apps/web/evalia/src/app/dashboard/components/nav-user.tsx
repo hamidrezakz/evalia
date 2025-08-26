@@ -74,8 +74,8 @@ export function NavUser({
                   <AvatarImage src={user.avatar} alt={user.name} />
                   <AvatarFallback className="rounded-lg">CN</AvatarFallback>
                 </Avatar>
-                <div className="grid flex-1 text-sm leading-tight">
-                  <span className="truncate font-medium">{user.name}</span>
+                <div className="grid flex-1 text-[12px] leading-tight">
+                  <span className="truncate font-medium">{user.name} (مدیر کل)</span>
                   <span className="truncate text-xs">{user.email}</span>
                 </div>
               </div>
