@@ -2,12 +2,9 @@
    Professional Custom Scrollbar
    ========================= */
 html,
-body,
-[data-scrollbar-overlay],
-.scrollbar-overlay {
-  scrollbar-gutter: stable overlay;
-  /* For legacy WebKit */
-  overflow: overlay !important;
+body {
+  scrollbar-gutter: stable;
+  /* Always reserve space for scrollbar, never overlay */
 }
 
 /* Webkit Browsers (Chrome, Edge, Safari) */
@@ -62,6 +59,7 @@ body,
   --scrollbar-thumb-hover: var(--primary);
   --scrollbar-thumb2-hover: var(--sidebar-border);
 }
+
 [data-slot="sidebar-menu-sub-button"] {
   font-size: 0.8rem !important;
 }
