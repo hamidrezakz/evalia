@@ -213,7 +213,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar
       side="right"
-      className="top-(--header-height) h-[calc(100svh-var(--header-height))]!"
+      className="top-(--header-height) h-[calc(100svh-var(--header-height))]! right-[fix]"
       {...props}>
       <SidebarHeader>
         <SidebarMenu>
@@ -293,9 +293,9 @@ function OrgSwitcher({
           className="flex w-full items-center gap-2 rounded-md text-right focus:outline-none">
           <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg border border-border/40 shadow-sm">
             {activeOrg?.logo ? (
-              <Avatar className="size-8 rounded-lg">
+              <Avatar className="size-10 rounded-full shadow-md">
                 <AvatarImage src={activeOrg.logo} alt={activeOrg.name} />
-                <AvatarFallback className="rounded-lg text-xs font-medium">
+                <AvatarFallback className="rounded-md text-xs font-medium text-primary">
                   {activeOrg.name.slice(0, 2)}
                 </AvatarFallback>
               </Avatar>
@@ -331,7 +331,7 @@ function OrgSwitcher({
       <DropdownMenuContent
         side="bottom"
         align="end"
-        className="w-72 rounded-lg">
+        className="w-70 rounded-lg mr-2 sm:mr-4">
         <DropdownMenuLabel className="text-xs tracking-wide text-muted-foreground flex items-center justify-between">
           <span>حساب‌های کاری</span>
           <span className="text-[0.6rem] font-normal text-muted-foreground/70">
@@ -378,7 +378,7 @@ function OrgSwitcher({
         <DropdownMenuSeparator />
         <DropdownMenuItem className="gap-2 mt-0.5 text-[0.8rem]">
           <Plus className="size-4" />
-          افزودن / پیوستن به حساب جدید
+          افزودن حساب جدید
         </DropdownMenuItem>
         <DropdownMenuItem className="gap-2 text-[0.8rem] mb-0.5">
           <Settings2 className="size-4" />

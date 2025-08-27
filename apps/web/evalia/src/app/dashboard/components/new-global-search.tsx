@@ -4,7 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
 import { sidebarNavData } from "@/app/dashboard/components/app-sidebar";
-import { activities, recentEmployees, dashboardTasks } from "@/data/dashboard";
+import { activities, recentEmployees, dashboardTasks } from "../data/dashboard";
 import {
   CommandDialog,
   CommandInput,
@@ -22,7 +22,6 @@ import {
   Settings2,
   ListTodo,
   Activity,
-  FileText,
   Waypoints,
   PanelLeft,
 } from "lucide-react";

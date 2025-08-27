@@ -289,7 +289,7 @@ importers:
         specifier: ^5
         version: 5.9.2
 
-  apps/web/eva:
+  apps/web/evalia:
     dependencies:
       '@radix-ui/react-avatar':
         specifier: ^1.1.10
@@ -410,7 +410,7 @@ importers:
         specifier: ^5.9.2
         version: 5.9.2
 
-  apps/web/evalia:
+  apps/web/test-evalia:
     dependencies:
       '@radix-ui/react-avatar':
         specifier: ^1.1.10
