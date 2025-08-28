@@ -18,3 +18,759 @@ datasource db {
 // Enums
 // ------------------------------
 
+/// Supported locales (زبان)
+enum Locale {
+  FA
+  EN
+}
+
+/// Gender (جنسیت) - optional usage
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+  UNDISCLOSED
+}
+
+/// High-level account status (وضعیت کاربر)
+enum UserStatus {
+  ACTIVE
+  INVITED
+  SUSPENDED
+  DELETED
+}
+
+/// OAuth / auth provider (ارائه دهنده احراز هویت)
+enum AuthProvider {
+  PASSWORD
+  GOOGLE
+  GITHUB
+  MICROSOFT
+  APPLE
+  AZURE_AD
+}
+
+/// Organization plan / tier (پلن سازمان)
+enum OrgPlan {
+  FREE
+  PRO
+  BUSINESS
+  ENTERPRISE
+}
+
+/// Membership role inside organization (نقش سطح بالا) - combine with fine-grained permissions if needed
+enum OrgRole {
+  OWNER
+  MANAGER
+  MEMBER
+}
+
+/// Generic permission enumerations (مجوزها) - can be extended
+enum PermissionCode {
+  ORG_MANAGE
+  USER_INVITE
+  TEAM_MANAGE
+  DASHBOARD_CONFIGURE
+  ASSESSMENT_TEMPLATE_MANAGE
+  ASSESSMENT_SESSION_MANAGE
+  ASSESSMENT_RESPONSE_VIEW
+  ASSESSMENT_AI_ANALYZE
+  BILLING_VIEW
+  BILLING_MANAGE
+  REPORT_VIEW
+  REPORT_EXPORT
+  NOTIFICATION_MANAGE
+}
+
+/// Assessment lifecycle state (وضعیت ارزیابی)
+enum AssessmentState {
+  DRAFT
+  ACTIVE
+  CLOSED
+  ARCHIVED
+}
+
+/// Session state (وضعیت اجرای ارزیابی)
+enum SessionState {
+  SCHEDULED
+  IN_PROGRESS
+  ANALYZING
+  COMPLETED
+  CANCELLED
+}
+
+/// Perspective of a response (نوع پاسخ دهنده)
+enum ResponsePerspective {
+  SELF
+  FACILITATOR
+  PEER
+  MANAGER
+  SYSTEM
+}
+
+/// Question response type (نوع سوال)
+enum QuestionType {
+  SCALE
+  TEXT
+  MULTI_CHOICE
+  SINGLE_CHOICE
+  BOOLEAN
+}
+
+/// AI job status (وضعیت پردازش هوش مصنوعی)
+enum AIJobStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+/// Notification channel (کانال اعلان)
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  SMS
+  PUSH
+}
+
+/// Notification status
+enum NotificationStatus {
+  PENDING
+  SENT
+  READ
+  FAILED
+  DISMISSED
+}
+
+/// Audit action category (دسته بندی لاگ)
+enum AuditActionType {
+  CREATE
+  UPDATE
+  DELETE
+  LOGIN
+  PERMISSION_CHANGE
+  SYSTEM
+}
+
+/// File / asset type (نوع فایل)
+enum AssetType {
+  AVATAR
+  DOCUMENT
+  SPREADSHEET
+  IMAGE
+  OTHER
+}
+
+/// Dashboard widget kind (نوع ویجت)
+enum WidgetKind {
+  KPI
+  CHART
+  TABLE
+  TEXT_BLOCK
+  CUSTOM
+}
+
+/// Platform-level global roles (نقش های پلتفرمی جهانی)
+enum PlatformRole {
+  SUPER_ADMIN
+  ANALYSIS_MANAGER
+  FACILITATOR
+  SUPPORT
+  SALES
+}
+
+/// Organization lifecycle status (وضعیت سازمان)
+enum OrganizationStatus {
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+/// Soft delete strategy: each soft-deletable model has deletedAt nullable timestamp
+
+// ------------------------------
+// Models - Core Identity & Org
+// ------------------------------
+
+/// User account (کاربر)
+model User {
+  id            String        @id @default(cuid())
+  email         String        @unique
+  emailVerified DateTime?
+  passwordHash  String?       /// null when password-less (OAuth)
+  provider      AuthProvider  @default(PASSWORD)
+  firstName     String
+  lastName      String
+  fullName      String        @default("") /// denormalized for faster search; keep sync
+  locale        Locale        @default(FA)
+  gender        Gender?
+  status        UserStatus    @default(ACTIVE)
+  avatarAssetId String?       @unique
+  /// Relation: User -> Asset (Avatar) | کاربر به فایل آواتار
+  avatarAsset   Asset?        @relation("UserAvatarAsset", fields: [avatarAssetId], references: [id])
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  deletedAt     DateTime?
+
+  /// All organization memberships | تمام عضویت‌های سازمانی کاربر
+  memberships   OrganizationMembership[] @relation("UserOrganizationMemberships")
+  /// All team memberships | عضویت‌های تیمی
+  teams         TeamMembership[]         @relation("UserTeamMemberships")
+  /// Invitations sent by user | دعوت‌نامه‌های ارسالی
+  invites       Invitation[]        @relation("InvitationSender")
+  /// AI jobs requested by user | درخواست‌های پردازش AI
+  aiJobs        AIAnalysisJob[]     @relation("AIJobRequester")
+  /// Assessment assignments (participant roles) | تخصیص‌های ارزیابی
+  assignments   AssessmentAssignment[] @relation("UserAssessmentAssignments")
+  /// Organizations where user is primary owner | سازمان‌هایی که مالک اصلی است
+  ownedOrganizations Organization[] @relation("OrgPrimaryOwner")
+  /// Notifications received | اعلان‌ها
+  notifications Notification[] @relation("UserNotifications")
+  /// Audit log entries performed by this user | لاگ‌های ممیزی مرتبط
+  auditLogs     AuditLog[] @relation("UserAuditLogs")
+  /// Global platform roles (array) - e.g. FACILITATOR handles many orgs
+  globalRoles   PlatformRole[] @default([])
+  /// Organizations created by this platform user | سازمان‌های ساخته‌شده
+  createdOrganizations Organization[] @relation("OrganizationsCreated")
+  /// Service assignments (facilitator / analysis manager) | تخصیص‌های خدماتی
+  serviceAssignments OrganizationServiceAssignment[] @relation("UserServiceAssignments")
+
+  @@index([fullName])
+  @@index([status])
+}
+
+/// Organization (سازمان)
+model Organization {
+  id             String                     @id @default(cuid())
+  name           String
+  slug           String                     @unique
+  plan           OrgPlan                    @default(FREE)
+  timezone       String                     @default("Asia/Tehran")
+  locale         Locale                     @default(FA)
+  primaryOwnerId String?
+  /// Primary owner relation | مالک اصلی سازمان
+  primaryOwner   User?                      @relation("OrgPrimaryOwner", fields: [primaryOwnerId], references: [id])
+  settings       Json                       @default("{}") /// arbitrary org-level settings
+  status         OrganizationStatus         @default(ACTIVE)
+  trialEndsAt    DateTime?
+  billingEmail   String?
+  lockedAt       DateTime?                  /// if suspended/locked
+  createdById    String?                    /// platform user who created the org
+  /// Platform user who created this org | کاربر پلتفرمی سازنده
+  createdBy      User?                      @relation("OrganizationsCreated", fields: [createdById], references: [id])
+  createdAt      DateTime                   @default(now())
+  updatedAt      DateTime                   @updatedAt
+  deletedAt      DateTime?
+
+  memberships    OrganizationMembership[]      @relation("OrganizationMemberships")
+  teams          Team[]                        @relation("OrganizationTeams")
+  questionBanks  QuestionBank[]                @relation("OrganizationQuestionBanks")
+  assessments    AssessmentTemplate[]          @relation("OrganizationAssessmentTemplates")
+  sessions       AssessmentSession[]           @relation("OrganizationAssessmentSessions")
+  dashboards     DashboardConfig[]             @relation("OrganizationDashboardConfigs")
+  navItems       NavigationItem[]              @relation("OrganizationNavigationItems")
+  invites        Invitation[]                  @relation("InvitationOrg")
+  notifications  Notification[]                @relation("OrganizationNotifications")
+  auditLogs      AuditLog[]                    @relation("OrganizationAuditLogs")
+  assets         Asset[]                       @relation("OrganizationAssets")
+  serviceAssignments OrganizationServiceAssignment[] @relation("OrganizationServiceAssignments")
+
+  @@index([plan])
+  @@index([locale])
+  @@index([status])
+}
+
+/// Assignment of a platform-level service role (facilitator, analysis manager, etc.) to specific organizations
+/// کاربر پلتفرمی که به یک سازمان به عنوان تسهیلگر یا مدیر تحلیل متصل می‌شود
+model OrganizationServiceAssignment {
+  id             String        @id @default(cuid())
+  organizationId String
+  userId         String
+  role           PlatformRole  /// Only certain roles make sense (FACILITATOR / ANALYSIS_MANAGER / SUPPORT)
+  active         Boolean       @default(true)
+  notes          String?
+  createdAt      DateTime      @default(now())
+  endedAt        DateTime?
+
+  organization   Organization  @relation("OrganizationServiceAssignments", fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User          @relation("UserServiceAssignments", fields: [userId], references: [id])
+
+  @@unique([organizationId, userId, role])
+  @@index([userId, role])
+  @@index([organizationId, active])
+}
+
+/// Membership tying a user to an organization with a role (عضویت کاربر در سازمان)
+model OrganizationMembership {
+  id             String    @id @default(cuid())
+  userId         String
+  organizationId String
+  role           OrgRole   @default(MEMBER)
+  /// Extra permission links | مجوزهای اضافه
+  permissions    PermissionOnMembership[] @relation("MembershipPermissions")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+
+  user           User         @relation("UserOrganizationMemberships", fields: [userId], references: [id])
+  organization   Organization @relation("OrganizationMemberships", fields: [organizationId], references: [id])
+
+  @@unique([userId, organizationId])
+  @@index([organizationId, role])
+}
+
+/// Join table for attaching extra permissions to a membership (مجوزهای اضافه)
+model PermissionOnMembership {
+  id          String         @id @default(cuid())
+  membershipId String
+  code        PermissionCode
+  createdAt   DateTime       @default(now())
+
+  membership  OrganizationMembership @relation("MembershipPermissions", fields: [membershipId], references: [id], onDelete: Cascade)
+
+  @@unique([membershipId, code])
+  @@index([code])
+}
+
+/// Team within organization (تیم)
+model Team {
+  id             String    @id @default(cuid())
+  organizationId String
+  name           String
+  slug           String
+  description    String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+
+  organization   Organization   @relation("OrganizationTeams", fields: [organizationId], references: [id])
+  members        TeamMembership[] @relation("TeamMembers")
+  sessions       AssessmentSession[]        @relation("SessionTeamScope")
+
+  @@unique([organizationId, slug])
+  @@index([organizationId, name])
+}
+
+/// Membership of user in team (عضویت کاربر در تیم)
+model TeamMembership {
+  id        String   @id @default(cuid())
+  teamId    String
+  userId    String
+  createdAt DateTime @default(now())
+  deletedAt DateTime?
+
+  team      Team  @relation("TeamMembers", fields: [teamId], references: [id], onDelete: Cascade)
+  user      User  @relation("UserTeamMemberships", fields: [userId], references: [id])
+
+  @@unique([teamId, userId])
+  @@index([userId])
+}
+
+// ------------------------------
+// Navigation & Dashboard Config
+// ------------------------------
+
+/// Navigation items configurable per org & role (آیتم منو)
+model NavigationItem {
+  id             String      @id @default(cuid())
+  organizationId String
+  role           OrgRole
+  parentId       String?     /// for nested menus
+  label          String
+  path           String?     /// internal route
+  externalUrl    String?     /// external link override
+  iconName       String?     /// maps to frontend icon registry
+  order          Int         @default(0)
+  isActive       Boolean     @default(true)
+  meta           Json        @default("{}") /// arbitrary extra data
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  deletedAt      DateTime?
+
+  organization   Organization @relation("OrganizationNavigationItems", fields: [organizationId], references: [id])
+  parent         NavigationItem? @relation("NavParent", fields: [parentId], references: [id])
+  children       NavigationItem[] @relation("NavParent")
+
+  @@index([organizationId, role])
+  @@index([parentId])
+  @@unique([organizationId, role, label, parentId])
+}
+
+/// Dashboard widget definition registry (تعریف ویجت)
+model WidgetDefinition {
+  id          String     @id @default(cuid())
+  key         String     @unique
+  kind        WidgetKind
+  title       String
+  description String?
+  configSchema Json?     /// JSON Schema for config validation
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  deletedAt   DateTime?
+
+  instances   DashboardWidget[] @relation("WidgetDefinitionInstances")
+}
+
+/// Dashboard configuration for org & role combination (پیکربندی داشبورد)
+model DashboardConfig {
+  id             String    @id @default(cuid())
+  organizationId String
+  role           OrgRole
+  title          String    @default("")
+  layout         Json      @default("{}") /// persisted layout engine state
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+
+  organization   Organization    @relation("OrganizationDashboardConfigs", fields: [organizationId], references: [id])
+  widgets        DashboardWidget[] @relation("DashboardWidgets")
+
+  @@unique([organizationId, role])
+}
+
+/// Individual widget instance placed on a dashboard (ویجت داشبورد)
+model DashboardWidget {
+  id              String           @id @default(cuid())
+  dashboardId     String
+  widgetDefinitionId String
+  title           String?
+  position        Json             @default("{}") /// x,y,w,h or grid config
+  config          Json             @default("{}") /// user-specified config
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  deletedAt       DateTime?
+
+  dashboard       DashboardConfig  @relation("DashboardWidgets", fields: [dashboardId], references: [id], onDelete: Cascade)
+  definition      WidgetDefinition @relation("WidgetDefinitionInstances", fields: [widgetDefinitionId], references: [id])
+}
+
+// ------------------------------
+// Assessment Domain
+// ------------------------------
+
+/// Bank of questions - can be global (organizationId null) or org-specific (بانک سوال)
+model QuestionBank {
+  id             String          @id @default(cuid())
+  organizationId String?
+  name           String
+  description    String?
+  isSystem       Boolean         @default(false)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  deletedAt      DateTime?
+
+  organization   Organization?   @relation("OrganizationQuestionBanks", fields: [organizationId], references: [id])
+  questions      Question[]
+
+  @@index([organizationId])
+  @@unique([organizationId, name])
+}
+
+/// A single question in a bank (سوال)
+model Question {
+  id             String       @id @default(cuid())
+  bankId         String
+  code           String?      /// optional human code
+  text           String
+  type           QuestionType
+  minScale       Int?         /// for SCALE
+  maxScale       Int?         /// for SCALE
+  meta           Json         @default("{}")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  deletedAt      DateTime?
+
+  bank           QuestionBank               @relation(fields: [bankId], references: [id])
+  options        QuestionOption[]           @relation("QuestionOptions")
+  templateLinks  AssessmentTemplateQuestion[] @relation("QuestionTemplateLinks")
+  aggregateScores AssessmentAggregateScore[] @relation("QuestionAggregateScores")
+
+  @@index([bankId])
+}
+
+/// Option for multiple choice questions (گزینه)
+model QuestionOption {
+  id         String    @id @default(cuid())
+  questionId String
+  value      String
+  label      String
+  order      Int       @default(0)
+  createdAt  DateTime  @default(now())
+
+  question   Question  @relation("QuestionOptions", fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([questionId, value])
+  @@index([questionId])
+}
+
+/// Assessment template (قالب ارزیابی)
+model AssessmentTemplate {
+  id             String                @id @default(cuid())
+  organizationId String
+  name           String
+  description    String?
+  state          AssessmentState       @default(DRAFT)
+  meta           Json                  @default("{}")
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  deletedAt      DateTime?
+
+  organization   Organization                @relation("OrganizationAssessmentTemplates", fields: [organizationId], references: [id])
+  sections       AssessmentTemplateSection[] @relation("TemplateSections")
+  sessions       AssessmentSession[]         @relation("TemplateSessions")
+
+  @@unique([organizationId, name])
+  @@index([organizationId, state])
+}
+
+/// Section inside a template for grouping (بخش)
+model AssessmentTemplateSection {
+  id          String       @id @default(cuid())
+  templateId  String
+  title       String
+  order       Int          @default(0)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  deletedAt   DateTime?
+
+  template    AssessmentTemplate         @relation("TemplateSections", fields: [templateId], references: [id], onDelete: Cascade)
+  questions   AssessmentTemplateQuestion[] @relation("TemplateSectionQuestions")
+
+  @@unique([templateId, title])
+  @@index([templateId])
+}
+
+/// Link between section and question with ordering & perspective rules (لینک سوال)
+model AssessmentTemplateQuestion {
+  id             String      @id @default(cuid())
+  sectionId      String
+  questionId     String
+  order          Int         @default(0)
+  perspectives   ResponsePerspective[] /// which perspectives answer this question
+  required       Boolean     @default(true)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  section        AssessmentTemplateSection @relation("TemplateSectionQuestions", fields: [sectionId], references: [id], onDelete: Cascade)
+  question       Question                  @relation("QuestionTemplateLinks", fields: [questionId], references: [id])
+  responses      AssessmentResponse[]      @relation("TemplateQuestionResponses")
+
+  @@unique([sectionId, questionId])
+  @@index([questionId])
+}
+
+/// A scheduled execution of a template (جلسه ارزیابی)
+model AssessmentSession {
+  id             String        @id @default(cuid())
+  organizationId String
+  templateId     String
+  teamScopeId    String?       /// optional: restrict to one team
+  name           String
+  description    String?
+  state          SessionState  @default(SCHEDULED)
+  startAt        DateTime
+  endAt          DateTime
+  meta           Json          @default("{}")
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  deletedAt      DateTime?
+
+  organization   Organization        @relation("OrganizationAssessmentSessions", fields: [organizationId], references: [id])
+  template       AssessmentTemplate  @relation("TemplateSessions", fields: [templateId], references: [id])
+  teamScope      Team?          @relation("SessionTeamScope", fields: [teamScopeId], references: [id])
+  assignments    AssessmentAssignment[]   @relation("SessionAssignments")
+  responses      AssessmentResponse[]     @relation("SessionResponses")
+  aiJobs         AIAnalysisJob[]          @relation("SessionAIJobs")
+  scores         AssessmentAggregateScore[] @relation("SessionAggregateScores")
+
+  @@index([organizationId, state])
+  @@index([templateId])
+  @@index([teamScopeId])
+}
+
+/// Participant assignment for a session (تخصیص شرکت کننده)
+model AssessmentAssignment {
+  id          String             @id @default(cuid())
+  sessionId   String
+  userId      String
+  perspective ResponsePerspective @default(SELF)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  session     AssessmentSession  @relation("SessionAssignments", fields: [sessionId], references: [id], onDelete: Cascade)
+  user        User               @relation("UserAssessmentAssignments", fields: [userId], references: [id])
+  responses   AssessmentResponse[] @relation("AssignmentResponses")
+
+  @@unique([sessionId, userId, perspective])
+  @@index([userId])
+}
+
+/// Individual response to a template question by an assignment (پاسخ)
+model AssessmentResponse {
+  id                String                  @id @default(cuid())
+  assignmentId      String
+  sessionId         String
+  templateQuestionId String
+  scaleValue        Int?
+  optionValue       String?                 /// for single/multi choice (store chosen option value when single)
+  optionValues      String[]                /// for multi choice
+  textValue         String?
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+
+  assignment        AssessmentAssignment       @relation("AssignmentResponses", fields: [assignmentId], references: [id], onDelete: Cascade)
+  session           AssessmentSession          @relation("SessionResponses", fields: [sessionId], references: [id], onDelete: Cascade)
+  templateQuestion  AssessmentTemplateQuestion @relation("TemplateQuestionResponses", fields: [templateQuestionId], references: [id])
+
+  @@index([templateQuestionId])
+  @@index([assignmentId])
+  @@index([sessionId])
+}
+
+/// Aggregated score caching (امتیاز تجمیعی)
+model AssessmentAggregateScore {
+  id           String             @id @default(cuid())
+  sessionId    String
+  questionId   String
+  perspective  ResponsePerspective
+  avgScale     Float?
+  distribution Json              @default("{}") /// histogram, etc.
+  computedAt   DateTime          @default(now())
+
+  session      AssessmentSession @relation("SessionAggregateScores", fields: [sessionId], references: [id], onDelete: Cascade)
+  question     Question          @relation("QuestionAggregateScores", fields: [questionId], references: [id])
+
+  @@unique([sessionId, questionId, perspective])
+  @@index([questionId])
+}
+
+// ------------------------------
+// AI Analysis
+// ------------------------------
+
+/// AI analysis processing job (کار پردازش AI)
+model AIAnalysisJob {
+  id           String        @id @default(cuid())
+  sessionId    String
+  requestedById String
+  status       AIJobStatus   @default(QUEUED)
+  inputSpec    Json          @default("{}") /// snapshot of prompt & parameters
+  outputSpec   Json?         /// final output summary
+  error        String?
+  createdAt    DateTime      @default(now())
+  startedAt    DateTime?
+  finishedAt   DateTime?
+
+  session      AssessmentSession @relation("SessionAIJobs", fields: [sessionId], references: [id])
+  requestedBy  User              @relation("AIJobRequester", fields: [requestedById], references: [id])
+  results      AIAnalysisResult[] @relation("AIJobResults")
+
+  @@index([sessionId, status])
+}
+
+/// AI produced structured result (خروجی AI)
+model AIAnalysisResult {
+  id        String        @id @default(cuid())
+  jobId     String
+  kind      String        /// e.g., "SUMMARY", "THEME", "SENTIMENT", "RISK"
+  payload   Json          @default("{}")
+  createdAt DateTime      @default(now())
+
+  job       AIAnalysisJob @relation("AIJobResults", fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@unique([jobId, kind])
+}
+
+// ------------------------------
+// Invitations, Notifications, Audit, Assets
+// ------------------------------
+
+/// Invitation to organization (دعوت)
+model Invitation {
+  id             String     @id @default(cuid())
+  organizationId String
+  email          String
+  inviterId      String
+  role           OrgRole    @default(MEMBER)
+  token          String     @unique
+  acceptedAt     DateTime?
+  expiresAt      DateTime
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  organization   Organization @relation("InvitationOrg", fields: [organizationId], references: [id], onDelete: Cascade)
+  inviter        User         @relation("InvitationSender", fields: [inviterId], references: [id])
+
+  @@index([organizationId, email])
+}
+
+/// In-app or external notification (اعلان)
+model Notification {
+  id             String              @id @default(cuid())
+  userId         String
+  organizationId String?
+  channel        NotificationChannel @default(IN_APP)
+  status         NotificationStatus  @default(PENDING)
+  title          String
+  message        String?
+  data           Json                @default("{}")
+  createdAt      DateTime            @default(now())
+  readAt         DateTime?
+  updatedAt      DateTime            @updatedAt
+
+  user           User           @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization?  @relation("OrganizationNotifications", fields: [organizationId], references: [id])
+
+  @@index([userId, status])
+}
+
+/// Audit log entry (لاگ ممیزی)
+model AuditLog {
+  id             String          @id @default(cuid())
+  organizationId String?
+  userId         String?
+  actionType     AuditActionType
+  event          String          /// e.g., ORG_CREATED, SESSION_STARTED
+  description    String?
+  targetType     String?
+  targetId       String?
+  ipAddress      String?
+  userAgent      String?
+  metadata       Json            @default("{}")
+  createdAt      DateTime        @default(now())
+
+  organization   Organization?   @relation("OrganizationAuditLogs", fields: [organizationId], references: [id])
+  user           User?           @relation("UserAuditLogs", fields: [userId], references: [id])
+
+  @@index([organizationId, createdAt])
+  @@index([userId])
+  @@index([actionType])
+}
+
+/// Stored file / asset (فایل)
+model Asset {
+  id             String    @id @default(cuid())
+  organizationId String?
+  type           AssetType
+  filename       String
+  mimeType       String
+  sizeBytes      Int
+  url            String     /// CDN / storage URL
+  checksum       String?
+  createdAt      DateTime   @default(now())
+  deletedAt      DateTime?
+
+  organization   Organization? @relation("OrganizationAssets", fields: [organizationId], references: [id])
+  users          User[]        @relation("UserAvatarAsset")
+
+  @@index([organizationId, type])
+  @@index([filename])
+}
+
+// ------------------------------
+// End of schema
+// ------------------------------
+
+

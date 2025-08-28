@@ -531,6 +531,26 @@ importers:
         specifier: ^5.9.2
         version: 5.9.2
 
+  packages/database/evalia:
+    dependencies:
+      '@prisma/client':
+        specifier: ^6.14.0
+        version: 6.14.0(prisma@6.14.0(typescript@5.9.2))(typescript@5.9.2)
+    devDependencies:
+      prisma:
+        specifier: ^6.14.0
+        version: 6.14.0(typescript@5.9.2)
+
+  packages/database/test-evalia:
+    dependencies:
+      '@prisma/client':
+        specifier: ^6.14.0
+        version: 6.14.0(prisma@6.14.0(typescript@5.9.2))(typescript@5.9.2)
+    devDependencies:
+      prisma:
+        specifier: ^6.14.0
+        version: 6.14.0(typescript@5.9.2)
+
 packages:
 
   '@alloc/quick-lru@5.2.0':
