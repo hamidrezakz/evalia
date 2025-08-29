@@ -1,6 +1,14 @@
 packages:
-  - 'apps/*'
-  - 'apps/web/*'
-  - 'packages/*'
-  - 'apps/api/*'
-  - 'packages/database/*'
+  - apps/*
+  - apps/web/*
+  - packages/*
+  - apps/api/*
+  - packages/database/*
+
+ignoredBuiltDependencies:
+  - "@nestjs/core"
+  - "@swc/core"
+  - "@tailwindcss/oxide"
+  - sharp
+  - unrs-resolver
+  # Removed prisma exclusions so that @prisma/client build scripts (generate) execute properly

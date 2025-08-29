@@ -9,9 +9,8 @@ export class AppService {
     return 'Hello World!';
   }
 
-  // Health check: test DB connection
-  async dbPing(): Promise<string> {
+  async dbPing(): Promise<'OK'> {
     await this.prisma.$queryRaw`SELECT 1`;
-    return 'DB OK';
+    return 'OK';
   }
 }

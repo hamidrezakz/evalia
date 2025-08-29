@@ -6,7 +6,7 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
+  // Removed custom output so generated client goes to node_modules/.prisma and is re-exported via @prisma/client
 }
 
 datasource db {

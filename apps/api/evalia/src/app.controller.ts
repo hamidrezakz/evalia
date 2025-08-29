@@ -1,13 +1,9 @@
 import { Controller, Get } from '@nestjs/common';
 import { AppService } from './app.service';
-import { PrismaService } from './prisma.service';
 
 @Controller()
 export class AppController {
-  constructor(
-    private readonly appService: AppService,
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly appService: AppService) {}
 
   @Get()
   getHello(): string {
@@ -16,8 +12,11 @@ export class AppController {
 
   @Get('health')
   async health(): Promise<{ db: string }> {
-    await this.prisma.$connect();
-    await this.prisma.$disconnect();
-    return { db: 'ok' };
+    try {
+      await this.appService.dbPing();
+      return { db: 'ok' };
+    } catch (e) {
+      return { db: 'error' };
+    }
   }
 }
