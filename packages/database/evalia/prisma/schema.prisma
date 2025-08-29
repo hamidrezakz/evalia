@@ -187,6 +187,22 @@ enum OrganizationStatus {
   ARCHIVED
 }
 
+/// Identifier type for verification (نوع شناسه برای تایید)
+enum VerificationIdentifierType {
+  EMAIL
+  PHONE
+}
+
+/// Purpose of verification code (هدف کد تایید)
+enum VerificationPurpose {
+  LOGIN
+  PASSWORD_RESET
+  MFA
+  EMAIL_VERIFY
+  PHONE_VERIFY
+  SENSITIVE_ACTION
+}
+
 /// Soft delete strategy: each soft-deletable model has deletedAt nullable timestamp
 
 // ------------------------------
@@ -198,6 +214,14 @@ model User {
   id            String        @id @default(cuid())
   email         String        @unique
   emailVerified DateTime?
+  /// Raw phone number entered by user (input) | شماره خام ورودی کاربر
+  phoneNumber   String?       @db.VarChar(32)
+  /// Normalized E.164 phone (e.g. +989121234567) | شماره نرمال شده استاندارد E.164
+  phoneNormalized String?     @unique @db.VarChar(32)
+  /// Country code (ISO 3166-1 alpha-2) derived | کد کشور استخراج شده
+  phoneCountry  String?       @db.Char(2)
+  /// When phone verified | زمان تایید شماره
+  phoneVerifiedAt DateTime?
   passwordHash  String?       /// null when password-less (OAuth)
   provider      AuthProvider  @default(PASSWORD)
   firstName     String
@@ -238,6 +262,7 @@ model User {
 
   @@index([fullName])
   @@index([status])
+  @@index([phoneNormalized])
 }
 
 /// Organization (سازمان)
@@ -691,7 +716,9 @@ model AIAnalysisResult {
 model Invitation {
   id             String     @id @default(cuid())
   organizationId String
-  email          String
+  email          String?
+  /// Optional: invite by phone (normalized E.164) | دعوت با شماره
+  invitedPhone   String?    @db.VarChar(32)
   inviterId      String
   role           OrgRole    @default(MEMBER)
   token          String     @unique
@@ -704,6 +731,7 @@ model Invitation {
   inviter        User         @relation("InvitationSender", fields: [inviterId], references: [id])
 
   @@index([organizationId, email])
+  @@index([organizationId, invitedPhone])
 }
 
 /// In-app or external notification (اعلان)
@@ -767,6 +795,34 @@ model Asset {
 
   @@index([organizationId, type])
   @@index([filename])
+}
+
+/// Verification code for email / phone flows (کد تایید موقت)
+model VerificationCode {
+  id             String                     @id @default(cuid())
+  identifierType VerificationIdentifierType
+  purpose        VerificationPurpose
+  /// Email or phone normalized depending on identifierType | ایمیل یا شماره نرمال
+  identifier     String
+  /// Hashed code (never store raw) | کد هش شده
+  codeHash       String @db.VarChar(128)
+  /// Optional: number of attempts used | تعداد تلاش‌ها
+  attempts       Int    @default(0)
+  /// Max allowed attempts (policy snapshot) | سقف مجاز تلاش
+  maxAttempts    Int    @default(5)
+  /// Metadata snapshot (IP, UA, locale) | متادیتای ایجاد
+  meta           Json   @default("{}")
+  /// Expiration time | زمان انقضا
+  expiresAt      DateTime
+  /// Consumed time (if used) | زمان مصرف
+  consumedAt     DateTime?
+  createdAt      DateTime @default(now())
+
+  @@index([identifierType, identifier])
+  @@index([purpose])
+  @@index([expiresAt])
+  @@index([consumedAt])
+  @@index([identifier, purpose, expiresAt])
 }
 
 // ------------------------------
