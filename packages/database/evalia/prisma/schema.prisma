@@ -6,8 +6,8 @@
 
 generator client {
   provider = "prisma-client-js"
-  // Removed custom output so generated client goes to node_modules/.prisma and is re-exported via @prisma/client
-}
+  output   = "../generated/prisma"
+  }
 
 datasource db {
   provider = "postgresql"
@@ -211,11 +211,9 @@ enum VerificationPurpose {
 
 /// User account (کاربر)
 model User {
-  id            String        @id @default(cuid())
-  email         String        @unique
+  id            Int           @id @default(autoincrement())
+  email         String?       @unique
   emailVerified DateTime?
-  /// Raw phone number entered by user (input) | شماره خام ورودی کاربر
-  phoneNumber   String?       @db.VarChar(32)
   /// Normalized E.164 phone (e.g. +989121234567) | شماره نرمال شده استاندارد E.164
   phoneNormalized String?     @unique @db.VarChar(32)
   /// Country code (ISO 3166-1 alpha-2) derived | کد کشور استخراج شده
@@ -230,7 +228,7 @@ model User {
   locale        Locale        @default(FA)
   gender        Gender?
   status        UserStatus    @default(ACTIVE)
-  avatarAssetId String?       @unique
+  avatarAssetId Int?          @unique
   /// Relation: User -> Asset (Avatar) | کاربر به فایل آواتار
   avatarAsset   Asset?        @relation("UserAvatarAsset", fields: [avatarAssetId], references: [id])
   createdAt     DateTime      @default(now())
@@ -259,6 +257,7 @@ model User {
   createdOrganizations Organization[] @relation("OrganizationsCreated")
   /// Service assignments (facilitator / analysis manager) | تخصیص‌های خدماتی
   serviceAssignments OrganizationServiceAssignment[] @relation("UserServiceAssignments")
+  refreshTokens RefreshToken[]
 
   @@index([fullName])
   @@index([status])
@@ -267,13 +266,13 @@ model User {
 
 /// Organization (سازمان)
 model Organization {
-  id             String                     @id @default(cuid())
+  id             Int                        @id @default(autoincrement())
   name           String
   slug           String                     @unique
   plan           OrgPlan                    @default(FREE)
   timezone       String                     @default("Asia/Tehran")
   locale         Locale                     @default(FA)
-  primaryOwnerId String?
+  primaryOwnerId Int?
   /// Primary owner relation | مالک اصلی سازمان
   primaryOwner   User?                      @relation("OrgPrimaryOwner", fields: [primaryOwnerId], references: [id])
   settings       Json                       @default("{}") /// arbitrary org-level settings
@@ -281,7 +280,7 @@ model Organization {
   trialEndsAt    DateTime?
   billingEmail   String?
   lockedAt       DateTime?                  /// if suspended/locked
-  createdById    String?                    /// platform user who created the org
+  createdById    Int?                       /// platform user who created the org
   /// Platform user who created this org | کاربر پلتفرمی سازنده
   createdBy      User?                      @relation("OrganizationsCreated", fields: [createdById], references: [id])
   createdAt      DateTime                   @default(now())
@@ -309,9 +308,9 @@ model Organization {
 /// Assignment of a platform-level service role (facilitator, analysis manager, etc.) to specific organizations
 /// کاربر پلتفرمی که به یک سازمان به عنوان تسهیلگر یا مدیر تحلیل متصل می‌شود
 model OrganizationServiceAssignment {
-  id             String        @id @default(cuid())
-  organizationId String
-  userId         String
+  id             Int           @id @default(autoincrement())
+  organizationId Int
+  userId         Int
   role           PlatformRole  /// Only certain roles make sense (FACILITATOR / ANALYSIS_MANAGER / SUPPORT)
   active         Boolean       @default(true)
   notes          String?
@@ -328,9 +327,9 @@ model OrganizationServiceAssignment {
 
 /// Membership tying a user to an organization with a role (عضویت کاربر در سازمان)
 model OrganizationMembership {
-  id             String    @id @default(cuid())
-  userId         String
-  organizationId String
+  id             Int       @id @default(autoincrement())
+  userId         Int
+  organizationId Int
   role           OrgRole   @default(MEMBER)
   /// Extra permission links | مجوزهای اضافه
   permissions    PermissionOnMembership[] @relation("MembershipPermissions")
@@ -347,8 +346,8 @@ model OrganizationMembership {
 
 /// Join table for attaching extra permissions to a membership (مجوزهای اضافه)
 model PermissionOnMembership {
-  id          String         @id @default(cuid())
-  membershipId String
+  id          Int            @id @default(autoincrement())
+  membershipId Int
   code        PermissionCode
   createdAt   DateTime       @default(now())
 
@@ -360,8 +359,8 @@ model PermissionOnMembership {
 
 /// Team within organization (تیم)
 model Team {
-  id             String    @id @default(cuid())
-  organizationId String
+  id             Int       @id @default(autoincrement())
+  organizationId Int
   name           String
   slug           String
   description    String?
@@ -379,9 +378,9 @@ model Team {
 
 /// Membership of user in team (عضویت کاربر در تیم)
 model TeamMembership {
-  id        String   @id @default(cuid())
-  teamId    String
-  userId    String
+  id        Int      @id @default(autoincrement())
+  teamId    Int
+  userId    Int
   createdAt DateTime @default(now())
   deletedAt DateTime?
 
@@ -398,10 +397,10 @@ model TeamMembership {
 
 /// Navigation items configurable per org & role (آیتم منو)
 model NavigationItem {
-  id             String      @id @default(cuid())
-  organizationId String
+  id             Int         @id @default(autoincrement())
+  organizationId Int
   role           OrgRole
-  parentId       String?     /// for nested menus
+  parentId       Int?        /// for nested menus
   label          String
   path           String?     /// internal route
   externalUrl    String?     /// external link override
@@ -424,7 +423,7 @@ model NavigationItem {
 
 /// Dashboard widget definition registry (تعریف ویجت)
 model WidgetDefinition {
-  id          String     @id @default(cuid())
+  id          Int        @id @default(autoincrement())
   key         String     @unique
   kind        WidgetKind
   title       String
@@ -439,8 +438,8 @@ model WidgetDefinition {
 
 /// Dashboard configuration for org & role combination (پیکربندی داشبورد)
 model DashboardConfig {
-  id             String    @id @default(cuid())
-  organizationId String
+  id             Int       @id @default(autoincrement())
+  organizationId Int
   role           OrgRole
   title          String    @default("")
   layout         Json      @default("{}") /// persisted layout engine state
@@ -456,9 +455,9 @@ model DashboardConfig {
 
 /// Individual widget instance placed on a dashboard (ویجت داشبورد)
 model DashboardWidget {
-  id              String           @id @default(cuid())
-  dashboardId     String
-  widgetDefinitionId String
+  id              Int              @id @default(autoincrement())
+  dashboardId     Int
+  widgetDefinitionId Int
   title           String?
   position        Json             @default("{}") /// x,y,w,h or grid config
   config          Json             @default("{}") /// user-specified config
@@ -476,8 +475,8 @@ model DashboardWidget {
 
 /// Bank of questions - can be global (organizationId null) or org-specific (بانک سوال)
 model QuestionBank {
-  id             String          @id @default(cuid())
-  organizationId String?
+  id             Int             @id @default(autoincrement())
+  organizationId Int?
   name           String
   description    String?
   isSystem       Boolean         @default(false)
@@ -494,8 +493,8 @@ model QuestionBank {
 
 /// A single question in a bank (سوال)
 model Question {
-  id             String       @id @default(cuid())
-  bankId         String
+  id             Int          @id @default(autoincrement())
+  bankId         Int
   code           String?      /// optional human code
   text           String
   type           QuestionType
@@ -516,8 +515,8 @@ model Question {
 
 /// Option for multiple choice questions (گزینه)
 model QuestionOption {
-  id         String    @id @default(cuid())
-  questionId String
+  id         Int       @id @default(autoincrement())
+  questionId Int
   value      String
   label      String
   order      Int       @default(0)
@@ -531,8 +530,8 @@ model QuestionOption {
 
 /// Assessment template (قالب ارزیابی)
 model AssessmentTemplate {
-  id             String                @id @default(cuid())
-  organizationId String
+  id             Int                   @id @default(autoincrement())
+  organizationId Int
   name           String
   description    String?
   state          AssessmentState       @default(DRAFT)
@@ -551,8 +550,8 @@ model AssessmentTemplate {
 
 /// Section inside a template for grouping (بخش)
 model AssessmentTemplateSection {
-  id          String       @id @default(cuid())
-  templateId  String
+  id          Int          @id @default(autoincrement())
+  templateId  Int
   title       String
   order       Int          @default(0)
   createdAt   DateTime     @default(now())
@@ -568,9 +567,9 @@ model AssessmentTemplateSection {
 
 /// Link between section and question with ordering & perspective rules (لینک سوال)
 model AssessmentTemplateQuestion {
-  id             String      @id @default(cuid())
-  sectionId      String
-  questionId     String
+  id             Int         @id @default(autoincrement())
+  sectionId      Int
+  questionId     Int
   order          Int         @default(0)
   perspectives   ResponsePerspective[] /// which perspectives answer this question
   required       Boolean     @default(true)
@@ -587,10 +586,10 @@ model AssessmentTemplateQuestion {
 
 /// A scheduled execution of a template (جلسه ارزیابی)
 model AssessmentSession {
-  id             String        @id @default(cuid())
-  organizationId String
-  templateId     String
-  teamScopeId    String?       /// optional: restrict to one team
+  id             Int           @id @default(autoincrement())
+  organizationId Int
+  templateId     Int
+  teamScopeId    Int?          /// optional: restrict to one team
   name           String
   description    String?
   state          SessionState  @default(SCHEDULED)
@@ -616,9 +615,9 @@ model AssessmentSession {
 
 /// Participant assignment for a session (تخصیص شرکت کننده)
 model AssessmentAssignment {
-  id          String             @id @default(cuid())
-  sessionId   String
-  userId      String
+  id          Int                @id @default(autoincrement())
+  sessionId   Int
+  userId      Int
   perspective ResponsePerspective @default(SELF)
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
@@ -633,10 +632,10 @@ model AssessmentAssignment {
 
 /// Individual response to a template question by an assignment (پاسخ)
 model AssessmentResponse {
-  id                String                  @id @default(cuid())
-  assignmentId      String
-  sessionId         String
-  templateQuestionId String
+  id                Int                     @id @default(autoincrement())
+  assignmentId      Int
+  sessionId         Int
+  templateQuestionId Int
   scaleValue        Int?
   optionValue       String?                 /// for single/multi choice (store chosen option value when single)
   optionValues      String[]                /// for multi choice
@@ -655,9 +654,9 @@ model AssessmentResponse {
 
 /// Aggregated score caching (امتیاز تجمیعی)
 model AssessmentAggregateScore {
-  id           String             @id @default(cuid())
-  sessionId    String
-  questionId   String
+  id           Int                @id @default(autoincrement())
+  sessionId    Int
+  questionId   Int
   perspective  ResponsePerspective
   avgScale     Float?
   distribution Json              @default("{}") /// histogram, etc.
@@ -676,9 +675,9 @@ model AssessmentAggregateScore {
 
 /// AI analysis processing job (کار پردازش AI)
 model AIAnalysisJob {
-  id           String        @id @default(cuid())
-  sessionId    String
-  requestedById String
+  id           Int           @id @default(autoincrement())
+  sessionId    Int
+  requestedById Int
   status       AIJobStatus   @default(QUEUED)
   inputSpec    Json          @default("{}") /// snapshot of prompt & parameters
   outputSpec   Json?         /// final output summary
@@ -696,8 +695,8 @@ model AIAnalysisJob {
 
 /// AI produced structured result (خروجی AI)
 model AIAnalysisResult {
-  id        String        @id @default(cuid())
-  jobId     String
+  id        Int           @id @default(autoincrement())
+  jobId     Int
   kind      String        /// e.g., "SUMMARY", "THEME", "SENTIMENT", "RISK"
   payload   Json          @default("{}")
   createdAt DateTime      @default(now())
@@ -714,12 +713,12 @@ model AIAnalysisResult {
 
 /// Invitation to organization (دعوت)
 model Invitation {
-  id             String     @id @default(cuid())
-  organizationId String
+  id             Int        @id @default(autoincrement())
+  organizationId Int
   email          String?
   /// Optional: invite by phone (normalized E.164) | دعوت با شماره
   invitedPhone   String?    @db.VarChar(32)
-  inviterId      String
+  inviterId      Int
   role           OrgRole    @default(MEMBER)
   token          String     @unique
   acceptedAt     DateTime?
@@ -736,9 +735,9 @@ model Invitation {
 
 /// In-app or external notification (اعلان)
 model Notification {
-  id             String              @id @default(cuid())
-  userId         String
-  organizationId String?
+  id             Int                 @id @default(autoincrement())
+  userId         Int
+  organizationId Int?
   channel        NotificationChannel @default(IN_APP)
   status         NotificationStatus  @default(PENDING)
   title          String
@@ -756,9 +755,9 @@ model Notification {
 
 /// Audit log entry (لاگ ممیزی)
 model AuditLog {
-  id             String          @id @default(cuid())
-  organizationId String?
-  userId         String?
+  id             Int             @id @default(autoincrement())
+  organizationId Int?
+  userId         Int?
   actionType     AuditActionType
   event          String          /// e.g., ORG_CREATED, SESSION_STARTED
   description    String?
@@ -779,8 +778,8 @@ model AuditLog {
 
 /// Stored file / asset (فایل)
 model Asset {
-  id             String    @id @default(cuid())
-  organizationId String?
+  id             Int       @id @default(autoincrement())
+  organizationId Int?
   type           AssetType
   filename       String
   mimeType       String
@@ -799,7 +798,7 @@ model Asset {
 
 /// Verification code for email / phone flows (کد تایید موقت)
 model VerificationCode {
-  id             String                     @id @default(cuid())
+  id             Int                        @id @default(autoincrement())
   identifierType VerificationIdentifierType
   purpose        VerificationPurpose
   /// Email or phone normalized depending on identifierType | ایمیل یا شماره نرمال
@@ -823,6 +822,27 @@ model VerificationCode {
   @@index([expiresAt])
   @@index([consumedAt])
   @@index([identifier, purpose, expiresAt])
+}
+
+/// Persisted refresh tokens for sessions (توکن رفرش ذخیره شده)
+model RefreshToken {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  jti         String   @unique               /// JWT ID claim stored for reference
+  tokenHash   String   @db.VarChar(128)      /// SHA-256 hash of the raw refresh token (never store raw)
+  ipAddress   String?  @db.VarChar(64)
+  userAgent   String?  @db.VarChar(256)
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  replacedById Int?
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  replacedBy  RefreshToken? @relation("RefreshTokenReplacement", fields: [replacedById], references: [id])
+  previous    RefreshToken[] @relation("RefreshTokenReplacement")
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 // ------------------------------

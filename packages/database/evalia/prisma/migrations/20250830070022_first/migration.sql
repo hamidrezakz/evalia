@@ -55,11 +55,20 @@ CREATE TYPE "public"."PlatformRole" AS ENUM ('SUPER_ADMIN', 'ANALYSIS_MANAGER', 
 -- CreateEnum
 CREATE TYPE "public"."OrganizationStatus" AS ENUM ('ACTIVE', 'SUSPENDED', 'ARCHIVED');
 
+-- CreateEnum
+CREATE TYPE "public"."VerificationIdentifierType" AS ENUM ('EMAIL', 'PHONE');
+
+-- CreateEnum
+CREATE TYPE "public"."VerificationPurpose" AS ENUM ('LOGIN', 'PASSWORD_RESET', 'MFA', 'EMAIL_VERIFY', 'PHONE_VERIFY', 'SENSITIVE_ACTION');
+
 -- CreateTable
 CREATE TABLE "public"."User" (
-    "id" TEXT NOT NULL,
-    "email" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
+    "email" TEXT,
     "emailVerified" TIMESTAMP(3),
+    "phoneNormalized" VARCHAR(32),
+    "phoneCountry" CHAR(2),
+    "phoneVerifiedAt" TIMESTAMP(3),
     "passwordHash" TEXT,
     "provider" "public"."AuthProvider" NOT NULL DEFAULT 'PASSWORD',
     "firstName" TEXT NOT NULL,
@@ -68,7 +77,7 @@ CREATE TABLE "public"."User" (
     "locale" "public"."Locale" NOT NULL DEFAULT 'FA',
     "gender" "public"."Gender",
     "status" "public"."UserStatus" NOT NULL DEFAULT 'ACTIVE',
-    "avatarAssetId" TEXT,
+    "avatarAssetId" INTEGER,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "deletedAt" TIMESTAMP(3),
@@ -79,19 +88,19 @@ CREATE TABLE "public"."User" (
 
 -- CreateTable
 CREATE TABLE "public"."Organization" (
-    "id" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
     "name" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
     "plan" "public"."OrgPlan" NOT NULL DEFAULT 'FREE',
     "timezone" TEXT NOT NULL DEFAULT 'Asia/Tehran',
     "locale" "public"."Locale" NOT NULL DEFAULT 'FA',
-    "primaryOwnerId" TEXT,
+    "primaryOwnerId" INTEGER,
     "settings" JSONB NOT NULL DEFAULT '{}',
     "status" "public"."OrganizationStatus" NOT NULL DEFAULT 'ACTIVE',
     "trialEndsAt" TIMESTAMP(3),
     "billingEmail" TEXT,
     "lockedAt" TIMESTAMP(3),
-    "createdById" TEXT,
+    "createdById" INTEGER,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "deletedAt" TIMESTAMP(3),
@@ -101,9 +110,9 @@ CREATE TABLE "public"."Organization" (
 
 -- CreateTable
 CREATE TABLE "public"."OrganizationServiceAssignment" (
-    "id" TEXT NOT NULL,
-    "organizationId" TEXT NOT NULL,
-    "userId" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
+    "organizationId" INTEGER NOT NULL,
+    "userId" INTEGER NOT NULL,
     "role" "public"."PlatformRole" NOT NULL,
     "active" BOOLEAN NOT NULL DEFAULT true,
     "notes" TEXT,
@@ -115,9 +124,9 @@ CREATE TABLE "public"."OrganizationServiceAssignment" (
 
 -- CreateTable
 CREATE TABLE "public"."OrganizationMembership" (
-    "id" TEXT NOT NULL,
-    "userId" TEXT NOT NULL,
-    "organizationId" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
+    "userId" INTEGER NOT NULL,
+    "organizationId" INTEGER NOT NULL,
     "role" "public"."OrgRole" NOT NULL DEFAULT 'MEMBER',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -128,8 +137,8 @@ CREATE TABLE "public"."OrganizationMembership" (
 
 -- CreateTable
 CREATE TABLE "public"."PermissionOnMembership" (
-    "id" TEXT NOT NULL,
-    "membershipId" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
+    "membershipId" INTEGER NOT NULL,
     "code" "public"."PermissionCode" NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -138,8 +147,8 @@ CREATE TABLE "public"."PermissionOnMembership" (
 
 -- CreateTable
 CREATE TABLE "public"."Team" (
-    "id" TEXT NOT NULL,
-    "organizationId" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
+    "organizationId" INTEGER NOT NULL,
     "name" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
     "description" TEXT,
@@ -152,9 +161,9 @@ CREATE TABLE "public"."Team" (
 
 -- CreateTable
 CREATE TABLE "public"."TeamMembership" (
-    "id" TEXT NOT NULL,
-    "teamId" TEXT NOT NULL,
-    "userId" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
+    "teamId" INTEGER NOT NULL,
+    "userId" INTEGER NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "deletedAt" TIMESTAMP(3),
 
@@ -163,10 +172,10 @@ CREATE TABLE "public"."TeamMembership" (
 
 -- CreateTable
 CREATE TABLE "public"."NavigationItem" (
-    "id" TEXT NOT NULL,
-    "organizationId" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
+    "organizationId" INTEGER NOT NULL,
     "role" "public"."OrgRole" NOT NULL,
-    "parentId" TEXT,
+    "parentId" INTEGER,
     "label" TEXT NOT NULL,
     "path" TEXT,
     "externalUrl" TEXT,
@@ -183,7 +192,7 @@ CREATE TABLE "public"."NavigationItem" (
 
 -- CreateTable
 CREATE TABLE "public"."WidgetDefinition" (
-    "id" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
     "key" TEXT NOT NULL,
     "kind" "public"."WidgetKind" NOT NULL,
     "title" TEXT NOT NULL,
@@ -198,8 +207,8 @@ CREATE TABLE "public"."WidgetDefinition" (
 
 -- CreateTable
 CREATE TABLE "public"."DashboardConfig" (
-    "id" TEXT NOT NULL,
-    "organizationId" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
+    "organizationId" INTEGER NOT NULL,
     "role" "public"."OrgRole" NOT NULL,
     "title" TEXT NOT NULL DEFAULT '',
     "layout" JSONB NOT NULL DEFAULT '{}',
@@ -212,9 +221,9 @@ CREATE TABLE "public"."DashboardConfig" (
 
 -- CreateTable
 CREATE TABLE "public"."DashboardWidget" (
-    "id" TEXT NOT NULL,
-    "dashboardId" TEXT NOT NULL,
-    "widgetDefinitionId" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
+    "dashboardId" INTEGER NOT NULL,
+    "widgetDefinitionId" INTEGER NOT NULL,
     "title" TEXT,
     "position" JSONB NOT NULL DEFAULT '{}',
     "config" JSONB NOT NULL DEFAULT '{}',
@@ -227,8 +236,8 @@ CREATE TABLE "public"."DashboardWidget" (
 
 -- CreateTable
 CREATE TABLE "public"."QuestionBank" (
-    "id" TEXT NOT NULL,
-    "organizationId" TEXT,
+    "id" SERIAL NOT NULL,
+    "organizationId" INTEGER,
     "name" TEXT NOT NULL,
     "description" TEXT,
     "isSystem" BOOLEAN NOT NULL DEFAULT false,
@@ -241,8 +250,8 @@ CREATE TABLE "public"."QuestionBank" (
 
 -- CreateTable
 CREATE TABLE "public"."Question" (
-    "id" TEXT NOT NULL,
-    "bankId" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
+    "bankId" INTEGER NOT NULL,
     "code" TEXT,
     "text" TEXT NOT NULL,
     "type" "public"."QuestionType" NOT NULL,
@@ -258,8 +267,8 @@ CREATE TABLE "public"."Question" (
 
 -- CreateTable
 CREATE TABLE "public"."QuestionOption" (
-    "id" TEXT NOT NULL,
-    "questionId" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
+    "questionId" INTEGER NOT NULL,
     "value" TEXT NOT NULL,
     "label" TEXT NOT NULL,
     "order" INTEGER NOT NULL DEFAULT 0,
@@ -270,8 +279,8 @@ CREATE TABLE "public"."QuestionOption" (
 
 -- CreateTable
 CREATE TABLE "public"."AssessmentTemplate" (
-    "id" TEXT NOT NULL,
-    "organizationId" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
+    "organizationId" INTEGER NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT,
     "state" "public"."AssessmentState" NOT NULL DEFAULT 'DRAFT',
@@ -285,8 +294,8 @@ CREATE TABLE "public"."AssessmentTemplate" (
 
 -- CreateTable
 CREATE TABLE "public"."AssessmentTemplateSection" (
-    "id" TEXT NOT NULL,
-    "templateId" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
+    "templateId" INTEGER NOT NULL,
     "title" TEXT NOT NULL,
     "order" INTEGER NOT NULL DEFAULT 0,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -298,9 +307,9 @@ CREATE TABLE "public"."AssessmentTemplateSection" (
 
 -- CreateTable
 CREATE TABLE "public"."AssessmentTemplateQuestion" (
-    "id" TEXT NOT NULL,
-    "sectionId" TEXT NOT NULL,
-    "questionId" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
+    "sectionId" INTEGER NOT NULL,
+    "questionId" INTEGER NOT NULL,
     "order" INTEGER NOT NULL DEFAULT 0,
     "perspectives" "public"."ResponsePerspective"[],
     "required" BOOLEAN NOT NULL DEFAULT true,
@@ -312,10 +321,10 @@ CREATE TABLE "public"."AssessmentTemplateQuestion" (
 
 -- CreateTable
 CREATE TABLE "public"."AssessmentSession" (
-    "id" TEXT NOT NULL,
-    "organizationId" TEXT NOT NULL,
-    "templateId" TEXT NOT NULL,
-    "teamScopeId" TEXT,
+    "id" SERIAL NOT NULL,
+    "organizationId" INTEGER NOT NULL,
+    "templateId" INTEGER NOT NULL,
+    "teamScopeId" INTEGER,
     "name" TEXT NOT NULL,
     "description" TEXT,
     "state" "public"."SessionState" NOT NULL DEFAULT 'SCHEDULED',
@@ -331,9 +340,9 @@ CREATE TABLE "public"."AssessmentSession" (
 
 -- CreateTable
 CREATE TABLE "public"."AssessmentAssignment" (
-    "id" TEXT NOT NULL,
-    "sessionId" TEXT NOT NULL,
-    "userId" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
+    "sessionId" INTEGER NOT NULL,
+    "userId" INTEGER NOT NULL,
     "perspective" "public"."ResponsePerspective" NOT NULL DEFAULT 'SELF',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -343,10 +352,10 @@ CREATE TABLE "public"."AssessmentAssignment" (
 
 -- CreateTable
 CREATE TABLE "public"."AssessmentResponse" (
-    "id" TEXT NOT NULL,
-    "assignmentId" TEXT NOT NULL,
-    "sessionId" TEXT NOT NULL,
-    "templateQuestionId" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
+    "assignmentId" INTEGER NOT NULL,
+    "sessionId" INTEGER NOT NULL,
+    "templateQuestionId" INTEGER NOT NULL,
     "scaleValue" INTEGER,
     "optionValue" TEXT,
     "optionValues" TEXT[],
@@ -359,9 +368,9 @@ CREATE TABLE "public"."AssessmentResponse" (
 
 -- CreateTable
 CREATE TABLE "public"."AssessmentAggregateScore" (
-    "id" TEXT NOT NULL,
-    "sessionId" TEXT NOT NULL,
-    "questionId" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
+    "sessionId" INTEGER NOT NULL,
+    "questionId" INTEGER NOT NULL,
     "perspective" "public"."ResponsePerspective" NOT NULL,
     "avgScale" DOUBLE PRECISION,
     "distribution" JSONB NOT NULL DEFAULT '{}',
@@ -372,9 +381,9 @@ CREATE TABLE "public"."AssessmentAggregateScore" (
 
 -- CreateTable
 CREATE TABLE "public"."AIAnalysisJob" (
-    "id" TEXT NOT NULL,
-    "sessionId" TEXT NOT NULL,
-    "requestedById" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
+    "sessionId" INTEGER NOT NULL,
+    "requestedById" INTEGER NOT NULL,
     "status" "public"."AIJobStatus" NOT NULL DEFAULT 'QUEUED',
     "inputSpec" JSONB NOT NULL DEFAULT '{}',
     "outputSpec" JSONB,
@@ -388,8 +397,8 @@ CREATE TABLE "public"."AIAnalysisJob" (
 
 -- CreateTable
 CREATE TABLE "public"."AIAnalysisResult" (
-    "id" TEXT NOT NULL,
-    "jobId" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
+    "jobId" INTEGER NOT NULL,
     "kind" TEXT NOT NULL,
     "payload" JSONB NOT NULL DEFAULT '{}',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -399,10 +408,11 @@ CREATE TABLE "public"."AIAnalysisResult" (
 
 -- CreateTable
 CREATE TABLE "public"."Invitation" (
-    "id" TEXT NOT NULL,
-    "organizationId" TEXT NOT NULL,
-    "email" TEXT NOT NULL,
-    "inviterId" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
+    "organizationId" INTEGER NOT NULL,
+    "email" TEXT,
+    "invitedPhone" VARCHAR(32),
+    "inviterId" INTEGER NOT NULL,
     "role" "public"."OrgRole" NOT NULL DEFAULT 'MEMBER',
     "token" TEXT NOT NULL,
     "acceptedAt" TIMESTAMP(3),
@@ -415,9 +425,9 @@ CREATE TABLE "public"."Invitation" (
 
 -- CreateTable
 CREATE TABLE "public"."Notification" (
-    "id" TEXT NOT NULL,
-    "userId" TEXT NOT NULL,
-    "organizationId" TEXT,
+    "id" SERIAL NOT NULL,
+    "userId" INTEGER NOT NULL,
+    "organizationId" INTEGER,
     "channel" "public"."NotificationChannel" NOT NULL DEFAULT 'IN_APP',
     "status" "public"."NotificationStatus" NOT NULL DEFAULT 'PENDING',
     "title" TEXT NOT NULL,
@@ -432,9 +442,9 @@ CREATE TABLE "public"."Notification" (
 
 -- CreateTable
 CREATE TABLE "public"."AuditLog" (
-    "id" TEXT NOT NULL,
-    "organizationId" TEXT,
-    "userId" TEXT,
+    "id" SERIAL NOT NULL,
+    "organizationId" INTEGER,
+    "userId" INTEGER,
     "actionType" "public"."AuditActionType" NOT NULL,
     "event" TEXT NOT NULL,
     "description" TEXT,
@@ -450,8 +460,8 @@ CREATE TABLE "public"."AuditLog" (
 
 -- CreateTable
 CREATE TABLE "public"."Asset" (
-    "id" TEXT NOT NULL,
-    "organizationId" TEXT,
+    "id" SERIAL NOT NULL,
+    "organizationId" INTEGER,
     "type" "public"."AssetType" NOT NULL,
     "filename" TEXT NOT NULL,
     "mimeType" TEXT NOT NULL,
@@ -464,8 +474,44 @@ CREATE TABLE "public"."Asset" (
     CONSTRAINT "Asset_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "public"."VerificationCode" (
+    "id" SERIAL NOT NULL,
+    "identifierType" "public"."VerificationIdentifierType" NOT NULL,
+    "purpose" "public"."VerificationPurpose" NOT NULL,
+    "identifier" TEXT NOT NULL,
+    "codeHash" VARCHAR(128) NOT NULL,
+    "attempts" INTEGER NOT NULL DEFAULT 0,
+    "maxAttempts" INTEGER NOT NULL DEFAULT 5,
+    "meta" JSONB NOT NULL DEFAULT '{}',
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "consumedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "VerificationCode_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."RefreshToken" (
+    "id" SERIAL NOT NULL,
+    "userId" INTEGER NOT NULL,
+    "jti" TEXT NOT NULL,
+    "tokenHash" VARCHAR(128) NOT NULL,
+    "ipAddress" VARCHAR(64),
+    "userAgent" VARCHAR(256),
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "revokedAt" TIMESTAMP(3),
+    "replacedById" INTEGER,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "RefreshToken_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "public"."User"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "User_phoneNormalized_key" ON "public"."User"("phoneNormalized");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "User_avatarAssetId_key" ON "public"."User"("avatarAssetId");
@@ -475,6 +521,9 @@ CREATE INDEX "User_fullName_idx" ON "public"."User"("fullName");
 
 -- CreateIndex
 CREATE INDEX "User_status_idx" ON "public"."User"("status");
+
+-- CreateIndex
+CREATE INDEX "User_phoneNormalized_idx" ON "public"."User"("phoneNormalized");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Organization_slug_key" ON "public"."Organization"("slug");
@@ -615,6 +664,9 @@ CREATE UNIQUE INDEX "Invitation_token_key" ON "public"."Invitation"("token");
 CREATE INDEX "Invitation_organizationId_email_idx" ON "public"."Invitation"("organizationId", "email");
 
 -- CreateIndex
+CREATE INDEX "Invitation_organizationId_invitedPhone_idx" ON "public"."Invitation"("organizationId", "invitedPhone");
+
+-- CreateIndex
 CREATE INDEX "Notification_userId_status_idx" ON "public"."Notification"("userId", "status");
 
 -- CreateIndex
@@ -631,6 +683,30 @@ CREATE INDEX "Asset_organizationId_type_idx" ON "public"."Asset"("organizationId
 
 -- CreateIndex
 CREATE INDEX "Asset_filename_idx" ON "public"."Asset"("filename");
+
+-- CreateIndex
+CREATE INDEX "VerificationCode_identifierType_identifier_idx" ON "public"."VerificationCode"("identifierType", "identifier");
+
+-- CreateIndex
+CREATE INDEX "VerificationCode_purpose_idx" ON "public"."VerificationCode"("purpose");
+
+-- CreateIndex
+CREATE INDEX "VerificationCode_expiresAt_idx" ON "public"."VerificationCode"("expiresAt");
+
+-- CreateIndex
+CREATE INDEX "VerificationCode_consumedAt_idx" ON "public"."VerificationCode"("consumedAt");
+
+-- CreateIndex
+CREATE INDEX "VerificationCode_identifier_purpose_expiresAt_idx" ON "public"."VerificationCode"("identifier", "purpose", "expiresAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "RefreshToken_jti_key" ON "public"."RefreshToken"("jti");
+
+-- CreateIndex
+CREATE INDEX "RefreshToken_userId_idx" ON "public"."RefreshToken"("userId");
+
+-- CreateIndex
+CREATE INDEX "RefreshToken_expiresAt_idx" ON "public"."RefreshToken"("expiresAt");
 
 -- AddForeignKey
 ALTER TABLE "public"."User" ADD CONSTRAINT "User_avatarAssetId_fkey" FOREIGN KEY ("avatarAssetId") REFERENCES "public"."Asset"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -760,3 +836,9 @@ ALTER TABLE "public"."AuditLog" ADD CONSTRAINT "AuditLog_userId_fkey" FOREIGN KE
 
 -- AddForeignKey
 ALTER TABLE "public"."Asset" ADD CONSTRAINT "Asset_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "public"."Organization"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."RefreshToken" ADD CONSTRAINT "RefreshToken_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."RefreshToken" ADD CONSTRAINT "RefreshToken_replacedById_fkey" FOREIGN KEY ("replacedById") REFERENCES "public"."RefreshToken"("id") ON DELETE SET NULL ON UPDATE CASCADE;
