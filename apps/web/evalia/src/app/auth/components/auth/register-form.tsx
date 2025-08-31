@@ -12,7 +12,6 @@ interface Props {
   onPasswordChange(v: string): void;
   onFirstNameChange(v: string): void;
   onLastNameChange(v: string): void;
-  onRegister(): void;
   onOtp(): void;
   onBack(): void;
 }
@@ -26,7 +25,6 @@ export function RegisterForm({
   onPasswordChange,
   onFirstNameChange,
   onLastNameChange,
-  onRegister,
   onOtp,
   onBack,
 }: Props) {
@@ -42,6 +40,7 @@ export function RegisterForm({
           <Input
             placeholder="نام"
             value={firstName}
+            autoFocus
             onChange={(e) => onFirstNameChange(e.target.value)}
           />
         </div>
@@ -68,7 +67,7 @@ export function RegisterForm({
         <Button
           disabled={loading || password.length < 6}
           className="flex-1"
-          onClick={onRegister}>
+          type="submit">
           ثبت‌نام
         </Button>
         <Button variant="secondary" type="button" onClick={onOtp}>

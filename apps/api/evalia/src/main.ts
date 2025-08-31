@@ -7,7 +7,7 @@ import { ValidationPipe } from '@nestjs/common';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   // Allow both LAN IP and localhost for frontend
-  const origins = (process.env.CORS_ORIGIN || 'http://192.168.84.199:3000,http://localhost:3000')
+  const origins = (process.env.CORS_ORIGIN || 'http://10.22.114.199:3000,http://localhost:3000')
     .split(',')
     .map((o) => o.trim());
   console.log('CORS allowed origins:', origins);

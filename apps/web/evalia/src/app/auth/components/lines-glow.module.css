@@ -1,0 +1,76 @@
+.linesGlowRoot {
+  position: fixed;
+  height: 100%;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: clamp(18px, 3vw, 38px);
+  background: var(--lines-bg, transparent);
+}
+.lineRow {
+  position: relative;
+  height: 1.5px;
+  width: 100vw;
+  max-width: 100%;
+  overflow: hidden;
+  background: transparent;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(120, 130, 150, 0.03),
+    0 0 8px 0 rgba(120, 130, 150, 0.03);
+}
+.glowAnim {
+  position: absolute;
+  left: -18%;
+  top: 0;
+  height: 100%;
+  width: 10%;
+  background: linear-gradient(
+    90deg,
+    rgba(59, 130, 246, 0.05) 0%,
+    rgba(59, 130, 246, 0.18) 20%,
+    rgba(255, 255, 255, 0.95) 50%,
+    #3b82f6 80%,
+    rgba(59, 130, 246, 0.12) 100%
+  );
+  filter: blur(6px) brightness(2.7) drop-shadow(0 0 24px #60a5fa)
+    drop-shadow(0 0 48px #3b82f6);
+  border-radius: 2px;
+  animation: glow-move 2.8s cubic-bezier(0.4, 0.7, 0.6, 1) infinite;
+  opacity: 1;
+  mix-blend-mode: lighten;
+}
+@keyframes glow-move {
+  0% {
+    left: -18%;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  50% {
+    left: 80%;
+    opacity: 1;
+  }
+  80% {
+    opacity: 0.5;
+  }
+  100% {
+    left: 110%;
+    opacity: 0;
+  }
+}
+.lineRow:nth-child(2) .glowAnim {
+  animation-delay: 0.7s;
+}
+.lineRow:nth-child(3) .glowAnim {
+  animation-delay: 1.3s;
+}
+.lineRow:nth-child(4) .glowAnim {
+  animation-delay: 2.1s;
+}
+.lineRow:nth-child(5) .glowAnim {
+  animation-delay: 2.7s;
+}

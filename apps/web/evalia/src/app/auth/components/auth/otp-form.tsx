@@ -10,7 +10,6 @@ interface Props {
   loading?: boolean;
   devCode?: string | null;
   onOtpChange(v: string): void;
-  onVerify(): void;
   onResend(): void;
 }
 
@@ -20,7 +19,6 @@ export function OtpForm({
   loading,
   devCode,
   onOtpChange,
-  onVerify,
   onResend,
 }: Props) {
   const [seconds, setSeconds] = useState(30);
@@ -59,7 +57,7 @@ export function OtpForm({
         <Button
           disabled={loading || otp.length < 6}
           className="flex-1"
-          onClick={onVerify}>
+          type="submit">
           تایید و ورود
         </Button>
         <Button

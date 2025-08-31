@@ -8,7 +8,6 @@ interface Props {
   password: string;
   loading?: boolean;
   onPasswordChange(v: string): void;
-  onLogin(): void;
   onOtp(): void;
   onGoRegister(): void;
 }
@@ -18,7 +17,6 @@ export function PasswordForm({
   password,
   loading,
   onPasswordChange,
-  onLogin,
   onOtp,
   onGoRegister,
 }: Props) {
@@ -33,6 +31,7 @@ export function PasswordForm({
         <Input
           type="password"
           placeholder="رمز عبور"
+          autoFocus
           value={password}
           onChange={(e) => onPasswordChange(e.target.value)}
           autoComplete="current-password"
@@ -42,7 +41,7 @@ export function PasswordForm({
         <Button
           disabled={loading || !password || password.length < 6}
           className="flex-1"
-          onClick={onLogin}>
+          type="submit">
           ورود
         </Button>
         <Button variant="secondary" type="button" onClick={onOtp}>

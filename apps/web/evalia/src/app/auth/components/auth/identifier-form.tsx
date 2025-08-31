@@ -8,16 +8,9 @@ interface Props {
   disabled?: boolean;
   loading?: boolean;
   onChange(v: string): void;
-  onSubmit(): void;
 }
 
-export function IdentifierForm({
-  phone,
-  onChange,
-  onSubmit,
-  disabled,
-  loading,
-}: Props) {
+export function IdentifierForm({ phone, onChange, disabled, loading }: Props) {
   return (
     <div className="space-y-2">
       <div className="relative">
@@ -29,13 +22,14 @@ export function IdentifierForm({
           disabled={disabled}
           autoComplete="tel"
           inputMode="tel"
+          autoFocus
           className=""
         />
       </div>
       <Button
         disabled={loading || !phone || phone.length < 11}
         className="w-full"
-        onClick={onSubmit}>
+        type="submit">
         ادامه
       </Button>
     </div>
