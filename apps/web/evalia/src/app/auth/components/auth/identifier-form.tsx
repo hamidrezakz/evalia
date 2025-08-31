@@ -1,9 +1,10 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Phone } from "lucide-react";
 
 interface Props {
-  identifier: string;
+  phone: string;
   disabled?: boolean;
   loading?: boolean;
   onChange(v: string): void;
@@ -11,7 +12,7 @@ interface Props {
 }
 
 export function IdentifierForm({
-  identifier,
+  phone,
   onChange,
   onSubmit,
   disabled,
@@ -19,16 +20,19 @@ export function IdentifierForm({
 }: Props) {
   return (
     <div className="space-y-2">
-      <Input
-        placeholder="ایمیل یا موبایل"
-        value={identifier}
-        onChange={(e) => onChange(e.target.value)}
-        disabled={disabled}
-        autoComplete="username"
-        inputMode="email"
-      />
+      <div className="relative">
+        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+        <Input
+          placeholder="شماره موبایل"
+          value={phone}
+          onChange={(e) => onChange(e.target.value.replace(/[^0-9+]/g, ""))}
+          disabled={disabled}
+          autoComplete="tel"
+          inputMode="tel"
+        />
+      </div>
       <Button
-        disabled={loading || !identifier}
+        disabled={loading || !phone}
         className="w-full"
         onClick={onSubmit}>
         ادامه

@@ -3,116 +3,173 @@ import { apiRequest, ApiError } from "./api-client";
 import { tokenStorage } from "@/lib/token-storage";
 import { normalizePhone } from "@/lib/normalize-phone";
 
+// Helper discriminators
 function isEmail(str: string) {
   return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(str);
 }
 
-// Common Schemas
+// Tokens
 export const tokensSchema = z.object({
   accessToken: z.string(),
   refreshToken: z.string(),
 });
-
 export type Tokens = z.infer<typeof tokensSchema>;
 
-const identifierSchema = z.object({ identifier: z.string().min(3) });
+// Backend uses pure phone (email login separate later) so we keep phone-centric schema
+const phoneSchema = z.object({ phone: z.string().min(6) });
 const passwordSchema = z.object({ password: z.string().min(6) });
 const nameSchema = z.object({
   firstName: z.string().min(1),
   lastName: z.string().min(1),
 });
-const otpRequestSchema = identifierSchema.extend({ purpose: z.string() });
+const otpRequestSchema = z.object({ phone: z.string(), purpose: z.string() });
 const otpVerifySchema = otpRequestSchema.extend({
   code: z.string().min(4).max(10),
 });
+const completeRegistrationSchema = z.object({
+  signupToken: z.string(),
+  firstName: z.string().min(1),
+  lastName: z.string().min(1),
+  password: z.string().min(6),
+});
 
-// Responses
+// Responses (align to backend: {exists}, {ok, devCode}, verify: either login or signupToken)
 const checkIdentifierResponse = z.object({ exists: z.boolean() });
 const otpRequestResponse = z.object({
-  success: z.boolean(),
+  ok: z.boolean(),
   devCode: z.string().optional(),
 });
-const loginResponse = z.object({ tokens: tokensSchema });
+const completeRegistrationResponse = z.object({
+  user: z.object({
+    id: z.number(),
+    email: z.string().nullable().optional(),
+    phone: z.string(),
+    fullName: z.string().nullable().optional(),
+    firstName: z.string().nullable().optional(),
+    lastName: z.string().nullable().optional(),
+  }),
+  tokens: tokensSchema,
+});
 
-export async function checkIdentifier(identifier: string) {
-  const id = isEmail(identifier) ? identifier : normalizePhone(identifier);
+// verifyOtp backend: existing user -> {user, tokens, mode: 'LOGIN'} OR new -> {signupToken, mode: 'SIGNUP'}
+const verifyOtpLoginResponse = z.object({
+  user: completeRegistrationResponse.shape.user,
+  tokens: tokensSchema,
+  mode: z.literal("LOGIN"),
+});
+const verifyOtpSignupResponse = z.object({
+  signupToken: z.string(),
+  mode: z.literal("SIGNUP"),
+});
+const verifyOtpResponse = z.union([
+  verifyOtpLoginResponse,
+  verifyOtpSignupResponse,
+]);
+
+// password login & email login shape reuse
+const loginResponse = z.object({
+  user: completeRegistrationResponse.shape.user,
+  tokens: tokensSchema,
+});
+
+function toPhone(value: string) {
+  // If email stays email (for future email login) else normalize phone
+  if (isEmail(value)) return value; // placeholder (backend phone-only now)
+  return normalizePhone(value);
+}
+
+export async function checkIdentifier(phoneRaw: string) {
+  const phone = toPhone(phoneRaw);
   return apiRequest<z.infer<typeof checkIdentifierResponse>, any>(
     "/auth/check-identifier",
-    identifierSchema,
+    phoneSchema,
     checkIdentifierResponse,
-    { body: { identifier: id } }
+    { body: { phone } }
   );
 }
 
-export async function loginWithPassword(identifier: string, password: string) {
-  const id = isEmail(identifier) ? identifier : normalizePhone(identifier);
+export async function loginWithPassword(phoneRaw: string, password: string) {
+  const phone = toPhone(phoneRaw);
   const res = await apiRequest<z.infer<typeof loginResponse>, any>(
     "/auth/login/password",
-    identifierSchema.merge(passwordSchema),
+    phoneSchema.merge(passwordSchema),
     loginResponse,
-    { body: { identifier: id, password } }
+    { body: { phone, password } }
   );
   tokenStorage.set(res.tokens);
-  return res.tokens;
+  return res;
 }
 
-export async function requestOtp(identifier: string, purpose: string) {
-  const id = isEmail(identifier) ? identifier : normalizePhone(identifier);
+export async function requestOtp(phoneRaw: string, purpose: string) {
+  const phone = toPhone(phoneRaw);
   return apiRequest<z.infer<typeof otpRequestResponse>, any>(
     "/auth/otp/request",
     otpRequestSchema,
     otpRequestResponse,
-    { body: { identifier: id, purpose } }
+    { body: { phone, purpose } }
   );
 }
 
 export async function verifyOtp(
-  identifier: string,
+  phoneRaw: string,
   purpose: string,
   code: string
 ) {
-  const id = isEmail(identifier) ? identifier : normalizePhone(identifier);
-  const res = await apiRequest<z.infer<typeof loginResponse>, any>(
+  const phone = toPhone(phoneRaw);
+  const res = await apiRequest<z.infer<typeof verifyOtpResponse>, any>(
     "/auth/otp/verify",
     otpVerifySchema,
-    loginResponse,
-    { body: { identifier: id, purpose, code } }
+    verifyOtpResponse,
+    { body: { phone, purpose, code } }
   );
-  tokenStorage.set(res.tokens);
-  return res.tokens;
+  if (res.mode === "LOGIN") {
+    tokenStorage.set(res.tokens);
+  }
+  return res;
 }
 
-export async function register(
-  identifier: string,
-  password: string,
+export async function completeRegistration(
+  signupToken: string,
   firstName: string,
-  lastName: string
+  lastName: string,
+  password: string
 ) {
-  const id = isEmail(identifier) ? identifier : normalizePhone(identifier);
-  const res = await apiRequest<z.infer<typeof loginResponse>, any>(
-    "/auth/register",
-    identifierSchema.merge(passwordSchema).merge(nameSchema),
-    loginResponse,
-    { body: { identifier: id, password, firstName, lastName } }
+  const res = await apiRequest<
+    z.infer<typeof completeRegistrationResponse>,
+    any
+  >(
+    "/auth/complete-registration",
+    completeRegistrationSchema,
+    completeRegistrationResponse,
+    { body: { signupToken, firstName, lastName, password } }
   );
   tokenStorage.set(res.tokens);
-  return res.tokens;
+  return res;
 }
 
-// Placeholders for future endpoints
+// Future email login placeholder
+export async function loginWithEmail(email: string, password: string) {
+  const res = await apiRequest<z.infer<typeof loginResponse>, any>(
+    "/auth/login/email",
+    z.object({ email: z.string().email() }).merge(passwordSchema),
+    loginResponse,
+    { body: { email, password } }
+  );
+  tokenStorage.set(res.tokens);
+  return res;
+}
+
+// Refresh / logout placeholders
 export async function refresh() {
   const tokens = tokenStorage.get();
   if (!tokens) throw new ApiError("No refresh token", 401);
-  // Will call /auth/refresh once backend implemented
   throw new ApiError("Not implemented", 501);
 }
 
 export async function logout() {
   tokenStorage.clear();
-  // Will call backend /auth/logout to revoke refresh token and clear cookies
 }
 
 export async function me() {
-  // Will call backend /auth/me using cookie access token (future) or attach bearer
   throw new ApiError("Not implemented", 501);
 }

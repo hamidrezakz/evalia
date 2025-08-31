@@ -1,3 +1,23 @@
+/**
+ * مثال استفاده از گارد نقش و دکوریتور Roles:
+ *
+ * import { Controller, Get, UseGuards } from '@nestjs/common';
+ * import { AuthGuard } from '@nestjs/passport';
+ * import { Roles } from './roles.decorator';
+ *
+ * // اگر RolesGuard به صورت global با APP_GUARD ثبت شده باشد، فقط کافی است:
+ *
+ * @Controller('admin')
+ * @UseGuards(AuthGuard('jwt'))
+ * export class AdminController {
+ *   @Get('dashboard')
+ *   @Roles('ADMIN', 'ORG:OWNER')
+ *   getDashboard() {
+ *     return { message: 'دسترسی مجاز!' };
+ *   }
+ * }
+ */
+
 import {
   CanActivate,
   ExecutionContext,
@@ -37,6 +57,6 @@ export class RolesGuard implements CanActivate {
       if (roles.org.some((o) => needed.includes(o.role))) return true;
     }
 
-    throw new ForbiddenException('insufficient role');
+    throw new ForbiddenException('دسترسی کافی به این بخش ندارید');
   }
 }

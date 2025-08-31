@@ -1,9 +1,10 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Phone, Lock, User } from "lucide-react";
 
 interface Props {
-  identifier: string;
+  phone: string;
   password: string;
   firstName: string;
   lastName: string;
@@ -17,7 +18,7 @@ interface Props {
 }
 
 export function RegisterForm({
-  identifier,
+  phone,
   password,
   firstName,
   lastName,
@@ -31,26 +32,38 @@ export function RegisterForm({
 }: Props) {
   return (
     <div className="space-y-2">
-      <Input disabled value={identifier} dir="ltr" />
+      <div className="relative">
+        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+        <Input disabled value={phone} />
+      </div>
       <div className="flex gap-2">
+        <div className="relative flex-1">
+          <User className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+          <Input
+            placeholder="نام"
+            value={firstName}
+            onChange={(e) => onFirstNameChange(e.target.value)}
+          />
+        </div>
+        <div className="relative flex-1">
+          <User className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+          <Input
+            placeholder="نام خانوادگی"
+            value={lastName}
+            onChange={(e) => onLastNameChange(e.target.value)}
+          />
+        </div>
+      </div>
+      <div className="relative">
+        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
         <Input
-          placeholder="نام"
-          value={firstName}
-          onChange={(e) => onFirstNameChange(e.target.value)}
-        />
-        <Input
-          placeholder="نام خانوادگی"
-          value={lastName}
-          onChange={(e) => onLastNameChange(e.target.value)}
+          type="password"
+          placeholder="رمز عبور"
+          value={password}
+          onChange={(e) => onPasswordChange(e.target.value)}
+          autoComplete="new-password"
         />
       </div>
-      <Input
-        type="password"
-        placeholder="رمز عبور"
-        value={password}
-        onChange={(e) => onPasswordChange(e.target.value)}
-        autoComplete="new-password"
-      />
       <div className="flex gap-2">
         <Button
           disabled={loading || password.length < 6}

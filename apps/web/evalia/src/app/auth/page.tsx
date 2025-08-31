@@ -12,6 +12,10 @@ import { PasswordForm } from "./components/auth/password-form";
 import { OtpForm } from "./components/auth/otp-form";
 import { RegisterForm } from "./components/auth/register-form";
 import { useLoginMachine } from "./hooks/useLoginMachine";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { friendlyError } from "./lib/error-map";
+import { User, Lock } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -22,9 +26,9 @@ export default function LoginPage() {
   const { state } = machine;
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-background">
       <Card
-        className="w-full max-w-[20rem]"
+        className="w-full max-w-md transition-all"
         role="form"
         aria-labelledby="login-title">
         <CardHeader>
@@ -35,31 +39,34 @@ export default function LoginPage() {
         <CardContent className="space-y-4">
           {state.error && (
             <div className="text-sm text-red-500" role="alert">
-              {state.error}
+              {friendlyError(state.error) || state.error}
             </div>
           )}
+
           {state.phase === "IDENTIFIER" && (
             <IdentifierForm
-              identifier={state.identifier}
+              phone={state.phone}
               loading={state.loading}
-              onChange={(v) => machine.set("identifier", v)}
+              onChange={(v) => machine.set("phone", v)}
               onSubmit={machine.submitIdentifier}
             />
           )}
+
           {state.phase === "PASSWORD" && (
             <PasswordForm
-              identifier={state.identifier}
+              phone={state.phone}
               password={state.password}
               loading={state.loading}
               onPasswordChange={(v) => machine.set("password", v)}
               onLogin={machine.doPasswordLogin}
               onOtp={machine.requestLoginOtp}
-              onGoRegister={() => machine.goToPhase("REGISTER")}
+              onGoRegister={() => machine.requestLoginOtp()}
             />
           )}
+
           {state.phase === "OTP" && (
             <OtpForm
-              identifier={state.identifier}
+              phone={state.phone}
               otp={state.otp}
               loading={state.loading}
               devCode={state.devCode}
@@ -68,22 +75,52 @@ export default function LoginPage() {
               onResend={machine.requestLoginOtp}
             />
           )}
-          {state.phase === "REGISTER" && (
-            <RegisterForm
-              identifier={state.identifier}
-              password={state.password}
-              firstName={state.firstName}
-              lastName={state.lastName}
-              loading={state.loading}
-              onPasswordChange={(v) => machine.set("password", v)}
-              onFirstNameChange={(v) => machine.set("firstName", v)}
-              onLastNameChange={(v) => machine.set("lastName", v)}
-              onRegister={machine.doRegister}
-              onOtp={machine.requestLoginOtp}
-              onBack={() =>
-                machine.goToPhase(state.exists ? "PASSWORD" : "IDENTIFIER")
-              }
-            />
+
+          {state.phase === "COMPLETE_REGISTRATION" && (
+            <div className="space-y-3">
+              <div className="text-sm text-muted-foreground text-center">
+                تکمیل ثبت‌نام — اطلاعات پروفایل را وارد کنید
+              </div>
+              <div className="relative">
+                <User className="absolute right-2 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                <Input
+                  placeholder="نام"
+                  value={state.firstName}
+                  onChange={(e) => machine.set("firstName", e.target.value)}
+                  className="pr-8"
+                />
+              </div>
+              <div className="relative">
+                <User className="absolute right-2 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                <Input
+                  placeholder="نام خانوادگی"
+                  value={state.lastName}
+                  onChange={(e) => machine.set("lastName", e.target.value)}
+                  className="pr-8"
+                />
+              </div>
+              <div className="relative">
+                <Lock className="absolute right-2 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                <Input
+                  type="password"
+                  placeholder="رمز عبور"
+                  value={state.password}
+                  onChange={(e) => machine.set("password", e.target.value)}
+                  className="pr-8"
+                />
+              </div>
+              <Button
+                disabled={
+                  state.loading ||
+                  state.password.length < 6 ||
+                  !state.firstName ||
+                  !state.lastName
+                }
+                className="w-full"
+                onClick={machine.finishRegistration}>
+                ثبت نهایی
+              </Button>
+            </div>
           )}
         </CardContent>
         <CardFooter className="text-center text-xs text-muted-foreground justify-center">

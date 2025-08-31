@@ -71,9 +71,14 @@ export class VerificationService {
       data: { expiresAt: now },
     });
 
-    const code = Math.floor(Math.random() * 10 ** this.codeLength)
+    /* const code = Math.floor(Math.random() * 10 ** this.codeLength)
+      .toString()
+      .padStart(this.codeLength, '0'); */
+
+    const code = Math.floor(0.123456 * 10 ** this.codeLength)
       .toString()
       .padStart(this.codeLength, '0');
+
     const codeHash = this.hash(code);
     const expiresAt = new Date(Date.now() + this.ttlMinutes * 60 * 1000);
     await this.prisma.verificationCode.create({

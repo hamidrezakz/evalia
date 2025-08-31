@@ -5,14 +5,18 @@ import {
   loginWithPassword,
   requestOtp,
   verifyOtp,
-  register,
+  completeRegistration,
 } from "../lib/auth-api";
 
-export type LoginPhase = "IDENTIFIER" | "PASSWORD" | "OTP" | "REGISTER";
+export type LoginPhase =
+  | "IDENTIFIER"
+  | "PASSWORD"
+  | "OTP"
+  | "COMPLETE_REGISTRATION"; // after signupToken
 
 interface State {
   phase: LoginPhase;
-  identifier: string;
+  phone: string;
   password: string;
   otp: string;
   firstName: string;
@@ -21,11 +25,13 @@ interface State {
   error: string | null;
   devCode: string | null; // dev only
   exists: boolean | null; // identifier existence
+  signupToken: string | null;
+  mode: "LOGIN" | "SIGNUP" | null;
 }
 
 const initial: State = {
   phase: "IDENTIFIER",
-  identifier: "",
+  phone: "",
   password: "",
   otp: "",
   firstName: "",
@@ -34,6 +40,8 @@ const initial: State = {
   error: null,
   devCode: null,
   exists: null,
+  signupToken: null,
+  mode: null,
 };
 
 type Action =
@@ -42,7 +50,9 @@ type Action =
   | { type: "LOADING"; value: boolean }
   | { type: "ERROR"; error: string | null }
   | { type: "DEV_CODE"; code: string | null }
-  | { type: "EXISTS"; exists: boolean };
+  | { type: "EXISTS"; exists: boolean }
+  | { type: "MODE"; mode: State["mode"] }
+  | { type: "SIGNUP_TOKEN"; token: string | null };
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
@@ -58,6 +68,10 @@ function reducer(state: State, action: Action): State {
       return { ...state, devCode: action.code };
     case "EXISTS":
       return { ...state, exists: action.exists };
+    case "MODE":
+      return { ...state, mode: action.mode };
+    case "SIGNUP_TOKEN":
+      return { ...state, signupToken: action.token };
     default:
       return state;
   }
@@ -86,47 +100,57 @@ export function useLoginMachine(onSuccess: () => void) {
   }
 
   const submitIdentifier = useCallback(async () => {
-    const identifier = state.identifier.trim();
-    if (!identifier) return;
-    const res = await wrap(() => checkIdentifier(identifier));
+    const phone = state.phone.trim();
+    if (!phone) return;
+    const res = await wrap(() => checkIdentifier(phone));
     dispatch({ type: "EXISTS", exists: res.exists });
-    dispatch({
-      type: "SET_PHASE",
-      phase: res.exists ? "PASSWORD" : "REGISTER",
-    });
-  }, [state.identifier]);
+    if (res.exists) {
+      dispatch({ type: "SET_PHASE", phase: "PASSWORD" });
+    } else {
+      // directly request OTP for new phone (SIGNUP path)
+      const r = await wrap(() => requestOtp(phone, "LOGIN")); // purpose can stay LOGIN for now
+      dispatch({ type: "DEV_CODE", code: r.devCode || null });
+      dispatch({ type: "SET_PHASE", phase: "OTP" });
+    }
+  }, [state.phone]);
 
   const doPasswordLogin = useCallback(async () => {
-    await wrap(() => loginWithPassword(state.identifier, state.password));
+    await wrap(() => loginWithPassword(state.phone, state.password));
     onSuccess();
-  }, [state.identifier, state.password, onSuccess]);
+  }, [state.phone, state.password, onSuccess]);
 
   const requestLoginOtp = useCallback(async () => {
-    const r = await wrap(() => requestOtp(state.identifier, "LOGIN"));
+    const r = await wrap(() => requestOtp(state.phone, "LOGIN"));
     dispatch({ type: "DEV_CODE", code: r.devCode || null });
     dispatch({ type: "SET_PHASE", phase: "OTP" });
-  }, [state.identifier]);
+  }, [state.phone]);
 
   const verifyLoginOtp = useCallback(async () => {
-    await wrap(() => verifyOtp(state.identifier, "LOGIN", state.otp));
-    onSuccess();
-  }, [state.identifier, state.otp, onSuccess]);
+    const r = await wrap(() => verifyOtp(state.phone, "LOGIN", state.otp));
+    if (r.mode === "LOGIN") {
+      onSuccess();
+    } else if (r.mode === "SIGNUP") {
+      dispatch({ type: "SIGNUP_TOKEN", token: r.signupToken });
+      dispatch({ type: "SET_PHASE", phase: "COMPLETE_REGISTRATION" });
+    }
+  }, [state.phone, state.otp, onSuccess]);
 
-  const doRegister = useCallback(async () => {
+  const finishRegistration = useCallback(async () => {
+    if (!state.signupToken) return;
     await wrap(() =>
-      register(
-        state.identifier,
-        state.password,
+      completeRegistration(
+        state.signupToken!, // non-null asserted after guard above
         state.firstName,
-        state.lastName
+        state.lastName,
+        state.password
       )
     );
     onSuccess();
   }, [
-    state.identifier,
-    state.password,
+    state.signupToken,
     state.firstName,
     state.lastName,
+    state.password,
     onSuccess,
   ]);
 
@@ -137,7 +161,7 @@ export function useLoginMachine(onSuccess: () => void) {
     doPasswordLogin,
     requestLoginOtp,
     verifyLoginOtp,
-    doRegister,
+    finishRegistration,
     goToPhase: (p: LoginPhase) => dispatch({ type: "SET_PHASE", phase: p }),
   };
 }
