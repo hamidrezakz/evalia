@@ -63,7 +63,7 @@ export function OtpForm({
           تایید و ورود
         </Button>
         <Button
-          variant="secondary"
+          variant="outline"
           type="button"
           disabled={!canResend}
           onClick={() => {
@@ -71,14 +71,14 @@ export function OtpForm({
             onResend();
             setSeconds(30);
           }}
-          className="flex items-center gap-1 min-w-[120px] justify-center">
+          className="flex items-center gap-1 min-w-[110px] justify-center text-[12px]">
           {canResend ? (
             <>
               <RefreshCcw className="size-4" />
               ارسال مجدد
             </>
           ) : (
-            <span className="tabular-nums">{seconds}s</span>
+            <span className="tabular-nums mt-0.5">{seconds}s</span>
           )}
         </Button>
       </div>

@@ -40,7 +40,7 @@ export function PasswordForm({
       </div>
       <div className="flex gap-2">
         <Button
-          disabled={loading || !password}
+          disabled={loading || !password || password.length < 6}
           className="flex-1"
           onClick={onLogin}>
           ورود
