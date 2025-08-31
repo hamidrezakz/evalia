@@ -18,10 +18,6 @@ export type Tokens = z.infer<typeof tokensSchema>;
 // Backend uses pure phone (email login separate later) so we keep phone-centric schema
 const phoneSchema = z.object({ phone: z.string().min(6) });
 const passwordSchema = z.object({ password: z.string().min(6) });
-const nameSchema = z.object({
-  firstName: z.string().min(1),
-  lastName: z.string().min(1),
-});
 const otpRequestSchema = z.object({ phone: z.string(), purpose: z.string() });
 const otpVerifySchema = otpRequestSchema.extend({
   code: z.string().min(4).max(10),
@@ -80,7 +76,7 @@ function toPhone(value: string) {
 
 export async function checkIdentifier(phoneRaw: string) {
   const phone = toPhone(phoneRaw);
-  return apiRequest<z.infer<typeof checkIdentifierResponse>, any>(
+  return apiRequest<z.infer<typeof checkIdentifierResponse>, { phone: string }>(
     "/auth/check-identifier",
     phoneSchema,
     checkIdentifierResponse,
@@ -90,24 +86,24 @@ export async function checkIdentifier(phoneRaw: string) {
 
 export async function loginWithPassword(phoneRaw: string, password: string) {
   const phone = toPhone(phoneRaw);
-  const res = await apiRequest<z.infer<typeof loginResponse>, any>(
-    "/auth/login/password",
-    phoneSchema.merge(passwordSchema),
-    loginResponse,
-    { body: { phone, password } }
-  );
+  const res = await apiRequest<
+    z.infer<typeof loginResponse>,
+    { phone: string; password: string }
+  >("/auth/login/password", phoneSchema.merge(passwordSchema), loginResponse, {
+    body: { phone, password },
+  });
   tokenStorage.set(res.tokens);
   return res;
 }
 
 export async function requestOtp(phoneRaw: string, purpose: string) {
   const phone = toPhone(phoneRaw);
-  return apiRequest<z.infer<typeof otpRequestResponse>, any>(
-    "/auth/otp/request",
-    otpRequestSchema,
-    otpRequestResponse,
-    { body: { phone, purpose } }
-  );
+  return apiRequest<
+    z.infer<typeof otpRequestResponse>,
+    { phone: string; purpose: string }
+  >("/auth/otp/request", otpRequestSchema, otpRequestResponse, {
+    body: { phone, purpose },
+  });
 }
 
 export async function verifyOtp(
@@ -116,12 +112,12 @@ export async function verifyOtp(
   code: string
 ) {
   const phone = toPhone(phoneRaw);
-  const res = await apiRequest<z.infer<typeof verifyOtpResponse>, any>(
-    "/auth/otp/verify",
-    otpVerifySchema,
-    verifyOtpResponse,
-    { body: { phone, purpose, code } }
-  );
+  const res = await apiRequest<
+    z.infer<typeof verifyOtpResponse>,
+    { phone: string; purpose: string; code: string }
+  >("/auth/otp/verify", otpVerifySchema, verifyOtpResponse, {
+    body: { phone, purpose, code },
+  });
   if (res.mode === "LOGIN") {
     tokenStorage.set(res.tokens);
   }
@@ -136,7 +132,12 @@ export async function completeRegistration(
 ) {
   const res = await apiRequest<
     z.infer<typeof completeRegistrationResponse>,
-    any
+    {
+      signupToken: string;
+      firstName: string;
+      lastName: string;
+      password: string;
+    }
   >(
     "/auth/complete-registration",
     completeRegistrationSchema,
@@ -149,7 +150,10 @@ export async function completeRegistration(
 
 // Future email login placeholder
 export async function loginWithEmail(email: string, password: string) {
-  const res = await apiRequest<z.infer<typeof loginResponse>, any>(
+  const res = await apiRequest<
+    z.infer<typeof loginResponse>,
+    { email: string; password: string }
+  >(
     "/auth/login/email",
     z.object({ email: z.string().email() }).merge(passwordSchema),
     loginResponse,

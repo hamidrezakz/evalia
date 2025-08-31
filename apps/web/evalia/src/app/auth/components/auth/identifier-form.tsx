@@ -29,10 +29,11 @@ export function IdentifierForm({
           disabled={disabled}
           autoComplete="tel"
           inputMode="tel"
+          className=""
         />
       </div>
       <Button
-        disabled={loading || !phone}
+        disabled={loading || !phone || phone.length < 11}
         className="w-full"
         onClick={onSubmit}>
         ادامه

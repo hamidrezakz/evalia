@@ -1,4 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { Suspense } from "react";
 
 function FilterBar() {
   return (
@@ -133,7 +134,7 @@ function SummaryTable() {
   );
 }
 
-export default function AnalysisPage() {
+function DashboardPageContent() {
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-lg font-bold">تحلیل منابع انسانی</h1>
@@ -144,5 +145,13 @@ export default function AnalysisPage() {
       <CorrelationMatrix />
       <SummaryTable />
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={null}>
+      <DashboardPageContent />
+    </Suspense>
   );
 }

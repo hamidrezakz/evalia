@@ -1,5 +1,6 @@
 "use client";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import {
   Card,
   CardContent,
@@ -10,14 +11,13 @@ import {
 import { IdentifierForm } from "./components/auth/identifier-form";
 import { PasswordForm } from "./components/auth/password-form";
 import { OtpForm } from "./components/auth/otp-form";
-import { RegisterForm } from "./components/auth/register-form";
 import { useLoginMachine } from "./hooks/useLoginMachine";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { friendlyError } from "./lib/error-map";
 import { User, Lock } from "lucide-react";
 
-export default function LoginPage() {
+function LoginPage() {
   const router = useRouter();
   const sp = useSearchParams();
   const redirect = sp.get("redirect") || "/dashboard";
@@ -28,7 +28,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-background">
       <Card
-        className="w-full max-w-md transition-all"
+        className="w-full max-w-md transition-all py-8"
         role="form"
         aria-labelledby="login-title">
         <CardHeader>
@@ -125,10 +125,23 @@ export default function LoginPage() {
         </CardContent>
         <CardFooter className="text-center text-xs text-muted-foreground justify-center">
           <div className="space-y-1">
-            <p>با ورود، شرایط استفاده را می‌پذیرید.</p>
+            <p>
+              با ورود یا ثبت‌نام در <span className="font-bold">ایوالیا</span>،
+              شما تمامی <span className="font-semibold">شرایط استفاده</span> و{" "}
+              <span className="font-semibold">حریم خصوصی</span> را به طور کامل
+              می‌پذیرید.
+            </p>
           </div>
         </CardFooter>
       </Card>
     </div>
+  );
+}
+
+export default function LoginPageWrapper() {
+  return (
+    <Suspense fallback={null}>
+      <LoginPage />
+    </Suspense>
   );
 }

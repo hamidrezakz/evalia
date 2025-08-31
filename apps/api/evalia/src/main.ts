@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { PrismaExceptionFilter } from './prisma-exception.filter';
@@ -5,8 +6,13 @@ import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  // Allow both LAN IP and localhost for frontend
+  const origins = (process.env.CORS_ORIGIN || 'http://192.168.84.199:3000,http://localhost:3000')
+    .split(',')
+    .map((o) => o.trim());
+  console.log('CORS allowed origins:', origins);
   app.enableCors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+    origin: origins.length === 1 ? origins[0] : origins,
     credentials: true,
   });
   app.useGlobalFilters(new PrismaExceptionFilter());

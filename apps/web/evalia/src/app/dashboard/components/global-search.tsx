@@ -22,7 +22,6 @@ import {
   Settings2,
   ListTodo,
   Activity,
-  FileText,
   Waypoints,
   PanelLeft,
 } from "lucide-react";
@@ -241,7 +240,7 @@ export function GlobalSearch() {
           placeholder="جستجو یا فرمان..."
           autoFocus
           value={query}
-          onValueChange={setQuery as any}
+          onValueChange={setQuery as (v: string) => void}
         />
         <CommandList className="max-h-[60vh] sm:max-h-[65vh] lg:max-h-[90vh]">
           <CommandEmpty>موردی یافت نشد</CommandEmpty>
@@ -296,14 +295,17 @@ export function GlobalSearch() {
 }
 
 function badgeForType(t: GlobalSearchItem["type"]) {
-  const variant: Record<string, string> = {
+  const variant: Record<
+    GlobalSearchItem["type"],
+    "secondary" | "outline" | "default" | "destructive"
+  > = {
     nav: "secondary",
     employee: "outline",
     task: "default",
     activity: "secondary",
     action: "destructive",
   };
-  const label: Record<string, string> = {
+  const label: Record<GlobalSearchItem["type"], string> = {
     nav: "مسیر",
     employee: "کارمند",
     task: "وظیفه",
@@ -312,7 +314,7 @@ function badgeForType(t: GlobalSearchItem["type"]) {
   };
   return (
     <Badge
-      variant={variant[t] as any}
+      variant={variant[t]}
       className="ml-auto rtl:mr-auto text-[10px] font-normal">
       {label[t]}
     </Badge>

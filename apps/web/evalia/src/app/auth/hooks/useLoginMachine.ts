@@ -45,7 +45,7 @@ const initial: State = {
 };
 
 type Action =
-  | { type: "SET_FIELD"; field: keyof State; value: any }
+  | { type: "SET_FIELD"; field: keyof State; value: State[keyof State] }
   | { type: "SET_PHASE"; phase: LoginPhase }
   | { type: "LOADING"; value: boolean }
   | { type: "ERROR"; error: string | null }
@@ -81,7 +81,7 @@ export function useLoginMachine(onSuccess: () => void) {
   const [state, dispatch] = useReducer(reducer, initial);
 
   const set = useCallback(
-    (field: keyof State, value: any) =>
+    <K extends keyof State>(field: K, value: State[K]) =>
       dispatch({ type: "SET_FIELD", field, value }),
     []
   );
@@ -91,9 +91,10 @@ export function useLoginMachine(onSuccess: () => void) {
     dispatch({ type: "ERROR", error: null });
     try {
       return await fn();
-    } catch (e: any) {
-      dispatch({ type: "ERROR", error: e.message || "خطا" });
-      throw e;
+    } catch (e) {
+      const err = e as Error;
+      dispatch({ type: "ERROR", error: err.message || "خطا" });
+      throw err;
     } finally {
       dispatch({ type: "LOADING", value: false });
     }

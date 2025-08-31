@@ -57,7 +57,7 @@ export function OtpForm({
       </div>
       <div className="flex gap-2">
         <Button
-          disabled={loading || otp.length < 4}
+          disabled={loading || otp.length < 6}
           className="flex-1"
           onClick={onVerify}>
           تایید و ورود

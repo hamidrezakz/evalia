@@ -6,8 +6,8 @@ import { z } from "zod";
  */
 export class ApiError extends Error {
   status: number;
-  details?: any;
-  constructor(message: string, status: number, details?: any) {
+  details?: unknown;
+  constructor(message: string, status: number, details?: unknown) {
     super(message);
     this.name = "ApiError";
     this.status = status;
@@ -57,12 +57,19 @@ export async function apiRequest<TResponse, TBody = unknown>(
   let res: Response;
   try {
     res = await fetchPromise;
-  } catch (e: any) {
-    if (e.name === "AbortError") throw e;
-    throw new ApiError(e.message || "Network error", 0);
+  } catch (e) {
+    if (
+      typeof e === "object" &&
+      e !== null &&
+      "name" in e &&
+      (e as { name?: unknown }).name === "AbortError"
+    )
+      throw e;
+    const err = e instanceof Error ? e : new Error(String(e));
+    throw new ApiError(err.message || "Network error", 0);
   }
 
-  let json: any = null;
+  let json: unknown = null;
   const text = await res.text();
   if (text) {
     try {
@@ -73,7 +80,12 @@ export async function apiRequest<TResponse, TBody = unknown>(
   }
 
   if (!res.ok) {
-    const message = json?.message || json?.error || text || "Request failed";
+    let message = text || "Request failed";
+    if (json && typeof json === "object") {
+      const j: Record<string, unknown> = json as Record<string, unknown>;
+      if (typeof j.message === "string") message = j.message;
+      else if (typeof j.error === "string") message = j.error;
+    }
     throw new ApiError(message, res.status, json);
   }
 

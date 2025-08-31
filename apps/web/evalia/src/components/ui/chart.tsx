@@ -1,8 +1,3 @@
-/* eslint-disable @typescript-eslint/restrict-template-expressions */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unnecessary-condition */
 "use client";
 
 import type {
@@ -318,25 +313,30 @@ function getPayloadConfigFromPayload(
   config: ChartConfig,
   payload: unknown,
   key: string
-) {
+): ChartConfig[string] | undefined {
   if (typeof payload !== "object" || payload === null) {
     return undefined;
   }
 
-  const payloadPayload =
-    "payload" in payload &&
-    typeof payload.payload === "object" &&
-    payload.payload !== null
-      ? payload.payload
-      : undefined;
+  // Narrow internal payload
+  const payloadPayload = (() => {
+    if (
+      typeof payload === "object" &&
+      payload !== null &&
+      "payload" in payload &&
+      typeof (payload as Record<string, unknown>)["payload"] === "object" &&
+      (payload as Record<string, unknown>)["payload"] !== null
+    ) {
+      return (payload as { payload: Record<string, unknown> }).payload;
+    }
+    return undefined;
+  })();
 
   let configLabelKey: string = key;
 
-  if (
-    key in payload &&
-    typeof payload[key as keyof typeof payload] === "string"
-  ) {
-    configLabelKey = payload[key as keyof typeof payload] as string;
+  if (key in (payload as Record<string, unknown>)) {
+    const v = (payload as Record<string, unknown>)[key];
+    if (typeof v === "string") configLabelKey = v;
   } else if (
     payloadPayload &&
     key in payloadPayload &&

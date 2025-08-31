@@ -1,6 +1,6 @@
 // Utility: Normalize Iranian phone number to +98 format
 export function normalizePhone(identifier: string): string {
-  let phone = identifier.trim();
+  const phone = identifier.trim();
   // اگر با + شروع شد و حداقل 10 رقم داشت، همان را برگردان
   if (/^\+\d{10,}$/.test(phone)) return phone;
   // اگر با 09 شروع شد
