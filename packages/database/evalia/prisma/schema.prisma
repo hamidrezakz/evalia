@@ -172,6 +172,7 @@ enum WidgetKind {
 
 /// Platform-level global roles (نقش های پلتفرمی جهانی)
 enum PlatformRole {
+  MEMBER
   SUPER_ADMIN
   ANALYSIS_MANAGER
   FACILITATOR
@@ -251,7 +252,7 @@ model User {
   /// Audit log entries performed by this user | لاگ‌های ممیزی مرتبط
   auditLogs     AuditLog[] @relation("UserAuditLogs")
   /// Global platform roles (array) - e.g. FACILITATOR handles many orgs
-  globalRoles   PlatformRole[] @default([])
+  globalRoles   PlatformRole[] @default([MEMBER])
   /// Organizations created by this platform user | سازمان‌های ساخته‌شده
   createdOrganizations Organization[] @relation("OrganizationsCreated")
   /// Service assignments (facilitator / analysis manager) | تخصیص‌های خدماتی
@@ -291,7 +292,6 @@ model Organization {
   questionBanks  QuestionBank[]                @relation("OrganizationQuestionBanks")
   assessments    AssessmentTemplate[]          @relation("OrganizationAssessmentTemplates")
   sessions       AssessmentSession[]           @relation("OrganizationAssessmentSessions")
-  dashboards     DashboardConfig[]             @relation("OrganizationDashboardConfigs")
   navItems       NavigationItem[]              @relation("OrganizationNavigationItems")
   invites        Invitation[]                  @relation("InvitationOrg")
   notifications  Notification[]                @relation("OrganizationNotifications")
@@ -397,8 +397,9 @@ model TeamMembership {
 /// Navigation items configurable per org & role (آیتم منو)
 model NavigationItem {
   id             Int         @id @default(autoincrement())
-  organizationId Int
-  role           OrgRole
+  organizationId Int?        // nullable: null = global, set = per-org
+  role           OrgRole?
+  platformRole   PlatformRole?
   parentId       Int?        /// for nested menus
   label          String
   path           String?     /// internal route
@@ -411,61 +412,15 @@ model NavigationItem {
   updatedAt      DateTime    @updatedAt
   deletedAt      DateTime?
 
-  organization   Organization @relation("OrganizationNavigationItems", fields: [organizationId], references: [id])
+  organization   Organization? @relation("OrganizationNavigationItems", fields: [organizationId], references: [id])
   parent         NavigationItem? @relation("NavParent", fields: [parentId], references: [id])
   children       NavigationItem[] @relation("NavParent")
 
-  @@index([organizationId, role])
+  @@index([organizationId])
+  @@index([role])
+  @@index([platformRole])
   @@index([parentId])
-  @@unique([organizationId, role, label, parentId])
-}
-
-/// Dashboard widget definition registry (تعریف ویجت)
-model WidgetDefinition {
-  id          Int        @id @default(autoincrement())
-  key         String     @unique
-  kind        WidgetKind
-  title       String
-  description String?
-  configSchema Json?     /// JSON Schema for config validation
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  deletedAt   DateTime?
-
-  instances   DashboardWidget[] @relation("WidgetDefinitionInstances")
-}
-
-/// Dashboard configuration for org & role combination (پیکربندی داشبورد)
-model DashboardConfig {
-  id             Int       @id @default(autoincrement())
-  organizationId Int
-  role           OrgRole
-  title          String    @default("")
-  layout         Json      @default("{}") /// persisted layout engine state
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  deletedAt      DateTime?
-
-  organization   Organization    @relation("OrganizationDashboardConfigs", fields: [organizationId], references: [id])
-  widgets        DashboardWidget[] @relation("DashboardWidgets")
-
-  @@unique([organizationId, role])
-}
-
-/// Individual widget instance placed on a dashboard (ویجت داشبورد)
-model DashboardWidget {
-  id              Int              @id @default(autoincrement())
-  dashboardId     Int
-  widgetDefinitionId Int
-  title           String?
-  position        Json             @default("{}") /// x,y,w,h or grid config
-  config          Json             @default("{}") /// user-specified config
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  deletedAt       DateTime?
-
-  dashboard       DashboardConfig  @relation("DashboardWidgets", fields: [dashboardId], references: [id], onDelete: Cascade)
-  definition      WidgetDefinition @relation("WidgetDefinitionInstances", fields: [widgetDefinitionId], references: [id])
+  @@unique([organizationId, role, platformRole, label, parentId])
 }
 
 // ------------------------------

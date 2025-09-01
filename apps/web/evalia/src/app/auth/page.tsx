@@ -90,14 +90,14 @@ function LoginPage() {
   });
 
   return (
-    <div className="flex items-center justify-center min-h-screen p-4">
-      <div className="">
+    <div className="flex items-center justify-center min-h-screen p-4 relative overflow-hidden">
+      {/* Centered glowing light source */}
+      <div
+        className="pointer-events-none absolute left-1/2 top-1/2 z-0 w-[420px] h-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-0 blur-3xl bg-gradient-radial from-indigo-300 via-indigo-500/80 to-indigo-300/0 shadow-[0_0_120px_40px_#6366f1cc,0_0_320px_120px_#818cf855]"
+        aria-hidden></div>
+      <div className="z-10 flex justify-center items-center w-full">
         <Form {...form}>
-          <form
-            onSubmit={onSubmit}
-            className="w-full"
-            noValidate
-            aria-labelledby="login-title">
+          <form onSubmit={onSubmit} noValidate aria-labelledby="login-title">
             <Card className="w-full max-w-sm transition-all py-8">
               <CardHeader>
                 <CardTitle id="login-title" className="text-center">

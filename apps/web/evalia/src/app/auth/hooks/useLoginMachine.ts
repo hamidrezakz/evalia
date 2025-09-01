@@ -44,6 +44,13 @@ const initial: State = {
   mode: null,
 };
 
+// Action type for the reducer: describes all possible actions that can be dispatched.
+// This is a TypeScript union type: Action can be any ONE of these object shapes.
+// Each action has a 'type' field (string literal) and, depending on the action, additional fields.
+// This pattern ensures type safety and clear intent for each action in the reducer.
+// Example usage:
+//   dispatch({ type: "SET_FIELD", field: "phone", value: "0912..." })
+//   dispatch({ type: "ERROR", error: "Invalid password" })
 type Action =
   | { type: "SET_FIELD"; field: keyof State; value: State[keyof State] }
   | { type: "SET_PHASE"; phase: LoginPhase }

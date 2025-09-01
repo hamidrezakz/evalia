@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { apiRequest, ApiError } from "./api-client";
+import { apiRequest } from "@/lib/api-client";
 import { tokenStorage } from "@/lib/token-storage";
 import { normalizePhone } from "@/lib/normalize-phone";
 
@@ -16,11 +16,11 @@ export const tokensSchema = z.object({
 export type Tokens = z.infer<typeof tokensSchema>;
 
 // Backend uses pure phone (email login separate later) so we keep phone-centric schema
-const phoneSchema = z.object({ phone: z.string().min(6) });
+const phoneSchema = z.object({ phone: z.string().min(9) });
 const passwordSchema = z.object({ password: z.string().min(6) });
 const otpRequestSchema = z.object({ phone: z.string(), purpose: z.string() });
 const otpVerifySchema = otpRequestSchema.extend({
-  code: z.string().min(4).max(10),
+  code: z.string().min(6).max(6),
 });
 const completeRegistrationSchema = z.object({
   signupToken: z.string(),
@@ -147,33 +147,15 @@ export async function completeRegistration(
   tokenStorage.set(res.tokens);
   return res;
 }
-
-// Future email login placeholder
-export async function loginWithEmail(email: string, password: string) {
-  const res = await apiRequest<
-    z.infer<typeof loginResponse>,
-    { email: string; password: string }
-  >(
-    "/auth/login/email",
-    z.object({ email: z.string().email() }).merge(passwordSchema),
-    loginResponse,
-    { body: { email, password } }
-  );
-  tokenStorage.set(res.tokens);
-  return res;
-}
-
-// Refresh / logout placeholders
-export async function refresh() {
-  const tokens = tokenStorage.get();
-  if (!tokens) throw new ApiError("No refresh token", 401);
-  throw new ApiError("Not implemented", 501);
-}
-
-export async function logout() {
-  tokenStorage.clear();
-}
-
-export async function me() {
-  throw new ApiError("Not implemented", 501);
-}
+/**
+ * NOTE: This file intentionally only exports the functions currently used by the login/onboarding flow:
+ *  - checkIdentifier
+ *  - loginWithPassword
+ *  - requestOtp
+ *  - verifyOtp
+ *  - completeRegistration
+ *
+ * Any future endpoints (email login, refresh token handling, logout, me profile, etc.) were moved to a
+ * separate placeholder file (auth-api.future.ts) to keep the active surface minimal & maintainable.
+ * This helps tree‑shaking, reduces cognitive load, and makes it obvious what is really in use.
+ */
