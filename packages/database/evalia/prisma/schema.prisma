@@ -341,6 +341,7 @@ model OrganizationMembership {
 
   @@unique([userId, organizationId])
   @@index([organizationId, role])
+  @@index([organizationId, role, createdAt])
 }
 
 /// Join table for attaching extra permissions to a membership (مجوزهای اضافه)
