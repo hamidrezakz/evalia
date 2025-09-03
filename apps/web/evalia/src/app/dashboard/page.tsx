@@ -7,12 +7,12 @@ import {
   PanelContent,
   PanelDescription,
 } from "@/components/ui/panel";
-import { FeatureGate } from "@/app/dashboard/organizations/lib/feature-gate";
-import { UserRoles } from "@/app/dashboard/organizations/lib/permissions";
+import { FeatureGate } from "@/app/organizations/lib/feature-gate";
+import { UserRoles } from "@/app/organizations/lib/permissions";
 import {
   ActiveOrgProvider,
   useActiveOrg,
-} from "@/app/dashboard/organizations/lib/active-org-context";
+} from "@/app/organizations/lib/active-org-context";
 
 // TODO: Replace this with real authenticated user roles context/hook
 function useCurrentUserRoles(): { roles: UserRoles; activeOrgId?: number } {
@@ -68,12 +68,8 @@ function SummaryTable() {
 }
 
 function DashboardInner() {
-  return (
-    <SummaryTable />
-
-  );
+  return <SummaryTable />;
 }
-
 
 export default function DashboardPage() {
   return (

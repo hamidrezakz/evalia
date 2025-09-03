@@ -4,7 +4,7 @@ import {
   canUseFeature,
   FeatureKey,
   UserRoles,
-} from "@/app/dashboard/organizations/lib/permissions";
+} from "@/app/organizations/lib/permissions";
 
 interface FeatureGateProps {
   feature: FeatureKey;

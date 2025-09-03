@@ -14,7 +14,6 @@ import { CreateNavigationItemDto } from './dto/create-navigation-item.dto';
 import { UpdateNavigationItemDto } from './dto/update-navigation-item.dto';
 import { ReorderNavigationDto } from './dto/reorder-navigation.dto';
 import { CheckTokenVersion } from '../common/check-token-version.decorator';
-import { ListNavigationItemsDto } from './dto/list-navigation-items.dto';
 
 @Controller('navigation')
 export class NavigationController {
