@@ -8,6 +8,7 @@ import { VerificationService } from './verification.service';
 import { PasswordService } from './password.service';
 import { JwtStrategy } from './jwt.strategy';
 import { RolesGuard } from '../common/roles.guard';
+import { TokenVersionGuard } from '../common/token-version.guard';
 import { APP_GUARD } from '@nestjs/core';
 
 @Module({
@@ -26,6 +27,7 @@ import { APP_GUARD } from '@nestjs/core';
     PasswordService,
     JwtStrategy,
     { provide: APP_GUARD, useClass: RolesGuard },
+    TokenVersionGuard,
   ],
   exports: [AuthService],
 })
