@@ -1,7 +1,7 @@
-import { apiRequest } from "@/lib/api-client";
+import { apiRequest } from "@/lib/api.client";
 import {
   OrganizationSchema,
-  OrganizationListResponseSchema,
+  OrganizationArraySchema,
   CreateOrganizationInputSchema,
   UpdateOrganizationInputSchema,
   ChangeOrganizationStatusSchema,
@@ -10,7 +10,7 @@ import {
   type UpdateOrganizationInput,
   type ChangeOrganizationStatusInput,
   type ListOrganizationsQuery,
-  type OrganizationListResponse,
+  type OrganizationArray,
   type Organization,
 } from "../types/organization.types";
 import { z } from "zod";
@@ -38,10 +38,10 @@ export async function listOrganizations(
     throw parsed.error; // can wrap in ApiError if desired
   }
   const qs = buildQuery(params);
-  return apiRequest<OrganizationListResponse>(
+  return apiRequest<OrganizationArray>(
     `/organizations${qs ? `?${qs}` : ""}`,
     null,
-    OrganizationListResponseSchema
+    OrganizationArraySchema
   );
 }
 
@@ -112,7 +112,6 @@ export async function changeOrganizationStatus(
 
 // Convenience: ensure slug uniqueness on client optionally (HEAD pattern not implemented backend yet) - placeholder
 export async function ensureOrgSlugAvailable(slug: string) {
-  // Placeholder (could call /organizations?q=slug and filter). Not implemented fully.
   const res = await listOrganizations({ q: slug, pageSize: 1 });
-  return !res.data.some((o) => o.slug === slug);
+  return !res.data.some((o: Organization) => o.slug === slug);
 }

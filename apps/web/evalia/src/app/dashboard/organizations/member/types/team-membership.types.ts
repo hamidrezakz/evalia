@@ -14,24 +14,12 @@ export const TeamMembershipSchema = z.object({
   user: TeamMemberUserSchema.optional(),
 });
 
-export const TeamMembershipListResponseSchema = z.object({
-  data: z.array(TeamMembershipSchema),
-  meta: z.object({
-    total: z.number(),
-    page: z.number(),
-    pageSize: z.number(),
-    pageCount: z.number(),
-    hasNext: z.boolean(),
-    hasPrev: z.boolean(),
-  }),
-});
+export const TeamMembershipArraySchema = z.array(TeamMembershipSchema);
 
 export const AddTeamMemberInputSchema = z.object({
   userId: z.number(),
 });
 
 export type TeamMembership = z.infer<typeof TeamMembershipSchema>;
-export type TeamMembershipListResponse = z.infer<
-  typeof TeamMembershipListResponseSchema
->;
+export type TeamMembershipArray = z.infer<typeof TeamMembershipArraySchema>;
 export type AddTeamMemberInput = z.infer<typeof AddTeamMemberInputSchema>;

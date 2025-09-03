@@ -1,9 +1,9 @@
-import { apiRequest } from "@/lib/api-client";
+import { apiRequest } from "@/lib/api.client";
 import {
-  TeamMembershipListResponseSchema,
+  TeamMembershipArraySchema,
   TeamMembershipSchema,
   AddTeamMemberInputSchema,
-  type TeamMembershipListResponse,
+  type TeamMembershipArray,
   type TeamMembership,
   type AddTeamMemberInput,
 } from "../types/team-membership.types";
@@ -22,10 +22,10 @@ export async function listTeamMembers(
   params: { page?: number; pageSize?: number } = {}
 ) {
   const qs = buildQuery(params);
-  return apiRequest<TeamMembershipListResponse>(
+  return apiRequest<TeamMembershipArray>(
     `/organizations/${orgId}/teams/${teamId}/members${qs ? `?${qs}` : ""}`,
     null,
-    TeamMembershipListResponseSchema
+    TeamMembershipArraySchema
   );
 }
 

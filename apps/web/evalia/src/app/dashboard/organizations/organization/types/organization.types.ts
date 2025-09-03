@@ -71,11 +71,8 @@ export const PaginationMetaSchema = z.object({
   hasPrev: z.boolean(),
 });
 
-export const OrganizationListResponseSchema = z.object({
-  data: z.array(OrganizationSchema),
-  meta: PaginationMetaSchema,
-  tookMs: z.number().optional(),
-});
+// Inner data schema for list responses (the interceptor already lifts meta to outer envelope)
+export const OrganizationArraySchema = z.array(OrganizationSchema);
 
 // Types
 export type Organization = z.infer<typeof OrganizationSchema>;
@@ -91,6 +88,4 @@ export type ChangeOrganizationStatusInput = z.infer<
 export type ListOrganizationsQuery = z.infer<
   typeof ListOrganizationsQuerySchema
 >;
-export type OrganizationListResponse = z.infer<
-  typeof OrganizationListResponseSchema
->;
+export type OrganizationArray = z.infer<typeof OrganizationArraySchema>;

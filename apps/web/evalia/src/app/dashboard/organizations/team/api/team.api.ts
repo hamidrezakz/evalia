@@ -1,11 +1,11 @@
-import { apiRequest } from "@/lib/api-client";
+import { apiRequest } from "@/lib/api.client";
 import {
   TeamSchema,
-  TeamListResponseSchema,
+  TeamArraySchema,
   CreateTeamInputSchema,
   UpdateTeamInputSchema,
   type Team,
-  type TeamListResponse,
+  type TeamArray,
   type CreateTeamInput,
   type UpdateTeamInput,
 } from "../types/team.types";
@@ -35,10 +35,10 @@ export async function listTeams(
   } = {}
 ) {
   const qs = buildQuery(params);
-  return apiRequest<TeamListResponse>(
+  return apiRequest<TeamArray>(
     `/organizations/${orgId}/teams${qs ? `?${qs}` : ""}`,
     null,
-    TeamListResponseSchema
+    TeamArraySchema
   );
 }
 

@@ -7,13 +7,13 @@ import { PrismaService } from '../prisma.service';
 import { AddTeamDto } from './dto/add-team.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';
 import { generateUniqueSlug } from './slug.util';
-import { CacheService } from '../common/cache.service';
+// import { CacheService } from '../common/cache.service';
 
 @Injectable()
 export class TeamService {
   constructor(
     private prisma: PrismaService,
-    private cache: CacheService,
+    // private cache: CacheService,
   ) {}
 
   private async orgExists(orgId: number) {
@@ -46,7 +46,7 @@ export class TeamService {
           description: dto.description,
         },
       });
-      await this.cache.invalidatePrefix(`team:list:${orgId}:`);
+      // await this.cache.invalidatePrefix(`team:list:${orgId}:`);
       return created;
     } catch (e: any) {
       if (e.code === 'P2002') {
@@ -74,9 +74,9 @@ export class TeamService {
         { name: { contains: q, mode: 'insensitive' } },
         { slug: { contains: q, mode: 'insensitive' } },
       ];
-    const cacheKey = `team:list:${orgId}:${this.cache.hashObject({ page, pageSize, q, includeDeleted })}`;
-    const cached = await this.cache.get<any>(cacheKey);
-    if (cached) return cached;
+    // const cacheKey = `team:list:${orgId}:${this.cache.hashObject({ page, pageSize, q, includeDeleted })}`;
+    // const cached = await this.cache.get<any>(cacheKey);
+    // if (cached) return cached;
     const total = await this.prisma.team.count({ where });
     const items = await this.prisma.team.findMany({
       where,
@@ -95,7 +95,7 @@ export class TeamService {
         hasPrev: page > 1,
       },
     };
-    await this.cache.set(cacheKey, result, 60);
+    // await this.cache.set(cacheKey, result, 60);
     return result;
   }
 
@@ -117,7 +117,7 @@ export class TeamService {
       where: { id: teamId },
       data: { name: dto.name, description: dto.description },
     });
-    await this.cache.invalidatePrefix(`team:list:${orgId}:`);
+    // await this.cache.invalidatePrefix(`team:list:${orgId}:`);
     return updated;
   }
 
@@ -127,7 +127,7 @@ export class TeamService {
       where: { id: teamId },
       data: { deletedAt: new Date() },
     });
-    await this.cache.invalidatePrefix(`team:list:${orgId}:`);
+    // await this.cache.invalidatePrefix(`team:list:${orgId}:`);
     return { success: true };
   }
 
@@ -144,7 +144,7 @@ export class TeamService {
       where: { id: teamId },
       data: { deletedAt: null },
     });
-    await this.cache.invalidatePrefix(`team:list:${orgId}:`);
+    // await this.cache.invalidatePrefix(`team:list:${orgId}:`);
     return restored;
   }
 }

@@ -25,7 +25,8 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { ROLES_KEY } from './roles.decorator';
+import { IS_PUBLIC_KEY } from './public.decorator';
+import { ROLES_KEY, AdvancedRolesDescriptor } from './roles.decorator';
 
 interface JwtRolesPayload {
   global: string[];
@@ -37,7 +38,14 @@ export class RolesGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const required = this.reflector.getAllAndOverride<string[]>(ROLES_KEY, [
+    // Allow public endpoints
+    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    if (isPublic) return true;
+
+    const meta = this.reflector.getAllAndOverride<any>(ROLES_KEY, [
       context.getHandler(),
       context.getClass(),
     ]);
@@ -49,17 +57,46 @@ export class RolesGuard implements CanActivate {
     // SUPER_ADMIN always allowed (global bypass)
     if (roles.global.includes('SUPER_ADMIN')) return true;
 
-    if (!required || required.length === 0) return true;
+    if (!meta) return true;
 
-    // Allow if any required role matches global roles
-    if (required.some((r) => roles.global.includes(r))) return true;
-
-    // Support ORG:<ROLE> pattern
-    const orgPatternRoles = required.filter((r) => r.startsWith('ORG:'));
-    if (orgPatternRoles.length) {
-      const needed = orgPatternRoles.map((r) => r.split(':')[1]);
-      if (roles.org.some((o) => needed.includes(o.role))) return true;
+    // Backward compatibility: meta is an array of strings
+    if (Array.isArray(meta)) {
+      if (meta.length === 0) return true;
+      if (meta.some((r) => roles.global.includes(r))) return true;
+      const orgPatternRoles = meta.filter((r) => r.startsWith('ORG:'));
+      if (orgPatternRoles.length) {
+        const needed = orgPatternRoles.map((r) => r.split(':')[1]);
+        if (roles.org.some((o) => needed.includes(o.role))) return true;
+      }
+      throw new ForbiddenException('دسترسی کافی به این بخش ندارید');
     }
+
+    // Advanced descriptor mode
+    const descriptor = meta as AdvancedRolesDescriptor;
+    const { any = [], all = [], orgAny = [], orgAll = [] } = descriptor;
+
+    // Helper resolvers
+    const hasGlobal = (r: string) => roles.global.includes(r);
+    const hasOrgRole = (r: string) => roles.org.some((o) => o.role === r);
+    const matchToken = (token: string): boolean => {
+      if (token.startsWith('ORG:')) {
+        const role = token.split(':')[1];
+        return hasOrgRole(role);
+      }
+      return hasGlobal(token);
+    };
+
+    // any: at least one matches (global or ORG: pattern aware)
+    if (any.length && any.some(matchToken)) return true;
+
+    // all: every listed global role must exist
+    if (all.length && all.every(hasGlobal)) return true;
+
+    // orgAny: at least one org role present
+    if (orgAny.length && orgAny.some(hasOrgRole)) return true;
+
+    // orgAll: all org roles must be present (possibly across org memberships)
+    if (orgAll.length && orgAll.every(hasOrgRole)) return true;
 
     throw new ForbiddenException('دسترسی کافی به این بخش ندارید');
   }

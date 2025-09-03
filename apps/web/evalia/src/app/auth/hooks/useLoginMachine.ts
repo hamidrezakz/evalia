@@ -6,7 +6,7 @@ import {
   requestOtp,
   verifyOtp,
   completeRegistration,
-} from "../api/auth-api";
+} from "../api/auth.api";
 
 export type LoginPhase =
   | "IDENTIFIER"
@@ -111,49 +111,53 @@ export function useLoginMachine(onSuccess: () => void) {
     const phone = state.phone.trim();
     if (!phone) return;
     const res = await wrap(() => checkIdentifier(phone));
-    dispatch({ type: "EXISTS", exists: res.exists });
-    if (res.exists) {
+    dispatch({ type: "EXISTS", exists: res.data.exists });
+    if (res.data.exists) {
       dispatch({ type: "SET_PHASE", phase: "PASSWORD" });
     } else {
       // directly request OTP for new phone (SIGNUP path)
       const r = await wrap(() => requestOtp(phone, "LOGIN")); // purpose can stay LOGIN for now
-      dispatch({ type: "DEV_CODE", code: r.devCode || null });
+      dispatch({ type: "DEV_CODE", code: r.data.devCode || null });
       dispatch({ type: "SET_PHASE", phase: "OTP" });
     }
   }, [state.phone]);
 
   const doPasswordLogin = useCallback(async () => {
-    await wrap(() => loginWithPassword(state.phone, state.password));
-    onSuccess();
+    const res = await wrap(() =>
+      loginWithPassword(state.phone, state.password)
+    );
+    if (res.success) onSuccess();
+    else dispatch({ type: "ERROR", error: res.message || "خطا" });
   }, [state.phone, state.password, onSuccess]);
 
   const requestLoginOtp = useCallback(async () => {
     const r = await wrap(() => requestOtp(state.phone, "LOGIN"));
-    dispatch({ type: "DEV_CODE", code: r.devCode || null });
+    dispatch({ type: "DEV_CODE", code: r.data.devCode || null });
     dispatch({ type: "SET_PHASE", phase: "OTP" });
   }, [state.phone]);
 
   const verifyLoginOtp = useCallback(async () => {
     const r = await wrap(() => verifyOtp(state.phone, "LOGIN", state.otp));
-    if (r.mode === "LOGIN") {
+    if (r.data.mode === "LOGIN") {
       onSuccess();
-    } else if (r.mode === "SIGNUP") {
-      dispatch({ type: "SIGNUP_TOKEN", token: r.signupToken });
+    } else if (r.data.mode === "SIGNUP") {
+      dispatch({ type: "SIGNUP_TOKEN", token: r.data.signupToken });
       dispatch({ type: "SET_PHASE", phase: "COMPLETE_REGISTRATION" });
     }
   }, [state.phone, state.otp, onSuccess]);
 
   const finishRegistration = useCallback(async () => {
     if (!state.signupToken) return;
-    await wrap(() =>
+    const res = await wrap(() =>
       completeRegistration(
-        state.signupToken!, // non-null asserted after guard above
+        state.signupToken!,
         state.firstName,
         state.lastName,
         state.password
       )
     );
-    onSuccess();
+    if (res.success) onSuccess();
+    else dispatch({ type: "ERROR", error: res.message || "خطا" });
   }, [
     state.signupToken,
     state.firstName,

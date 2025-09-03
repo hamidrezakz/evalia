@@ -33,12 +33,9 @@ export const PaginationMetaSchema = z.object({
   hasPrev: z.boolean(),
 });
 
-export const TeamListResponseSchema = z.object({
-  data: z.array(TeamSchema),
-  meta: PaginationMetaSchema,
-});
+export const TeamArraySchema = z.array(TeamSchema);
 
 export type Team = z.infer<typeof TeamSchema>;
 export type CreateTeamInput = z.infer<typeof CreateTeamInputSchema>;
 export type UpdateTeamInput = z.infer<typeof UpdateTeamInputSchema>;
-export type TeamListResponse = z.infer<typeof TeamListResponseSchema>;
+export type TeamArray = z.infer<typeof TeamArraySchema>;
