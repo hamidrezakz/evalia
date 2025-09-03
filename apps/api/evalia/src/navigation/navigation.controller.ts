@@ -20,36 +20,18 @@ import { ListNavigationItemsDto } from './dto/list-navigation-items.dto';
 export class NavigationController {
   constructor(private readonly navigation: NavigationService) {}
 
-  // Resolved (merged) menu for current user & org (for now expects orgId & roles passed explicitly from caller)
-  @Get('org/:orgId/resolve')
-  async resolveOrg(
-    @Param('orgId', ParseIntPipe) orgId: number,
+  // Simplified single-role tree (platformRole یا orgRole یکی از اینها)
+  @Get('role')
+  async getByRole(
+    @Query('platformRole') platformRole?: string,
     @Query('orgRole') orgRole?: string,
-    @Query('platformRoles') platformRolesCsv?: string,
+    @Query('includeInactive') includeInactive?: string,
   ) {
-    const platformRoles = platformRolesCsv
-      ? platformRolesCsv.split(',').filter(Boolean)
-      : [];
-    return this.navigation.buildResolvedMenu({
-      organizationId: orgId,
-      userOrgRole: (orgRole as any) || null,
-      platformRoles: platformRoles as any,
+    return this.navigation.getTreeForRole({
+      platformRole: platformRole ? (platformRole as any) : null,
+      orgRole: orgRole ? (orgRole as any) : null,
+      includeInactive: includeInactive === 'true',
     });
-  }
-
-  @Get('global')
-  async listGlobal() {
-    return this.navigation.findRawByOrg(null);
-  }
-
-  @Get()
-  async listFiltered(@Query() query: ListNavigationItemsDto) {
-    return this.navigation.listFiltered(query);
-  }
-
-  @Get('org/:orgId')
-  async listOrg(@Param('orgId', ParseIntPipe) orgId: number) {
-    return this.navigation.findRawByOrg(orgId);
   }
 
   @Get(':id')

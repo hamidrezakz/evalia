@@ -1,18 +1,16 @@
-import { IsOptional, IsInt, IsBoolean, IsEnum } from 'class-validator';
+import { IsOptional, IsInt, IsBoolean, IsEnum, IsArray } from 'class-validator';
 import { OrgRole, PlatformRole } from '@prisma/client';
 
 export class ListNavigationItemsDto {
+  // Filter items containing at least one of these platform roles
   @IsOptional()
-  @IsInt()
-  organizationId?: number | null;
+  @IsArray()
+  platformRoles?: PlatformRole[];
 
+  // Filter items containing at least one of these org roles
   @IsOptional()
-  @IsEnum(OrgRole)
-  role?: OrgRole | null;
-
-  @IsOptional()
-  @IsEnum(PlatformRole)
-  platformRole?: PlatformRole | null;
+  @IsArray()
+  orgRoles?: OrgRole[];
 
   @IsOptional()
   @IsBoolean()

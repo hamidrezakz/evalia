@@ -294,7 +294,6 @@ model Organization {
   questionBanks  QuestionBank[]                @relation("OrganizationQuestionBanks")
   assessments    AssessmentTemplate[]          @relation("OrganizationAssessmentTemplates")
   sessions       AssessmentSession[]           @relation("OrganizationAssessmentSessions")
-  navItems       NavigationItem[]              @relation("OrganizationNavigationItems")
   invites        Invitation[]                  @relation("InvitationOrg")
   notifications  Notification[]                @relation("OrganizationNotifications")
   auditLogs      AuditLog[]                    @relation("OrganizationAuditLogs")
@@ -400,9 +399,6 @@ model TeamMembership {
 /// Navigation items configurable per org & role (آیتم منو)
 model NavigationItem {
   id             Int         @id @default(autoincrement())
-  organizationId Int?        // nullable: null = global, set = per-org
-  role           OrgRole?
-  platformRole   PlatformRole?
   parentId       Int?        /// for nested menus
   label          String
   path           String?     /// internal route
@@ -415,15 +411,15 @@ model NavigationItem {
   updatedAt      DateTime    @updatedAt
   deletedAt      DateTime?
 
-  organization   Organization? @relation("OrganizationNavigationItems", fields: [organizationId], references: [id])
+  platformRoles  PlatformRole[] // آیتم می‌تواند به چند نقش گلوبال متصل باشد
+  orgRoles       OrgRole[]      // آیتم می‌تواند به چند نقش سازمانی متصل باشد
+
   parent         NavigationItem? @relation("NavParent", fields: [parentId], references: [id])
   children       NavigationItem[] @relation("NavParent")
 
-  @@index([organizationId])
-  @@index([role])
-  @@index([platformRole])
   @@index([parentId])
-  @@unique([organizationId, role, platformRole, label, parentId])
+  @@index([order])
+  @@unique([label, parentId])
 }
 
 // ------------------------------

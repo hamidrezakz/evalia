@@ -10,24 +10,26 @@ import {
   IsNumber,
   Min,
   ValidateIf,
+  IsArray,
+  ArrayUnique,
 } from 'class-validator';
 
 export class UpdateNavigationItemDto {
   @IsOptional()
   @IsInt()
-  organizationId?: number | null;
-
-  @IsOptional()
-  @IsEnum(OrgRole)
-  role?: OrgRole | null;
-
-  @IsOptional()
-  @IsEnum(PlatformRole)
-  platformRole?: PlatformRole | null;
-
-  @IsOptional()
-  @IsInt()
   parentId?: number | null;
+
+  @IsOptional()
+  @IsArray()
+  @IsEnum(PlatformRole, { each: true })
+  @ArrayUnique()
+  platformRoles?: PlatformRole[] | null;
+
+  @IsOptional()
+  @IsArray()
+  @IsEnum(OrgRole, { each: true })
+  @ArrayUnique()
+  orgRoles?: OrgRole[] | null;
 
   @IsOptional()
   @IsString()

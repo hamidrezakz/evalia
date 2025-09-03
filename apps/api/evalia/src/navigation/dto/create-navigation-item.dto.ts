@@ -8,25 +8,29 @@ import {
   IsEnum,
   IsNumber,
   Min,
+  IsArray,
+  ArrayNotEmpty,
+  ArrayUnique,
 } from 'class-validator';
 import { OrgRole, PlatformRole } from '@prisma/client';
 
 export class CreateNavigationItemDto {
   @IsOptional()
   @IsInt()
-  organizationId?: number | null;
-
-  @IsOptional()
-  @IsEnum(OrgRole)
-  role?: OrgRole;
-
-  @IsOptional()
-  @IsEnum(PlatformRole)
-  platformRole?: PlatformRole;
-
-  @IsOptional()
-  @IsInt()
   parentId?: number | null;
+
+  // Optional arrays of roles; empty or undefined => public/generic item
+  @IsOptional()
+  @IsArray()
+  @IsEnum(PlatformRole, { each: true })
+  @ArrayUnique()
+  platformRoles?: PlatformRole[];
+
+  @IsOptional()
+  @IsArray()
+  @IsEnum(OrgRole, { each: true })
+  @ArrayUnique()
+  orgRoles?: OrgRole[];
 
   @IsString()
   label!: string;
