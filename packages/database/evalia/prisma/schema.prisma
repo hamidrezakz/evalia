@@ -258,6 +258,8 @@ model User {
   /// Service assignments (facilitator / analysis manager) | تخصیص‌های خدماتی
   serviceAssignments OrganizationServiceAssignment[] @relation("UserServiceAssignments")
   refreshTokens RefreshToken[]
+  /// Increment to invalidate previously issued access tokens (JWT tokenVersion strategy)
+  tokenVersion  Int           @default(1)
 
   @@index([fullName])
   @@index([status])
