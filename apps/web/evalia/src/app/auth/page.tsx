@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useForm } from "react-hook-form";
 import { Form } from "@/components/ui/form";
-import { friendlyError } from "./lib/error-map";
+import { friendlyError } from "./api/error-map";
 import { User, Lock } from "lucide-react";
 
 type AuthFormValues = {

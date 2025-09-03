@@ -6,7 +6,7 @@ import {
   requestOtp,
   verifyOtp,
   completeRegistration,
-} from "../lib/auth-api";
+} from "../api/auth-api";
 
 export type LoginPhase =
   | "IDENTIFIER"

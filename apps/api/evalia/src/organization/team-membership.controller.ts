@@ -8,7 +8,7 @@ import {
   Body,
 } from '@nestjs/common';
 import { TeamMembershipService } from './team-membership.service';
-// import { Roles } from '../auth/roles.decorator';
+import { Roles } from '../common/roles.decorator';
 
 class AddTeamMemberDto {
   userId!: number;
@@ -19,7 +19,7 @@ export class TeamMembershipController {
   constructor(private service: TeamMembershipService) {}
 
   @Get()
-  // @Roles('ORG:OWNER','ORG:MANAGER')
+  @Roles('ORG:OWNER', 'ORG:MANAGER')
   list(
     @Param('orgId') orgId: string,
     @Param('teamId') teamId: string,
@@ -35,7 +35,7 @@ export class TeamMembershipController {
   }
 
   @Post()
-  // @Roles('ORG:OWNER','ORG:MANAGER')
+  @Roles('ORG:OWNER', 'ORG:MANAGER')
   add(
     @Param('orgId') orgId: string,
     @Param('teamId') teamId: string,
@@ -45,7 +45,7 @@ export class TeamMembershipController {
   }
 
   @Delete(':membershipId')
-  // @Roles('ORG:OWNER','ORG:MANAGER')
+  @Roles('ORG:OWNER', 'ORG:MANAGER')
   remove(
     @Param('orgId') orgId: string,
     @Param('teamId') teamId: string,

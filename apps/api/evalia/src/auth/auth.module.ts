@@ -7,7 +7,7 @@ import { PrismaService } from '../prisma.service';
 import { VerificationService } from './verification.service';
 import { PasswordService } from './password.service';
 import { JwtStrategy } from './jwt.strategy';
-import { RolesGuard } from './roles.guard';
+import { RolesGuard } from '../common/roles.guard';
 import { APP_GUARD } from '@nestjs/core';
 
 @Module({

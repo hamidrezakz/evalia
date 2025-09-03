@@ -12,14 +12,14 @@ import { MembershipService } from './membership.service';
 import { AddMemberDto } from './dto/add-member.dto';
 import { UpdateMemberRoleDto } from './dto/update-member-role.dto';
 import { OrgRole } from '@prisma/client';
-// import { Roles } from '../auth/roles.decorator';
+import { Roles } from '../common/roles.decorator';
 
 @Controller('organizations/:orgId/members')
 export class MembershipController {
   constructor(private service: MembershipService) {}
 
   @Get()
-  // @Roles('ORG:OWNER','ORG:MANAGER')
+  @Roles('ORG:OWNER', 'ORG:MANAGER')
   list(
     @Param('orgId') orgId: string,
     @Query('page') page?: string,
@@ -37,13 +37,13 @@ export class MembershipController {
   }
 
   @Post()
-  // @Roles('ORG:OWNER','ORG:MANAGER')
+  @Roles('ORG:OWNER', 'ORG:MANAGER')
   add(@Param('orgId') orgId: string, @Body() dto: AddMemberDto) {
     return this.service.add(Number(orgId), dto);
   }
 
   @Patch(':membershipId')
-  // @Roles('ORG:OWNER','ORG:MANAGER')
+  @Roles('ORG:OWNER', 'ORG:MANAGER')
   update(
     @Param('orgId') orgId: string,
     @Param('membershipId') membershipId: string,
@@ -53,7 +53,7 @@ export class MembershipController {
   }
 
   @Delete(':membershipId')
-  // @Roles('ORG:OWNER','ORG:MANAGER')
+  @Roles('ORG:OWNER', 'ORG:MANAGER')
   remove(
     @Param('orgId') orgId: string,
     @Param('membershipId') membershipId: string,

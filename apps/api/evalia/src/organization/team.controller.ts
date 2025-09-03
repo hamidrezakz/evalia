@@ -11,14 +11,14 @@ import {
 import { TeamService } from './team.service';
 import { AddTeamDto } from './dto/add-team.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';
-// import { Roles } from '../auth/roles.decorator';
+import { Roles } from '../common/roles.decorator';
 
 @Controller('organizations/:orgId/teams')
 export class TeamController {
   constructor(private service: TeamService) {}
 
   @Post()
-  // @Roles('ORG:OWNER','ORG:MANAGER')
+  @Roles('ORG:OWNER', 'ORG:MANAGER')
   create(@Param('orgId') orgId: string, @Body() dto: AddTeamDto) {
     return this.service.create(Number(orgId), dto);
   }
@@ -46,6 +46,7 @@ export class TeamController {
   }
 
   @Patch(':teamId')
+  @Roles('ORG:OWNER', 'ORG:MANAGER')
   update(
     @Param('orgId') orgId: string,
     @Param('teamId') teamId: string,
@@ -55,11 +56,13 @@ export class TeamController {
   }
 
   @Delete(':teamId')
+  @Roles('ORG:OWNER', 'ORG:MANAGER')
   remove(@Param('orgId') orgId: string, @Param('teamId') teamId: string) {
     return this.service.softDelete(Number(orgId), Number(teamId));
   }
 
   @Post(':teamId/restore')
+  @Roles('ORG:OWNER', 'ORG:MANAGER')
   restore(@Param('orgId') orgId: string, @Param('teamId') teamId: string) {
     return this.service.restore(Number(orgId), Number(teamId));
   }

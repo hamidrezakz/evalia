@@ -41,11 +41,15 @@ export class RolesGuard implements CanActivate {
       context.getHandler(),
       context.getClass(),
     ]);
-    if (!required || required.length === 0) return true;
     const req = context.switchToHttp().getRequest();
     const user = req.user as any;
     if (!user) throw new ForbiddenException('unauthorized');
     const roles = (user.roles || { global: [], org: [] }) as JwtRolesPayload;
+
+    // SUPER_ADMIN always allowed (global bypass)
+    if (roles.global.includes('SUPER_ADMIN')) return true;
+
+    if (!required || required.length === 0) return true;
 
     // Allow if any required role matches global roles
     if (required.some((r) => roles.global.includes(r))) return true;

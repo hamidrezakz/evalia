@@ -17,14 +17,10 @@ import { ListOrganizationsQueryDto } from './dto/list-organizations.dto';
 import { ChangeOrganizationStatusDto } from './dto/change-org-status.dto';
 import { PaginationResult } from './types/pagination-result.type';
 import { generateUniqueSlug } from './slug.util';
-import { CacheService } from '../common/cache.service';
 
 @Injectable()
 export class OrganizationService {
-  constructor(
-    private prisma: PrismaService,
-    private cache: CacheService,
-  ) {}
+  constructor(private prisma: PrismaService) {}
 
   async create(dto: CreateOrganizationDto, actorUserId?: number) {
     const slug =
@@ -43,7 +39,7 @@ export class OrganizationService {
           createdById: actorUserId,
         },
       });
-      await this.cache.invalidatePrefix('org:list:');
+      // ...existing code...
       return created;
     } catch (e: any) {
       if (this.isUniqueViolation(e, 'Organization_slug_key')) {
@@ -77,9 +73,7 @@ export class OrganizationService {
         : {}),
     };
 
-    const cacheKey = `org:list:${this.cache.hashObject({ page, pageSize, q, status, plan, orderBy, orderDir })}`;
-    const cached = await this.cache.get<any>(cacheKey);
-    if (cached) return cached;
+    // ...existing code...
     const total = await this.prisma.organization.count({ where });
     const items = await this.prisma.organization.findMany({
       where,
@@ -99,7 +93,7 @@ export class OrganizationService {
         hasPrev: page > 1,
       },
     };
-    await this.cache.set(cacheKey, result, 60);
+    // ...existing code...
     return result;
   }
 
@@ -139,7 +133,7 @@ export class OrganizationService {
       where: { id },
       data: { deletedAt: new Date() },
     });
-    await this.cache.invalidatePrefix('org:list:');
+    // ...existing code...
     return { success: true };
   }
 
@@ -156,7 +150,7 @@ export class OrganizationService {
       where: { id },
       data: { deletedAt: null },
     });
-    await this.cache.invalidatePrefix('org:list:');
+    // ...existing code...
     return restored;
   }
 
@@ -166,7 +160,7 @@ export class OrganizationService {
       where: { id },
       data: { status: dto.status },
     });
-    await this.cache.invalidatePrefix('org:list:');
+    // ...existing code...
     return updated;
   }
 
