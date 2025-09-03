@@ -96,3 +96,69 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+
+---
+
+## Navigation Module (Dynamic Menu System)
+
+This service provides hierarchical menu items with multi-tenant override capability.
+
+### Precedence Order (highest wins when same parent + label)
+
+1. Organization + Org Role specific (organizationId != null AND role != null)
+2. Organization generic (organizationId != null AND role == null)
+3. Global + Platform Role (organizationId == null AND platformRole != null)
+4. Global generic (organizationId == null AND platformRole == null)
+
+### Resolution Algorithm
+
+1. Fetch all candidates matching any scope for the requesting user (org + roles).
+2. Group by composite key: (parentId||root) + label.
+3. Keep highest precedence item per key (numeric score 400/300/200/100).
+4. Filter inactive / soft-deleted, then build tree ordered by parentId -> order -> label.
+
+### Validation Rules
+
+- label uniqueness within same (parentId, organizationId, role, platformRole) excluding soft-deleted.
+- Parent scope alignment: same organizationId. Child may specialize with role/platformRole when parent is generic; inverse mismatch rejected.
+- Circular parent chains are rejected.
+- path XOR externalUrl (mutually exclusive).
+
+### Key Endpoints
+
+- GET /navigation/org/:orgId/resolve -> merged tree
+- GET /navigation (filters) -> raw flat list
+- POST /navigation -> create item
+- PATCH /navigation/:id -> update item
+- POST /navigation/reorder -> batch set parent/order
+- POST /navigation/:id/toggle -> activate/deactivate
+- DELETE /navigation/:id -> soft delete
+
+### Reorder Payload Example
+
+```
+POST /navigation/reorder
+{
+  "items": [
+    { "id": 12, "parentId": null, "order": 0 },
+    { "id": 15, "parentId": 12, "order": 0 }
+  ]
+}
+```
+
+### Override Example
+
+1. Create global generic: Dashboard
+2. Create org generic (org=10): Dashboard (custom label / order) -> overrides global for that org
+3. Create org role-specific (org=10, role=MANAGER): Dashboard -> overrides org generic for MANAGERs
+
+### Suggested Caching Strategy (Future)
+
+Cache key: `nav:v1:org:{orgId||0}:roles:{hash(roles)}:tv:{tokenVersion}` storing resolved tree JSON for short TTL (e.g. 5m). Invalidate manually on mutations.
+
+### Planned Enhancements
+
+- Swagger decorators for all DTOs
+- Role/permission guard integration (SUPER_ADMIN for global mutations; OWNER/MANAGER for org mutations)
+- Bulk import/export (JSON)
+- Optional menu item visibility conditions (time-based, feature flags)
