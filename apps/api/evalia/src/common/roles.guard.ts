@@ -54,7 +54,7 @@ export class RolesGuard implements CanActivate {
     if (!user) throw new ForbiddenException('unauthorized');
     const roles = (user.roles || { global: [], org: [] }) as JwtRolesPayload;
 
-    // SUPER_ADMIN always allowed (global bypass)
+    // SUPER_ADMIN always allowed (global bypass) 
     if (roles.global.includes('SUPER_ADMIN')) return true;
 
     if (!meta) return true;

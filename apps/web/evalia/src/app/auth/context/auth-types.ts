@@ -26,11 +26,26 @@ export interface ActiveSelection {
 }
 
 // Minimal user shape (extend when backend adds more fields)
+// Expanded to match backend UserDetail and frontend UserDetail type
 export interface AuthUser {
   id: number;
   email?: string | null;
   phone?: string | null;
   fullName?: string | null;
+  status?: string;
+  globalRoles?: string[];
+  organizations?: Array<{
+    membershipId?: number;
+    orgId: number;
+    role: string;
+    joinedAt?: string;
+  }>;
+  teams?: Array<{
+    id: number;
+    name: string;
+    organizationId: number;
+  }>;
+  createdAt?: string;
   firstName?: string | null;
   lastName?: string | null;
   [key: string]: any;
