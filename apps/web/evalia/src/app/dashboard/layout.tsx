@@ -3,11 +3,13 @@ import { AppSidebar } from "@/app/dashboard/components/app-sidebar";
 import { SiteHeader } from "@/app/dashboard/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { MobileSidebarAutoClose } from "@/app/dashboard/components/mobile-sidebar-auto-close";
+import { AuthProvider } from "@/app/auth/context/AuthContext";
 
 import { ReactNode, Suspense } from "react";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
+    <AuthProvider>
     <div className="[--header-height:calc(--spacing(14))]">
       <SidebarProvider className="flex flex-col">
         {/* Auto-close the sidebar on mobile navigation changes (needs Suspense for routing hooks) */}
@@ -36,5 +38,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         </div>
       </SidebarProvider>
     </div>
+  </AuthProvider>
   );
 }
