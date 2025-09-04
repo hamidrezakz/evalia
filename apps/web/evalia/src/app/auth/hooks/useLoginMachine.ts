@@ -1,12 +1,13 @@
 "use client";
-import { useCallback, useReducer } from "react";
+import { useCallback, useReducer, useEffect } from "react";
 import {
-  checkIdentifier,
-  loginWithPassword,
-  requestOtp,
-  verifyOtp,
-  completeRegistration,
-} from "../api/auth.api";
+  useLoginMutation,
+  useRequestOtpMutation,
+  useVerifyOtpMutation,
+  useCompleteRegistrationMutation,
+} from "./useAuth";
+import { checkIdentifier } from "../api/auth.api";
+import { useQueryClient } from "@tanstack/react-query";
 
 export type LoginPhase =
   | "IDENTIFIER"
@@ -44,13 +45,6 @@ const initial: State = {
   mode: null,
 };
 
-// Action type for the reducer: describes all possible actions that can be dispatched.
-// This is a TypeScript union type: Action can be any ONE of these object shapes.
-// Each action has a 'type' field (string literal) and, depending on the action, additional fields.
-// This pattern ensures type safety and clear intent for each action in the reducer.
-// Example usage:
-//   dispatch({ type: "SET_FIELD", field: "phone", value: "0912..." })
-//   dispatch({ type: "ERROR", error: "Invalid password" })
 type Action =
   | { type: "SET_FIELD"; field: keyof State; value: State[keyof State] }
   | { type: "SET_PHASE"; phase: LoginPhase }
@@ -86,6 +80,74 @@ function reducer(state: State, action: Action): State {
 
 export function useLoginMachine(onSuccess: () => void) {
   const [state, dispatch] = useReducer(reducer, initial);
+  const queryClient = useQueryClient();
+
+  // Removed auto identifier query to avoid multiple network calls while typing.
+  const loginMutation = useLoginMutation({
+    onSuccess: (data) => {
+      dispatch({ type: "MODE", mode: "LOGIN" });
+      // Invalidate identifier query cache after successful login
+      if (state.phone) {
+        queryClient.invalidateQueries({
+          queryKey: ["auth", "identifier", state.phone],
+        });
+      }
+      onSuccess();
+    },
+    onError: (err: Error) => dispatch({ type: "ERROR", error: err.message }),
+  });
+  const requestOtpMutation = useRequestOtpMutation({
+    onSuccess: (data) => {
+      dispatch({ type: "DEV_CODE", code: data.devCode || null });
+      dispatch({ type: "SET_PHASE", phase: "OTP" });
+    },
+    onError: (err: Error) => dispatch({ type: "ERROR", error: err.message }),
+  });
+  const verifyOtpMutation = useVerifyOtpMutation({
+    onSuccess: (data) => {
+      if (data.mode === "LOGIN") {
+        dispatch({ type: "MODE", mode: "LOGIN" });
+        if (state.phone) {
+          queryClient.invalidateQueries({
+            queryKey: ["auth", "identifier", state.phone],
+          });
+        }
+        onSuccess();
+      } else if (data.mode === "SIGNUP") {
+        dispatch({ type: "MODE", mode: "SIGNUP" });
+        dispatch({ type: "SIGNUP_TOKEN", token: data.signupToken });
+        dispatch({ type: "SET_PHASE", phase: "COMPLETE_REGISTRATION" });
+      }
+    },
+    onError: (err: Error) => dispatch({ type: "ERROR", error: err.message }),
+  });
+  const completeRegistrationMutation = useCompleteRegistrationMutation({
+    onSuccess: (data) => {
+      dispatch({ type: "MODE", mode: "LOGIN" });
+      if (state.phone) {
+        queryClient.invalidateQueries({
+          queryKey: ["auth", "identifier", state.phone],
+        });
+      }
+      onSuccess();
+    },
+    onError: (err: Error) => dispatch({ type: "ERROR", error: err.message }),
+  });
+
+  // Derive loading from mutations / query
+  useEffect(() => {
+    const loading =
+      loginMutation.isPending ||
+      requestOtpMutation.isPending ||
+      verifyOtpMutation.isPending ||
+      completeRegistrationMutation.isPending;
+    dispatch({ type: "LOADING", value: loading });
+  }, [
+    loginMutation.isPending,
+    requestOtpMutation.isPending,
+    verifyOtpMutation.isPending,
+    completeRegistrationMutation.isPending,
+  ]);
 
   const set = useCallback(
     <K extends keyof State>(field: K, value: State[K]) =>
@@ -93,77 +155,56 @@ export function useLoginMachine(onSuccess: () => void) {
     []
   );
 
-  async function wrap<T>(fn: () => Promise<T>) {
-    dispatch({ type: "LOADING", value: true });
-    dispatch({ type: "ERROR", error: null });
-    try {
-      return await fn();
-    } catch (e) {
-      const err = e as Error;
-      dispatch({ type: "ERROR", error: err.message || "خطا" });
-      throw err;
-    } finally {
-      dispatch({ type: "LOADING", value: false });
-    }
-  }
-
   const submitIdentifier = useCallback(async () => {
     const phone = state.phone.trim();
     if (!phone) return;
-    const res = await wrap(() => checkIdentifier(phone));
-    dispatch({ type: "EXISTS", exists: res.data.exists });
-    if (res.data.exists) {
-      dispatch({ type: "SET_PHASE", phase: "PASSWORD" });
-    } else {
-      // directly request OTP for new phone (SIGNUP path)
-      const r = await wrap(() => requestOtp(phone, "LOGIN")); // purpose can stay LOGIN for now
-      dispatch({ type: "DEV_CODE", code: r.data.devCode || null });
-      dispatch({ type: "SET_PHASE", phase: "OTP" });
+    dispatch({ type: "ERROR", error: null });
+    dispatch({ type: "LOADING", value: true });
+    try {
+      const res = await checkIdentifier(phone);
+      dispatch({ type: "EXISTS", exists: res.exists });
+      if (res.exists) {
+        dispatch({ type: "SET_PHASE", phase: "PASSWORD" });
+      } else {
+        requestOtpMutation.mutate({ identifier: phone, purpose: "LOGIN" });
+      }
+    } catch (e: any) {
+      dispatch({ type: "ERROR", error: e.message || "خطا" });
+    } finally {
+      dispatch({ type: "LOADING", value: false });
     }
-  }, [state.phone]);
+  }, [state.phone, requestOtpMutation]);
 
-  const doPasswordLogin = useCallback(async () => {
-    const res = await wrap(() =>
-      loginWithPassword(state.phone, state.password)
-    );
-    if (res.success) onSuccess();
-    else dispatch({ type: "ERROR", error: res.message || "خطا" });
-  }, [state.phone, state.password, onSuccess]);
+  const doPasswordLogin = useCallback(() => {
+    loginMutation.mutate({ identifier: state.phone, password: state.password });
+  }, [state.phone, state.password, loginMutation]);
 
-  const requestLoginOtp = useCallback(async () => {
-    const r = await wrap(() => requestOtp(state.phone, "LOGIN"));
-    dispatch({ type: "DEV_CODE", code: r.data.devCode || null });
-    dispatch({ type: "SET_PHASE", phase: "OTP" });
-  }, [state.phone]);
+  const requestLoginOtp = useCallback(() => {
+    requestOtpMutation.mutate({ identifier: state.phone, purpose: "LOGIN" });
+  }, [state.phone, requestOtpMutation]);
 
-  const verifyLoginOtp = useCallback(async () => {
-    const r = await wrap(() => verifyOtp(state.phone, "LOGIN", state.otp));
-    if (r.data.mode === "LOGIN") {
-      onSuccess();
-    } else if (r.data.mode === "SIGNUP") {
-      dispatch({ type: "SIGNUP_TOKEN", token: r.data.signupToken });
-      dispatch({ type: "SET_PHASE", phase: "COMPLETE_REGISTRATION" });
-    }
-  }, [state.phone, state.otp, onSuccess]);
+  const verifyLoginOtp = useCallback(() => {
+    verifyOtpMutation.mutate({
+      identifier: state.phone,
+      purpose: "LOGIN",
+      code: state.otp,
+    });
+  }, [state.phone, state.otp, verifyOtpMutation]);
 
-  const finishRegistration = useCallback(async () => {
+  const finishRegistration = useCallback(() => {
     if (!state.signupToken) return;
-    const res = await wrap(() =>
-      completeRegistration(
-        state.signupToken!,
-        state.firstName,
-        state.lastName,
-        state.password
-      )
-    );
-    if (res.success) onSuccess();
-    else dispatch({ type: "ERROR", error: res.message || "خطا" });
+    completeRegistrationMutation.mutate({
+      signupToken: state.signupToken,
+      firstName: state.firstName,
+      lastName: state.lastName,
+      password: state.password,
+    });
   }, [
     state.signupToken,
     state.firstName,
     state.lastName,
     state.password,
-    onSuccess,
+    completeRegistrationMutation,
   ]);
 
   return {
@@ -175,5 +216,11 @@ export function useLoginMachine(onSuccess: () => void) {
     verifyLoginOtp,
     finishRegistration,
     goToPhase: (p: LoginPhase) => dispatch({ type: "SET_PHASE", phase: p }),
+    mutations: {
+      login: loginMutation,
+      requestOtp: requestOtpMutation,
+      verifyOtp: verifyOtpMutation,
+      completeRegistration: completeRegistrationMutation,
+    },
   };
 }

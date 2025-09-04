@@ -5,8 +5,8 @@ import { Phone } from "lucide-react";
 
 interface Props {
   phone: string;
-  disabled?: boolean;
-  loading?: boolean;
+  disabled?: boolean; // external disable (rare)
+  loading?: boolean; // show pending state
   onChange(v: string): void;
 }
 
@@ -27,10 +27,10 @@ export function IdentifierForm({ phone, onChange, disabled, loading }: Props) {
         />
       </div>
       <Button
-        disabled={loading || !phone || phone.length < 11}
+        disabled={disabled || loading || !phone || phone.length < 11}
         className="w-full"
         type="submit">
-        ادامه
+        {loading ? "در حال بررسی..." : "ادامه"}
       </Button>
     </div>
   );

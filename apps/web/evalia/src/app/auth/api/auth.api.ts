@@ -18,30 +18,57 @@ import {
   type LoginPasswordData,
   type CompleteRegistrationData,
 } from "./auth.types";
+import { z } from "zod";
 
-// Keep email vs phone discrimination helper local (not exported)
+/**
+ * Auth API design goals:
+ * - Pure functions (fetch layer) separated from potential React hooks.
+ * - Full runtime validation for request body (via passed schema) & response inner data.
+ * - Unified, cache-friendly query/mutation keys for React Query use.
+ * - Minimal surface (only actively used endpoints) – future endpoints live elsewhere.
+ */
+
+// Envelope inner schemas (apiRequest already validates top-level envelope)
+const innerDataSchema = z.any();
+
+// Helpers -------------------------------------------------------------
 function isEmail(str: string) {
   return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(str);
 }
-
-function toPhone(value: string) {
-  // If email stays email (for future email login) else normalize phone
-  if (isEmail(value)) return value; // placeholder (backend phone-only now)
-  return normalizePhone(value);
+function toPhone(identifier: string) {
+  if (isEmail(identifier)) return identifier; // placeholder for future dual-mode
+  return normalizePhone(identifier);
 }
 
-export async function checkIdentifier(phoneRaw: string) {
-  const phone = toPhone(phoneRaw);
-  return apiRequest<CheckIdentifierData, { phone: string }>(
+// Query / Mutation Keys (React Query friendly) -----------------------
+export const authKeys = {
+  root: ["auth"] as const,
+  identifier: (identifier: string) =>
+    ["auth", "identifier", identifier] as const, // checkIdentifier
+  // Mutations (convention: start with 'm:')
+  mLogin: () => ["auth", "m", "login"] as const,
+  mOtpRequest: () => ["auth", "m", "otpRequest"] as const,
+  mOtpVerify: () => ["auth", "m", "otpVerify"] as const,
+  mCompleteRegistration: () => ["auth", "m", "completeRegistration"] as const,
+};
+
+// Core API functions --------------------------------------------------
+export async function checkIdentifier(phoneOrEmailRaw: string) {
+  const phone = toPhone(phoneOrEmailRaw);
+  const res = await apiRequest<CheckIdentifierData, { phone: string }>(
     "/auth/check-identifier",
     phoneSchema,
     checkIdentifierDataSchema,
     { body: { phone }, auth: false }
   );
+  return res.data; // unwrap inner validated data
 }
 
-export async function loginWithPassword(phoneRaw: string, password: string) {
-  const phone = toPhone(phoneRaw);
+export async function loginWithPassword(
+  identifierRaw: string,
+  password: string
+) {
+  const phone = toPhone(identifierRaw);
   const res = await apiRequest<
     LoginPasswordData,
     { phone: string; password: string }
@@ -52,35 +79,35 @@ export async function loginWithPassword(phoneRaw: string, password: string) {
     { body: { phone, password } }
   );
   tokenStorage.set(res.data.tokens);
-  return res;
+  return res.data;
 }
 
-export async function requestOtp(phoneRaw: string, purpose: string) {
-  const phone = toPhone(phoneRaw);
-  return apiRequest<OtpRequestData, { phone: string; purpose: string }>(
-    "/auth/otp/request",
-    otpRequestSchema,
-    otpRequestDataSchema,
-    { body: { phone, purpose } }
-  );
+export async function requestOtp(identifierRaw: string, purpose: string) {
+  const phone = toPhone(identifierRaw);
+  const res = await apiRequest<
+    OtpRequestData,
+    { phone: string; purpose: string }
+  >("/auth/otp/request", otpRequestSchema, otpRequestDataSchema, {
+    body: { phone, purpose },
+    auth: false,
+  });
+  return res.data;
 }
 
 export async function verifyOtp(
-  phoneRaw: string,
+  identifierRaw: string,
   purpose: string,
   code: string
 ) {
-  const phone = toPhone(phoneRaw);
+  const phone = toPhone(identifierRaw);
   const res = await apiRequest<
     VerifyOtpData,
     { phone: string; purpose: string; code: string }
   >("/auth/otp/verify", otpVerifySchema, verifyOtpDataSchema, {
     body: { phone, purpose, code },
   });
-  if (res.data.mode === "LOGIN") {
-    tokenStorage.set(res.data.tokens);
-  }
-  return res;
+  if (res.data.mode === "LOGIN") tokenStorage.set(res.data.tokens);
+  return res.data;
 }
 
 export async function completeRegistration(
@@ -104,17 +131,19 @@ export async function completeRegistration(
     { body: { signupToken, firstName, lastName, password } }
   );
   tokenStorage.set(res.data.tokens);
-  return res;
+  return res.data;
 }
+
+// Facade / OO style (optional) ---------------------------------------
+export class AuthApiClient {
+  checkIdentifier = checkIdentifier;
+  loginWithPassword = loginWithPassword;
+  requestOtp = requestOtp;
+  verifyOtp = verifyOtp;
+  completeRegistration = completeRegistration;
+}
+
 /**
- * NOTE: This file intentionally only exports the functions currently used by the login/onboarding flow:
- *  - checkIdentifier
- *  - loginWithPassword
- *  - requestOtp
- *  - verifyOtp
- *  - completeRegistration
- *
- * Any future endpoints (email login, refresh token handling, logout, me profile, etc.) were moved to a
- * separate placeholder file (auth-api.future.ts) to keep the active surface minimal & maintainable.
- * This helps tree‑shaking, reduces cognitive load, and makes it obvious what is really in use.
+ * NOTE: Future endpoints (refresh, logout, me, email-based flows) should live in a separate file
+ * (e.g., auth.api.future.ts) to keep this module lean and highly tree-shakable.
  */

@@ -129,7 +129,13 @@ export async function apiRequest<TData = unknown, TBody = unknown>(
   responseSchema: z.ZodTypeAny | null,
   options: RequestOptions<TBody> = {}
 ): Promise<ApiResponse<TData>> {
-  const base = process.env.NEXT_PUBLIC_API_BASE || "api.evalia.ir";
+  // Ensure base URL has protocol; allow user to supply with or without protocol
+  let rawBase = process.env.NEXT_PUBLIC_API_BASE || "api.evalia.ir";
+  if (!/^https?:\/\//i.test(rawBase)) {
+    rawBase = "https://" + rawBase.replace(/^\/+/, "");
+  }
+  // Remove trailing slash to avoid double slashes when concatenating path
+  const base = rawBase.replace(/\/$/, "");
   const useAuth = options.auth !== false;
   const allowRefresh = options.refreshOn401 !== false;
   if (bodySchema && options.body) {
