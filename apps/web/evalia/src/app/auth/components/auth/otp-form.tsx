@@ -46,6 +46,7 @@ export function OtpForm({
         <Input
           placeholder="کد تایید"
           value={otp}
+          autoFocus
           onChange={(e) => onOtpChange(e.target.value.replace(/[^0-9]/g, ""))}
           inputMode="numeric"
           autoComplete="one-time-code"

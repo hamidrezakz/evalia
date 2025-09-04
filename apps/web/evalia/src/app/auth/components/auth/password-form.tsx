@@ -44,11 +44,16 @@ export function PasswordForm({
           type="submit">
           ورود
         </Button>
-        <Button variant="secondary" type="button" onClick={onOtp}>
-          ورود با کد
+        <Button
+          variant="outline"
+          type="button"
+          onClick={onOtp}
+          className="min-w-[100px]"
+          >
+          <span className="text-[12px] mt-0.5"> ورود با کد</span>
         </Button>
       </div>
-      <Button variant="ghost" className="w-full" onClick={onGoRegister}>
+      <Button variant="ghost" className="w-full text-[12px]" onClick={onGoRegister}>
         ثبت‌نام جدید
       </Button>
     </div>

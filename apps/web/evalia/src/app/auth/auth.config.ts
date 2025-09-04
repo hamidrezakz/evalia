@@ -1,8 +1,4 @@
 // Centralized auth-related constants & helpers
-export const AUTH_CACHE = {
-  IDENTIFIER_STALE: 60_000, // 1 min
-  IDENTIFIER_GC: 5 * 60_000, // 5 min
-};
 
 export const AUTH_PURPOSE = {
   LOGIN: "LOGIN",

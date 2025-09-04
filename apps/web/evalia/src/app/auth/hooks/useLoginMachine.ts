@@ -5,8 +5,8 @@ import {
   useRequestOtpMutation,
   useVerifyOtpMutation,
   useCompleteRegistrationMutation,
+  useCheckIdentifierMutation,
 } from "./useAuth";
-import { checkIdentifier } from "../api/auth.api";
 import { useQueryClient } from "@tanstack/react-query";
 
 export type LoginPhase =
@@ -82,11 +82,23 @@ export function useLoginMachine(onSuccess: () => void) {
   const [state, dispatch] = useReducer(reducer, initial);
   const queryClient = useQueryClient();
 
-  // Removed auto identifier query to avoid multiple network calls while typing.
+  const checkIdentifierMutation = useCheckIdentifierMutation({
+    onSuccess: (res) => {
+      dispatch({ type: "EXISTS", exists: res.exists });
+      if (res.exists) {
+        dispatch({ type: "SET_PHASE", phase: "PASSWORD" });
+      } else {
+        requestOtpMutation.mutate({
+          identifier: state.phone,
+          purpose: "LOGIN",
+        });
+      }
+    },
+    onError: (err: Error) => dispatch({ type: "ERROR", error: err.message }),
+  });
   const loginMutation = useLoginMutation({
     onSuccess: (data) => {
       dispatch({ type: "MODE", mode: "LOGIN" });
-      // Invalidate identifier query cache after successful login
       if (state.phone) {
         queryClient.invalidateQueries({
           queryKey: ["auth", "identifier", state.phone],
@@ -134,15 +146,16 @@ export function useLoginMachine(onSuccess: () => void) {
     onError: (err: Error) => dispatch({ type: "ERROR", error: err.message }),
   });
 
-  // Derive loading from mutations / query
   useEffect(() => {
     const loading =
+      checkIdentifierMutation.isPending ||
       loginMutation.isPending ||
       requestOtpMutation.isPending ||
       verifyOtpMutation.isPending ||
       completeRegistrationMutation.isPending;
     dispatch({ type: "LOADING", value: loading });
   }, [
+    checkIdentifierMutation.isPending,
     loginMutation.isPending,
     requestOtpMutation.isPending,
     verifyOtpMutation.isPending,
@@ -155,25 +168,12 @@ export function useLoginMachine(onSuccess: () => void) {
     []
   );
 
-  const submitIdentifier = useCallback(async () => {
+  const submitIdentifier = useCallback(() => {
     const phone = state.phone.trim();
     if (!phone) return;
     dispatch({ type: "ERROR", error: null });
-    dispatch({ type: "LOADING", value: true });
-    try {
-      const res = await checkIdentifier(phone);
-      dispatch({ type: "EXISTS", exists: res.exists });
-      if (res.exists) {
-        dispatch({ type: "SET_PHASE", phase: "PASSWORD" });
-      } else {
-        requestOtpMutation.mutate({ identifier: phone, purpose: "LOGIN" });
-      }
-    } catch (e: any) {
-      dispatch({ type: "ERROR", error: e.message || "خطا" });
-    } finally {
-      dispatch({ type: "LOADING", value: false });
-    }
-  }, [state.phone, requestOtpMutation]);
+    checkIdentifierMutation.mutate({ identifier: phone });
+  }, [state.phone, checkIdentifierMutation]);
 
   const doPasswordLogin = useCallback(() => {
     loginMutation.mutate({ identifier: state.phone, password: state.password });
@@ -217,6 +217,7 @@ export function useLoginMachine(onSuccess: () => void) {
     finishRegistration,
     goToPhase: (p: LoginPhase) => dispatch({ type: "SET_PHASE", phase: p }),
     mutations: {
+      checkIdentifier: checkIdentifierMutation,
       login: loginMutation,
       requestOtp: requestOtpMutation,
       verifyOtp: verifyOtpMutation,

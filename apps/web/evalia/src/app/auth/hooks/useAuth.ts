@@ -19,25 +19,23 @@ import type {
   LoginPasswordData,
   CompleteRegistrationData,
 } from "../api/auth.types";
-import { AUTH_CACHE } from "../auth.config";
 
 /**
  * Hooks for auth flows built on top of the low-level auth.api.ts functions.
  * These encapsulate caching keys and mutation lifecycle handling.
  */
 
-export function useCheckIdentifier(identifier: string | null, enabled = true) {
-  return useQuery({
-    queryKey: identifier
-      ? authKeys.identifier(identifier)
-      : authKeys.identifier(""),
-    queryFn: () => {
-      if (!identifier) throw new Error("identifier is required");
-      return checkIdentifier(identifier);
-    },
-    enabled: enabled && !!identifier,
-    staleTime: AUTH_CACHE.IDENTIFIER_STALE,
-    gcTime: AUTH_CACHE.IDENTIFIER_GC,
+export function useCheckIdentifierMutation(
+  options?: UseMutationOptions<
+    CheckIdentifierData,
+    Error,
+    { identifier: string }
+  >
+) {
+  return useMutation({
+    mutationKey: authKeys.identifier("mutation"),
+    mutationFn: ({ identifier }) => checkIdentifier(identifier),
+    ...options,
   });
 }
 
@@ -101,20 +99,6 @@ export function useCompleteRegistrationMutation(
     mutationKey: authKeys.mCompleteRegistration(),
     mutationFn: ({ signupToken, firstName, lastName, password }) =>
       completeRegistration(signupToken, firstName, lastName, password),
-    ...options,
-  });
-}
-
-export function useCheckIdentifierMutation(
-  options?: UseMutationOptions<
-    CheckIdentifierData,
-    Error,
-    { identifier: string }
-  >
-) {
-  return useMutation({
-    mutationKey: authKeys.identifier("mutation"),
-    mutationFn: ({ identifier }) => checkIdentifier(identifier),
     ...options,
   });
 }
