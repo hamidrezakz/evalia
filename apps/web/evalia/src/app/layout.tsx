@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { ThemeProvider } from "@/components/theme-provider"
+import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
-
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -15,19 +15,19 @@ type RootLayoutProps = {
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <>
-      <html lang="fa-IR" dir="rtl"  suppressHydrationWarning>
+      <html lang="fa-IR" dir="rtl" suppressHydrationWarning>
         <head />
         <body className="bg-background text-foreground antialiased">
           <ThemeProvider
             attribute="class"
             defaultTheme="system"
             enableSystem
-            disableTransitionOnChange
-          >
+            disableTransitionOnChange>
             {children}
+            <ReactQueryDevtools initialIsOpen={false} />
           </ThemeProvider>
         </body>
       </html>
     </>
-  )
+  );
 }
