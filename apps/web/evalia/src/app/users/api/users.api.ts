@@ -64,9 +64,13 @@ export async function getUser(id: number): Promise<UserDetail> {
   if (!Number.isInteger(id) || id <= 0)
     throw new Error("User id must be a positive integer");
   const res = await apiRequest(`/users/${id}`, null, detailInnerSchema);
-  const validated = detailUserResponseSchema.safeParse(res.data.data);
+  // Try both res.data.data and res.data for compatibility with different API envelopes
+  const userData = res.data?.data ?? res.data;
+  const validated = detailUserResponseSchema.safeParse(userData);
   if (!validated.success) {
-    throw new Error("User detail response validation failed");
+    throw new Error(
+      "User detail response validation failed: " + validated.error.message
+    );
   }
   return validated.data;
 }

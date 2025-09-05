@@ -36,12 +36,15 @@ export type UserTeam = z.infer<typeof userTeamSchema>;
 export const userListItemSchema = z.object({
   id: z.number().int().positive(),
   fullName: z.string().nullable().optional(),
-  email: z.string().email().nullable().optional(),
-  phone: z.string().nullable().optional(),
+  email: z.string().email().or(z.null()).optional(),
+  phone: z.string().or(z.null()).optional(),
   status: userStatusEnum,
   globalRoles: z.array(z.string()).default([]),
-  organizations: z.array(userOrganizationSchema),
-  teams: z.array(userTeamSchema),
+  organizations: z.preprocess(
+    (v) => (v == null ? [] : v),
+    z.array(userOrganizationSchema)
+  ),
+  teams: z.preprocess((v) => (v == null ? [] : v), z.array(userTeamSchema)),
   createdAt: z.string(), // ISO date
 });
 export type UserListItem = z.infer<typeof userListItemSchema>;
