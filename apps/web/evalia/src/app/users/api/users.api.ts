@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { apiRequest, unwrap } from "@/lib/api.client";
+import { usersKeys } from "./users-query-keys"; // authoritative keys (moved out for consistency)
 import {
   listUsersResponseSchema,
   detailUserResponseSchema,
@@ -79,26 +80,17 @@ export async function getUser(id: number): Promise<UserDetail> {
  * React Query style factory helpers (optional). Consumers can wrap with @tanstack/react-query.
  * Provided as lightweight utilities so we keep this module framework‑agnostic.
  */
-export const usersKeys = {
-  all: ["users"] as const,
-  list: (p?: Partial<ListUsersQuery>) =>
-    [
-      "users",
-      "list",
-      Object.keys(p || {})
-        .sort()
-        .map((k) => `${k}:${(p as any)[k]}`),
-    ] as const,
-  detail: (id: number) => ["users", "detail", id] as const,
-};
+// NOTE: usersKeys moved to users-query-keys.ts. If you previously imported from this file, switch to:
+//   import { usersKeys } from "./users-query-keys";
+// We intentionally keep no re-export here to force explicit migration.
 
 export type UsersListKey = ReturnType<typeof usersKeys.list>;
-export type UserDetailKey = ReturnType<typeof usersKeys.detail>;
+export type UserDetailKey = ReturnType<typeof usersKeys.byId>;
 
+// Factory kept for backward compatibility in hooks; delegates to new keys.
 /**
- * Optional convenience wrappers tailored for react-query usage.
- * Example:
- *   const query = useQuery(usersKeys.list(filters), () => listUsers(filters));
+ * @deprecated Prefer using direct hooks or usersQueryFns from users-hooks/users-query-keys.
+ * This factory remains for legacy integration; will be removed once all call sites migrate.
  */
 export function createUsersQueryFns() {
   return {
