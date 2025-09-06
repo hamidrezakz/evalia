@@ -164,6 +164,27 @@ export class OrganizationService {
     return updated;
   }
 
+  async listForUser(userId: number) {
+    // Fetch memberships first to avoid unnecessary large joins
+    const memberships = await this.prisma.organizationMembership.findMany({
+      where: { userId, deletedAt: null },
+      select: { organizationId: true, role: true, id: true },
+      orderBy: { createdAt: 'asc' },
+    });
+    if (memberships.length === 0) return [];
+    const orgIds = memberships.map((m) => m.organizationId);
+    const orgs = await this.prisma.organization.findMany({
+      where: { id: { in: orgIds }, deletedAt: null },
+      orderBy: { createdAt: 'desc' },
+    });
+    // Map roles onto organizations for convenience (optional add later: multiple roles?)
+    const map = new Map<number, { role: string; membershipId: number }>();
+    memberships.forEach((m) =>
+      map.set(m.organizationId, { role: m.role, membershipId: m.id }),
+    );
+    return orgs.map((o) => ({ ...o, membership: map.get(o.id) }));
+  }
+
   private isUniqueViolation(e: any, indexName: string) {
     return (
       e?.code === 'P2002' &&

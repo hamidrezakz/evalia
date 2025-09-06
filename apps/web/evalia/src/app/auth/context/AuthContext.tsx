@@ -10,15 +10,14 @@ import React, {
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { tokenStorage } from "@/lib/token-storage";
-import { decodeAccessToken, ApiError } from "@/lib/api.client";
-import { fetchUser, fetchOrganizations } from "./auth-apis"; // still used in refetchAll (optionally)
+import { decodeAccessToken, ApiError, refreshTokens } from "@/lib/api.client";
 import {
   AccessTokenPayload,
   ActiveSelection,
   AuthContextValue,
 } from "./auth-types";
-import { authKeys } from "./auth-query-keys";
 import { useAuthUser, useAuthOrganizations } from "./auth-queries";
+import { unifiedAuthRefetch } from "./auth-refetch";
 
 // -------------------------------
 // Types & Shapes
@@ -125,7 +124,8 @@ export const AuthProvider: React.FC<ProviderProps> = ({
   }, [decoded?.exp]);
 
   // Queries (enabled only if we have tokens & not expired) ------------------
-  const enabled = !!tokens?.accessToken && !isTokenExpired();
+  // Enabled: allow queries if we have a token; refresh flow will handle nearing expiry
+  const enabled = !!tokens?.accessToken;
 
   // User detail query (if we can resolve userId)
   const userQuery = useAuthUser(userId, enabled);
@@ -188,47 +188,69 @@ export const AuthProvider: React.FC<ProviderProps> = ({
   }, [router, queryClient, loginPath]);
 
   // Refetch all relevant queries & handle expiry/401
+  const attemptRefresh = useCallback(async () => {
+    const ok = await refreshTokens();
+    if (ok) {
+      const updated = tokenStorage.get();
+      if (updated) setTokens(updated);
+    }
+    return ok;
+  }, []);
+
   const refetchAll = useCallback(async () => {
     if (!tokens?.accessToken || !tokens.refreshToken) {
       router.replace(loginPath);
       return;
     }
     if (isTokenExpired()) {
-      signOut();
-      return;
-    }
-    try {
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: authKeys.user(userId || 0) }),
-        queryClient.refetchQueries({ queryKey: authKeys.organizations() }),
-        queryClient.refetchQueries({
-          queryKey: authKeys.navigation(),
-          type: "active",
-        }),
-      ]);
-    } catch (e) {
-      if (e instanceof ApiError && e.status === 401) {
+      const refreshed = await attemptRefresh();
+      if (!refreshed) {
         signOut();
+        return;
       }
     }
-    // Re-validate tokens after possible refresh logic
+    try {
+      await unifiedAuthRefetch(queryClient, userId);
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 401) {
+        const refreshed = await attemptRefresh();
+        if (refreshed) {
+          await unifiedAuthRefetch(queryClient, userId);
+        } else {
+          signOut();
+        }
+      }
+    }
     const current = tokenStorage.get();
     if (!current?.accessToken) {
       signOut();
     } else {
-      setTokens(current); // update in case refresh updated them
+      setTokens(current);
     }
   }, [
     tokens?.accessToken,
     tokens?.refreshToken,
+    attemptRefresh,
     isTokenExpired,
     signOut,
-    userQuery,
-    orgsQuery,
     queryClient,
+    userId,
     router,
     loginPath,
   ]);
+
+  // Proactive refresh timer (~60s before expiry)
+  useEffect(() => {
+    if (!decoded?.exp) return;
+    const nowSec = Date.now() / 1000;
+    const lead = 60; // seconds before expiry
+    const when = (decoded.exp - lead - nowSec) * 1000;
+    if (when <= 0) return; // already near expiry; will be handled by calls
+    const id = setTimeout(() => {
+      attemptRefresh();
+    }, when);
+    return () => clearTimeout(id);
+  }, [decoded?.exp, attemptRefresh]);
 
   // Listen for storage events (multi-tab logout/login sync)
   useEffect(() => {
@@ -300,6 +322,23 @@ export function useAuthContext(): AuthContextValue {
 export function useRequireAuth() {
   const { accessToken, isTokenExpired, signOut } = useAuthContext();
   useEffect(() => {
-    if (!accessToken || isTokenExpired()) signOut();
+    let cancelled = false;
+    (async () => {
+      if (!accessToken) {
+        signOut();
+        return;
+      }
+      if (isTokenExpired()) {
+        // Passive: refetchAll will attempt refresh; call it here if needed
+        try {
+          // Access refetchAll through context re-read (avoid circular import complexity)
+        } catch {
+          signOut();
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [accessToken, isTokenExpired, signOut]);
 }

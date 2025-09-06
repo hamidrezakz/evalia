@@ -10,6 +10,11 @@ export const OrganizationStatusEnum = z.enum([
 export const LocaleEnum = z.enum(["FA", "EN"]);
 
 // Base organization schema (full)
+export const OrganizationMembershipSchema = z.object({
+  role: z.string(),
+  membershipId: z.number(),
+});
+
 export const OrganizationSchema = z.object({
   id: z.number(),
   name: z.string(),
@@ -21,6 +26,7 @@ export const OrganizationSchema = z.object({
   billingEmail: z.string().email().optional().nullable(),
   createdAt: z.string(),
   deletedAt: z.string().nullable().optional(),
+  membership: OrganizationMembershipSchema.optional(),
 });
 
 // Create payload
@@ -75,6 +81,9 @@ export const PaginationMetaSchema = z.object({
 export const OrganizationArraySchema = z.array(OrganizationSchema);
 
 // Types
+export type OrganizationMembership = z.infer<
+  typeof OrganizationMembershipSchema
+>;
 export type Organization = z.infer<typeof OrganizationSchema>;
 export type CreateOrganizationInput = z.infer<
   typeof CreateOrganizationInputSchema

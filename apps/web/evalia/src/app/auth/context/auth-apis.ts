@@ -2,7 +2,7 @@
 // This also simplifies future changes (e.g., batching, added headers, error normalization).
 
 import { getUser } from "@/app/users/api/users.api";
-import { listOrganizations } from "@/app/organizations/organization/api/organization.api";
+import { listUserOrganizations } from "@/app/organizations/organization/api/organization.api";
 import { unwrap } from "@/lib/api.client";
 
 export async function fetchUser(userId: number) {
@@ -10,6 +10,6 @@ export async function fetchUser(userId: number) {
 }
 
 export async function fetchOrganizations() {
-  const res = await listOrganizations({ pageSize: 100 });
+  const res = await listUserOrganizations();
   return unwrap<any[]>(res);
 }

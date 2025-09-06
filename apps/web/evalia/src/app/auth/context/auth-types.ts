@@ -57,7 +57,7 @@ export interface AuthContextValue {
   decoded: AccessTokenPayload | null;
   userId: number | null;
   user: AuthUser | null;
-  organizations: any[]; // Replace with concrete Organization type when available
+  organizations: import("@/app/organizations/organization/types/organization.types").Organization[];
   active: ActiveSelection;
   loading: boolean;
   error: string | null;

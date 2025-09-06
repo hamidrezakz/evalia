@@ -115,3 +115,14 @@ export async function ensureOrgSlugAvailable(slug: string) {
   const res = await listOrganizations({ q: slug, pageSize: 1 });
   return !res.data.some((o: Organization) => o.slug === slug);
 }
+
+// List organizations current authenticated user is member of (non-paginated for auth context usage)
+export async function listUserOrganizations() {
+  // Backend returns organizations with membership field
+  const raw = await apiRequest<OrganizationArray>(
+    `/organizations/my`,
+    null,
+    OrganizationArraySchema
+  );
+  return raw;
+}

@@ -20,6 +20,7 @@ import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { CompleteRegistrationDto } from './dto/complete-registration.dto';
 import { LoginEmailDto } from './dto/login-email.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 
 // Phone normalization: expect E.164 or local starting 0 -> convert to +98 etc (extend later)
 function normalizePhone(raw: string): string {
@@ -60,16 +61,16 @@ export class AuthService {
     try {
       payload = this.jwt.verify(dto.signupToken);
     } catch {
-      throw new BadRequestException('توکن ثبت نام معتبر نیست');
+      throw new BadRequestException('Invalid signup token');
     }
     if (payload.type !== 'signup' || !payload.phoneNormalized) {
-      throw new BadRequestException('توکن ثبت نام نامعتبر است');
+      throw new BadRequestException('Signup token is not valid');
     }
     const phoneNormalized = payload.phoneNormalized as string;
     const exists = await this.prisma.user.findFirst({
       where: { phoneNormalized },
     });
-    if (exists) throw new BadRequestException('کاربر قبلاً ایجاد شده است');
+    if (exists) throw new BadRequestException('User already exists');
     const passwordHash = dto.password
       ? await this.password.hash(dto.password)
       : null;
@@ -93,11 +94,11 @@ export class AuthService {
     const user = await this.prisma.user.findFirst({
       where: { phoneNormalized },
     });
-    if (!user) throw new UnauthorizedException('کاربر یافت نشد');
+    if (!user) throw new UnauthorizedException('User not found');
     if (!user.passwordHash)
-      throw new BadRequestException('برای این کاربر رمز عبور تنظیم نشده است');
+      throw new BadRequestException('Password not set for this user');
     const ok = await this.password.compare(dto.password, user.passwordHash);
-    if (!ok) throw new UnauthorizedException('رمز عبور نادرست است');
+    if (!ok) throw new UnauthorizedException('Incorrect password');
     return {
       user: this.toPublicUser(user),
       tokens: await this.issueTokens(user.id),
@@ -108,11 +109,11 @@ export class AuthService {
   async loginEmail(dto: LoginEmailDto) {
     const norm = dto.email.trim().toLowerCase();
     const user = await this.prisma.user.findFirst({ where: { email: norm } });
-    if (!user) throw new UnauthorizedException('کاربر یافت نشد');
+    if (!user) throw new UnauthorizedException('User not found');
     if (!user.passwordHash)
-      throw new BadRequestException('برای این کاربر رمز عبور تنظیم نشده است');
+      throw new BadRequestException('Password not set for this user');
     const ok = await this.password.compare(dto.password, user.passwordHash);
-    if (!ok) throw new UnauthorizedException('رمز عبور نادرست است');
+    if (!ok) throw new UnauthorizedException('Incorrect password');
     return {
       user: this.toPublicUser(user),
       tokens: await this.issueTokens(user.id),
@@ -137,7 +138,8 @@ export class AuthService {
       code: dto.code,
       purpose: dto.purpose,
     });
-    if (!verified.ok) throw new BadRequestException('کد نامعتبر یا منقضی است');
+    if (!verified.ok)
+      throw new BadRequestException('Code is invalid or expired');
     const user = await this.prisma.user.findFirst({
       where: { phoneNormalized },
     });
@@ -162,14 +164,14 @@ export class AuthService {
     const user = await this.prisma.user.findFirst({
       where: { phoneNormalized },
     });
-    if (!user) throw new BadRequestException('کاربر یافت نشد');
+    if (!user) throw new BadRequestException('User not found');
     const v = await this.verification.verify({
       identifier: phoneNormalized,
       identifierType: 'PHONE',
       code: dto.code,
       purpose: 'PASSWORD_RESET',
     });
-    if (!v.ok) throw new BadRequestException('کد نامعتبر است');
+    if (!v.ok) throw new BadRequestException('Code is invalid');
     const passwordHash = await this.password.hash(dto.newPassword);
     await this.prisma.user.update({
       where: { id: user.id },
@@ -211,7 +213,7 @@ export class AuthService {
       tokenVersion,
     });
     const refreshToken = this.jwt.sign(
-      { sub: userId, type: 'refresh' },
+      { sub: userId, type: 'refresh', tokenVersion },
       { expiresIn: '21d' },
     );
     return { accessToken, refreshToken, roles };
@@ -220,5 +222,28 @@ export class AuthService {
   private toPublicUser(user: any) {
     const { id, email, phoneNormalized, fullName, firstName, lastName } = user;
     return { id, email, phone: phoneNormalized, fullName, firstName, lastName };
+  }
+
+  async refreshTokens(dto: RefreshTokenDto) {
+    let payload: any;
+    try {
+      payload = this.jwt.verify(dto.refreshToken);
+    } catch {
+      throw new UnauthorizedException('Refresh token is invalid');
+    }
+    if (payload.type !== 'refresh' || !payload.sub) {
+      throw new UnauthorizedException('Refresh token is not valid');
+    }
+    const userId = payload.sub;
+    // Check user existence and tokenVersion
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new UnauthorizedException('User not found');
+    const tokenVersionFromToken = payload.tokenVersion ?? 1;
+    const currentVersion = user.tokenVersion ?? 1;
+    if (tokenVersionFromToken !== currentVersion) {
+      throw new UnauthorizedException('Token has expired, please login again');
+    }
+    const tokens = await this.issueTokens(userId);
+    return { user: this.toPublicUser(user), tokens };
   }
 }

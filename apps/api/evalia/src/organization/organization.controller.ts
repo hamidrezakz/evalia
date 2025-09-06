@@ -7,7 +7,10 @@ import {
   Query,
   Patch,
   Delete,
+  Req,
+  UnauthorizedException,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { OrganizationService } from './organization.service';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { ListOrganizationsQueryDto } from './dto/list-organizations.dto';
@@ -25,6 +28,14 @@ export class OrganizationController {
   @Get()
   list(@Query() query: ListOrganizationsQueryDto) {
     return this.service.list(query);
+  }
+
+  @Get('my')
+  listMine(@Req() req: Request) {
+    const user = (req as any).user;
+    const userId = user?.sub || user?.id;
+    if (!userId) throw new UnauthorizedException('User not authenticated');
+    return this.service.listForUser(Number(userId));
   }
 
   @Get(':id')
