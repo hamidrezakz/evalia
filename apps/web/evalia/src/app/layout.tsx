@@ -23,7 +23,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
             defaultTheme="system"
             enableSystem
             disableTransitionOnChange>
-            {children}
+            <div className="max-w-screen overflow-x-hidden">{children}</div>
           </ThemeProvider>
         </QueryProvider>
       </body>

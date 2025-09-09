@@ -447,6 +447,9 @@ importers:
       react-colorful:
         specifier: ^5.6.1
         version: 5.6.1(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
+      react-device-mockups:
+        specifier: ^0.1.12
+        version: 0.1.12(html5-device-mockups@3.2.1)(prop-types@15.8.1)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
       react-dom:
         specifier: 19.1.1
         version: 19.1.1(react@19.1.1)
@@ -643,16 +646,6 @@ importers:
         version: 5.9.2
 
   packages/database/evalia:
-    dependencies:
-      '@prisma/client':
-        specifier: ^6.14.0
-        version: 6.14.0(prisma@6.14.0(typescript@5.9.2))(typescript@5.9.2)
-    devDependencies:
-      prisma:
-        specifier: ^6.14.0
-        version: 6.14.0(typescript@5.9.2)
-
-  packages/database/test-evalia:
     dependencies:
       '@prisma/client':
         specifier: ^6.14.0
@@ -4307,6 +4300,9 @@ packages:
   html-escaper@2.0.2:
     resolution: {integrity: sha512-H2iMtd0I4Mt5eYiapRdIDjp+XzelXQ0tFE4JS7YFwFevXXMmOp9myNrUvCg0D6ws8iqkRPBfKHgbwig1SmlLfg==}
 
+  html5-device-mockups@3.2.1:
+    resolution: {integrity: sha512-jxuLuDf9iABIoFlclVGmhjC3sH91JquIOz6ByKsROg/0ztqamac3XYlnA3GZHfQNM6XZRIsNX8OWal+2R/CTEQ==}
+
   http-cache-semantics@4.2.0:
     resolution: {integrity: sha512-dTxcvPXqPvXBQpq5dUr6mEMJX4oIEFv6bwom3FDwKRDsuIjjJGANqhBuoAn9c1RQJIdAKav33ED65E2ys+87QQ==}
 
@@ -5530,6 +5526,15 @@ packages:
     peerDependencies:
       react: '>=16.8.0'
       react-dom: '>=16.8.0'
+
+  react-device-mockups@0.1.12:
+    resolution: {integrity: sha512-ne45CDegHdk0zfhSTetgNj5xgXUC3m3iEZiyhq8XekiyDwcBEfxf4PdCayeVr+GQc7Me9ah8jibRhBQNlBkbLg==}
+    engines: {node: '>=8', npm: '>=5'}
+    peerDependencies:
+      html5-device-mockups: ^3.2.1
+      prop-types: ^15.5.4
+      react: ^15.0.0 || ^16.0.0 || ^17.0.0
+      react-dom: ^15.0.0 || ^16.0.0 || ^17.0.0
 
   react-dom@19.1.0:
     resolution: {integrity: sha512-Xs1hdnE+DyKgeHJeJznQmYMIBG3TKIHJJT95Q58nHLSrElKlGQqDTR2HQ9fx5CN/Gk6Vh/kupBTDLU11/nDk/g==}
@@ -11386,6 +11391,8 @@ snapshots:
 
   html-escaper@2.0.2: {}
 
+  html5-device-mockups@3.2.1: {}
+
   http-cache-semantics@4.2.0: {}
 
   http-errors@2.0.0:
@@ -12751,6 +12758,13 @@ snapshots:
 
   react-colorful@5.6.1(react-dom@19.1.1(react@19.1.1))(react@19.1.1):
     dependencies:
+      react: 19.1.1
+      react-dom: 19.1.1(react@19.1.1)
+
+  react-device-mockups@0.1.12(html5-device-mockups@3.2.1)(prop-types@15.8.1)(react-dom@19.1.1(react@19.1.1))(react@19.1.1):
+    dependencies:
+      html5-device-mockups: 3.2.1
+      prop-types: 15.8.1
       react: 19.1.1
       react-dom: 19.1.1(react@19.1.1)
 

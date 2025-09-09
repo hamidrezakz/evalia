@@ -6,6 +6,7 @@ export default function Home() {
     <HeroSection
       fullHeight
       highlight="نسخه نمایشی"
+      className="flex overflow-auto"
       title={
         <span>
           راهکار سازمانی <span className="text-primary">Evalia</span>
@@ -17,7 +18,7 @@ export default function Home() {
       headerRight={
         <div>
           <div
-            className="size-10 md:size-12 rounded-lg bg-primary/20 border border-primary/30"
+            className="size-10 md:size-12 rounded-lg bg-primary/20 border border-primary/30 mb-4"
             aria-label="لوگو"
           />
         </div>

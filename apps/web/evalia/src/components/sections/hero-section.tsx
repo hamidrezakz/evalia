@@ -5,6 +5,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { PageSection } from "@/components/sections";
 import { Button } from "@/components/ui/button";
+import { PrimaryNavigation } from "@/components/primary-navigation";
 
 type Action = {
   label: string;
@@ -24,6 +25,11 @@ export type HeroSectionProps = {
   fullHeight?: boolean; // پر کردن ارتفاع ویوپرت
   headerLeft?: React.ReactNode; // محتوای سمت چپ هدر (مثلاً ModeToggle)
   headerRight?: React.ReactNode; // محتوای سمت راست هدر (مثلاً لوگو)
+  headerCenter?: React.ReactNode; // منو یا ناوبری وسط هدر
+  headerLeftClassName?: string; // کلاس سفارشی برای کانتینر ناحیه چپ
+  headerRightClassName?: string; // کلاس سفارشی برای کانتینر ناحیه راست
+  headerCenterClassName?: string; // کلاس سفارشی برای کانتینر ناحیه وسط
+  headerBarClassName?: string; // کلاس سفارشی برای wrapper اصلی هدر
 };
 
 /**
@@ -46,27 +52,44 @@ export function HeroSection({
   fullHeight,
   headerLeft,
   headerRight,
+  headerCenter,
+  headerLeftClassName,
+  headerRightClassName,
+  headerCenterClassName,
+  headerBarClassName,
 }: HeroSectionProps) {
   return (
     <PageSection
       className={cn(
-        "relative text-center",
-        fullHeight && "min-h-[100svh] flex items-center py-0",
+        "flex text-center relative items-center align-middle",
+        fullHeight && "items-center py-0 px-2 min-h-[100svh]",
         className
       )}>
       <div className="mx-auto max-w-3xl space-y-4">
         {/* هدر شناور داخل هیرو: چپ/راست با فاصله 4 */}
-        <div className="absolute inset-x-0 top-0">
-          <div className="container flex items-start justify-between">
-            <div className="p-4">
+        <div className={cn("absolute inset-x-0 top-0", headerBarClassName)}>
+          <div className="container flex items-start justify-between gap-2">
+            {/* ناحیه راست (معمولاً لوگو در RTL) */}
+            <div className={cn("p-4 flex items-center", headerRightClassName)}>
               {headerRight ?? (
                 <div
                   className="size-10 md:size-12 rounded-lg bg-muted/50 border border-border"
-                  aria-label="لوگو"
+                  aria-label="لوگو پیش‌فرض"
+                  role="img"
                 />
               )}
             </div>
-            <div className="p-4">{headerLeft}</div>
+            <div
+              className={cn(
+                "p-4 flex-1 flex items-center justify-center",
+                headerCenterClassName
+              )}>
+              {headerCenter ?? <PrimaryNavigation className="max-w-full" />}
+            </div>
+            {/* ناحیه چپ (اکشن‌ها / سوییچر تم و غیره) */}
+            <div className={cn("p-4 flex items-center", headerLeftClassName)}>
+              {headerLeft}
+            </div>
           </div>
         </div>
         {highlight ? (
