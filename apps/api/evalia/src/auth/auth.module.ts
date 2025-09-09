@@ -10,7 +10,7 @@ import { JwtStrategy } from './jwt.strategy';
 import { RolesGuard } from '../common/roles.guard';
 import { TokenVersionGuard } from '../common/token-version.guard';
 import { APP_GUARD } from '@nestjs/core';
-import { AuthGuard } from '@nestjs/passport';
+import { JwtAuthGuard } from './jwt-auth.guard';
 import { OptionalJwtGuard } from '../common/optional-jwt.guard';
 
 @Module({
@@ -28,7 +28,7 @@ import { OptionalJwtGuard } from '../common/optional-jwt.guard';
     VerificationService,
     PasswordService,
     JwtStrategy,
-    { provide: APP_GUARD, useClass: OptionalJwtGuard },
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
     TokenVersionGuard,
   ],

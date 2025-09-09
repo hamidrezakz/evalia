@@ -1,4 +1,4 @@
-import { apiRequest } from "@/lib/api.client";
+import { apiRequest, unwrap } from "@/lib/api.client";
 import {
   TeamMembershipArraySchema,
   TeamMembershipSchema,
@@ -22,11 +22,12 @@ export async function listTeamMembers(
   params: { page?: number; pageSize?: number } = {}
 ) {
   const qs = buildQuery(params);
-  return apiRequest<TeamMembershipArray>(
+  const res = await apiRequest<TeamMembershipArray>(
     `/organizations/${orgId}/teams/${teamId}/members${qs ? `?${qs}` : ""}`,
     null,
     TeamMembershipArraySchema
   );
+  return unwrap(res);
 }
 
 export async function addTeamMember(

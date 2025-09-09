@@ -6,6 +6,7 @@ import {
   Min,
   IsArray,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { UserStatus } from '@prisma/client';
 
 export class ListUsersDto {
@@ -34,11 +35,17 @@ export class ListUsersDto {
   statuses?: UserStatus[]; // multi-status filter
 
   @IsOptional()
+  @Transform(({ value }) =>
+    typeof value === 'string' ? parseInt(value, 10) : value,
+  )
   @IsInt()
   @Min(1)
   page?: number = 1;
 
   @IsOptional()
+  @Transform(({ value }) =>
+    typeof value === 'string' ? parseInt(value, 10) : value,
+  )
   @IsInt()
   @Min(1)
   pageSize?: number = 20;

@@ -36,9 +36,25 @@ const STALE_DETAIL = 2 * 60 * 1000; // 2m
  * Returns { data, meta } object (from listUsers) where data is UserListItem[].
  */
 export function useUsers(params?: Partial<ListUsersQuery>) {
+  // تبدیل و مقداردهی پیش‌فرض عددی برای page و pageSize
+  const safeParams = { ...params };
+  safeParams.page =
+    typeof safeParams.page === "string"
+      ? parseInt(safeParams.page, 10)
+      : Number(safeParams.page ?? 1);
+  safeParams.pageSize =
+    typeof safeParams.pageSize === "string"
+      ? parseInt(safeParams.pageSize, 10)
+      : Number(safeParams.pageSize ?? 20);
+  if (isNaN(safeParams.page) || safeParams.page < 1) safeParams.page = 1;
+  if (isNaN(safeParams.pageSize) || safeParams.pageSize < 1)
+    safeParams.pageSize = 20;
+  if (safeParams.id !== undefined) safeParams.id = Number(safeParams.id);
+  if (safeParams.orgId !== undefined)
+    safeParams.orgId = Number(safeParams.orgId);
   return useQuery({
-    queryKey: usersKeys.list(params),
-    queryFn: async () => listUsers(params),
+    queryKey: usersKeys.list(safeParams),
+    queryFn: async () => listUsers(safeParams),
     staleTime: STALE_LIST,
     // structural sharing automatically keeps old data during param changes if shape similar
   });
