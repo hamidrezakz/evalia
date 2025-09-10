@@ -62,7 +62,9 @@ export const completeRegistrationSchema = z.object({
 });
 
 // Inner response payload schemas
-export const checkIdentifierDataSchema = z.object({ exists: z.boolean() });
+export const checkIdentifierDataSchema = z
+  .object({ exists: z.boolean() })
+  .passthrough();
 export type CheckIdentifierData = z.infer<typeof checkIdentifierDataSchema>;
 
 export const otpRequestDataSchema = z.object({

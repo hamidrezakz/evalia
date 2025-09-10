@@ -4,6 +4,7 @@ import {
   useQuery,
   UseMutationOptions,
 } from "@tanstack/react-query";
+import { ApiResponse } from "@/lib/api/types";
 import {
   authKeys,
   checkIdentifier,
@@ -27,7 +28,7 @@ import type {
 
 export function useCheckIdentifierMutation(
   options?: UseMutationOptions<
-    CheckIdentifierData,
+    ApiResponse<CheckIdentifierData>,
     Error,
     { identifier: string }
   >
@@ -41,7 +42,7 @@ export function useCheckIdentifierMutation(
 
 export function useLoginMutation(
   options?: UseMutationOptions<
-    LoginPasswordData,
+    ApiResponse<LoginPasswordData>,
     Error,
     { identifier: string; password: string }
   >
@@ -56,7 +57,7 @@ export function useLoginMutation(
 
 export function useRequestOtpMutation(
   options?: UseMutationOptions<
-    OtpRequestData,
+    ApiResponse<OtpRequestData>,
     Error,
     { identifier: string; purpose: string }
   >
@@ -70,7 +71,7 @@ export function useRequestOtpMutation(
 
 export function useVerifyOtpMutation(
   options?: UseMutationOptions<
-    VerifyOtpData,
+    ApiResponse<VerifyOtpData>,
     Error,
     { identifier: string; purpose: string; code: string }
   >
@@ -85,7 +86,7 @@ export function useVerifyOtpMutation(
 
 export function useCompleteRegistrationMutation(
   options?: UseMutationOptions<
-    CompleteRegistrationData,
+    ApiResponse<CompleteRegistrationData>,
     Error,
     {
       signupToken: string;

@@ -2,7 +2,8 @@ import { z } from "zod";
 import { apiRequest, unwrap } from "@/lib/api.client";
 import { usersKeys } from "./users-query-keys"; // authoritative keys (moved out for consistency)
 import {
-  listUsersResponseSchema,
+  userListItemSchema,
+  paginationMetaSchema,
   detailUserResponseSchema,
   listUsersQuerySchema,
   type ListUsersQuery,
@@ -19,7 +20,11 @@ import {
  */
 
 // Internal envelope shape adapter (apiRequest already validates outer envelope; here we model inner data layout)
-const listInnerSchema = z.object({ data: z.array(z.any()), meta: z.any() });
+// Generic envelope schema for all list endpoints
+const listEnvelopeSchema = z.object({
+  data: z.array(userListItemSchema),
+  meta: paginationMetaSchema,
+});
 const detailInnerSchema = z.any();
 
 /**
@@ -46,9 +51,8 @@ export async function listUsers(
   params?: Partial<ListUsersQuery>
 ): Promise<{ data: UserListItem[]; meta: any }> {
   const path = buildListPath(params);
-  const res = await apiRequest(path, null, listInnerSchema);
-  // Validate using backend envelope: res.data and res.meta
-  const validated = listUsersResponseSchema.safeParse({
+  const res = await apiRequest(path, null, null); // envelope: { data, meta }
+  const validated = listEnvelopeSchema.safeParse({
     data: res.data,
     meta: res.meta,
   });

@@ -1,4 +1,5 @@
 import { apiRequest } from "@/lib/api.client";
+import { z } from "zod";
 import {
   OrganizationSchema,
   OrganizationArraySchema,
@@ -14,7 +15,19 @@ import {
   type OrganizationArray,
   type Organization,
 } from "../types/organization.types";
-import { z } from "zod";
+
+// Envelope schema for paginated organization lists
+const organizationListEnvelopeSchema = z.object({
+  data: OrganizationArraySchema,
+  meta: z.object({
+    total: z.number(),
+    page: z.number(),
+    pageSize: z.number(),
+    pageCount: z.number(),
+    hasNext: z.boolean(),
+    hasPrev: z.boolean(),
+  }),
+});
 
 // Build query string with only defined values
 function buildQuery(params: Partial<ListOrganizationsQuery>) {
@@ -39,25 +52,13 @@ export async function listOrganizations(
     throw parsed.error; // can wrap in ApiError if desired
   }
   const qs = buildQuery(params);
-  // Strict validation: use listOrganizationsResponseSchema
   const res = await apiRequest(
     `/organizations${qs ? `?${qs}` : ""}`,
     null,
-    listOrganizationsResponseSchema
+    organizationListEnvelopeSchema
   );
-  // Always return a defined value
-  if (!res || !res.data) {
-    return {
-      data: [],
-      meta: {
-        total: 0,
-        page: 1,
-        pageSize: 20,
-        pageCount: 0,
-        hasNext: false,
-        hasPrev: false,
-      },
-    };
+  if (!res || !res.data || !res.meta) {
+    throw new Error("Organization list response missing required fields");
   }
   return res;
 }

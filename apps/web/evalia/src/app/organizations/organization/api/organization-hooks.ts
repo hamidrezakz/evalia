@@ -45,7 +45,8 @@ export function useOrganizations(params?: Partial<Record<string, any>>) {
     queryKey: orgKeys.list(params),
     queryFn: async () => {
       const res = await listOrganizations(params || ({} as any));
-      return res.data as OrganizationArray;
+      // Return full envelope: { data, meta }
+      return res;
     },
     staleTime: STALE_TIME_LIST,
     // If using React Query v4 and want transition smoothing, re-add keepPreviousData: true
@@ -75,7 +76,7 @@ export function useUserOrganizations(enabled: boolean = true) {
     queryKey: orgKeys.userMembership(),
     queryFn: async () => {
       const res = await listUserOrganizations();
-      return res.data as OrganizationArray; // includes membership field
+      return res as OrganizationArray; // includes membership field
     },
     enabled,
     staleTime: STALE_TIME_USER_ORGS,

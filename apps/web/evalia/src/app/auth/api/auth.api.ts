@@ -61,7 +61,7 @@ export async function checkIdentifier(phoneOrEmailRaw: string) {
     checkIdentifierDataSchema,
     { body: { phone }, auth: false }
   );
-  return res.data; // unwrap inner validated data
+  return res;
 }
 
 export async function loginWithPassword(
@@ -79,7 +79,7 @@ export async function loginWithPassword(
     { body: { phone, password } }
   );
   tokenStorage.set(res.data.tokens);
-  return res.data;
+  return res;
 }
 
 export async function requestOtp(identifierRaw: string, purpose: string) {
@@ -91,7 +91,7 @@ export async function requestOtp(identifierRaw: string, purpose: string) {
     body: { phone, purpose },
     auth: false,
   });
-  return res.data;
+  return res;
 }
 
 export async function verifyOtp(
@@ -107,7 +107,7 @@ export async function verifyOtp(
     body: { phone, purpose, code },
   });
   if (res.data.mode === "LOGIN") tokenStorage.set(res.data.tokens);
-  return res.data;
+  return res;
 }
 
 export async function completeRegistration(
@@ -131,7 +131,7 @@ export async function completeRegistration(
     { body: { signupToken, firstName, lastName, password } }
   );
   tokenStorage.set(res.data.tokens);
-  return res.data;
+  return res;
 }
 
 // Facade / OO style (optional) ---------------------------------------
