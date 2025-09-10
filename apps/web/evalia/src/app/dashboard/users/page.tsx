@@ -33,13 +33,16 @@ export default function DashboardUsersPage() {
         </div>
       </div>
 
-      <Panel className="p-0">
-        <UsersList
-          initialQuery={{ q: "", page: 1, pageSize: 20 }}
-          canEdit={() => true}
-          canBlock={() => true}
-          canDelete={() => true}
-        />
+      <Panel className="">
+        <div className="px-2">
+          {" "}
+          <UsersList
+            initialQuery={{ q: "", page: 1, pageSize: 20 }}
+            canEdit={() => true}
+            canBlock={() => true}
+            canDelete={() => true}
+          />
+        </div>
       </Panel>
     </div>
   );

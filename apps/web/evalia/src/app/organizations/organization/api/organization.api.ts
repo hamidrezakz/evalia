@@ -55,12 +55,15 @@ export async function listOrganizations(
   const res = await apiRequest(
     `/organizations${qs ? `?${qs}` : ""}`,
     null,
-    organizationListEnvelopeSchema
+    null
   );
-  if (!res || !res.data || !res.meta) {
-    throw new Error("Organization list response missing required fields");
+  const validated = organizationListEnvelopeSchema.safeParse(res);
+  if (!validated.success) {
+    throw new Error(
+      "Organization list response validation failed: " + validated.error.message
+    );
   }
-  return res;
+  return res.data;
 }
 
 // Get single organization

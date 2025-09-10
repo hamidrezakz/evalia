@@ -76,7 +76,8 @@ export function useUserOrganizations(enabled: boolean = true) {
     queryKey: orgKeys.userMembership(),
     queryFn: async () => {
       const res = await listUserOrganizations();
-      return res as OrganizationArray; // includes membership field
+      // Return full envelope for consistency
+      return res;
     },
     enabled,
     staleTime: STALE_TIME_USER_ORGS,
@@ -103,23 +104,26 @@ export function useCreateOrganization() {
     mutationFn: (input: CreateOrganizationInput) => createOrganization(input),
     onMutate: async (input) => {
       await qc.cancelQueries({ queryKey: orgKeys.lists() });
-      const prev = qc.getQueriesData<OrganizationArray>({
+      const prev = qc.getQueriesData<{ data: OrganizationArray; meta: any }>({
         queryKey: orgKeys.lists(),
       });
-      // Optimistically insert into each cached list (simple approach, assumes filter passes)
-      prev.forEach(([key, data]) => {
-        if (data) {
-          qc.setQueryData(key, [
-            ...data,
-            {
-              id: -Date.now(),
-              name: input.name,
-              slug: input.slug || "",
-              plan: input.plan || "FREE",
-              status: "ACTIVE",
-              createdAt: new Date().toISOString(),
-            } as any,
-          ]);
+      // Optimistically insert into each cached list envelope
+      prev.forEach(([key, envelope]) => {
+        if (envelope && Array.isArray(envelope.data)) {
+          qc.setQueryData(key, {
+            ...envelope,
+            data: [
+              ...envelope.data,
+              {
+                id: -Date.now(),
+                name: input.name,
+                slug: input.slug || "",
+                plan: input.plan || "FREE",
+                status: "ACTIVE",
+                createdAt: new Date().toISOString(),
+              } as any,
+            ],
+          });
         }
       });
       return { prev };
@@ -182,15 +186,19 @@ export function useDeleteOrganization(id: number) {
     mutationFn: () => deleteOrganization(id),
     onMutate: async () => {
       await qc.cancelQueries({ queryKey: orgKeys.lists() });
-      const prevLists = qc.getQueriesData<OrganizationArray>({
+      const prevLists = qc.getQueriesData<{
+        data: OrganizationArray;
+        meta: any;
+      }>({
         queryKey: orgKeys.lists(),
       });
-      prevLists.forEach(([key, data]) => {
-        if (data)
-          qc.setQueryData(
-            key,
-            data.filter((o: any) => o.id !== id)
-          );
+      prevLists.forEach(([key, envelope]) => {
+        if (envelope && Array.isArray(envelope.data)) {
+          qc.setQueryData(key, {
+            ...envelope,
+            data: envelope.data.filter((o: any) => o.id !== id),
+          });
+        }
       });
       return { prevLists };
     },
