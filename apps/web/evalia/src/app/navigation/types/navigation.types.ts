@@ -30,36 +30,28 @@ export type NavTarget = z.infer<typeof navTargetEnum>;
  */
 export type NavigationItemTree = {
   id: number;
-  parentId: number | null;
   label: string;
-  icon?: string | null;
   path?: string | null;
   externalUrl?: string | null;
+  iconName?: string | null;
   order: number;
-  enabled: boolean;
-  description?: string | null;
-  platformRoles: PlatformRole[];
-  orgRoles: OrgRole[];
-  createdAt: string;
-  updatedAt: string;
-  children: NavigationItemTree[];
+  isActive?: boolean;
+  meta?: Record<string, any>;
+  parentId?: number | null;
+  children?: NavigationItemTree[];
 };
 
 export const navigationItemTreeSchema: z.ZodType<NavigationItemTree> = z.object(
   {
     id: z.number().int().positive(),
-    parentId: z.number().int().positive().nullable(),
     label: z.string().min(1),
-    icon: z.string().nullable().optional(),
     path: z.string().nullable().optional(),
-    externalUrl: z.string().url().nullable().optional(),
+    externalUrl: z.string().nullable().optional(),
+    iconName: z.string().nullable().optional(),
     order: z.number().int(),
-    enabled: z.boolean(),
-    description: z.string().nullable().optional(),
-    platformRoles: z.array(platformRoleEnum).default([]),
-    orgRoles: z.array(orgRoleEnum).default([]),
-    createdAt: z.string(),
-    updatedAt: z.string(),
+    isActive: z.boolean().optional(),
+    meta: z.object({}).passthrough().optional(),
+    parentId: z.number().int().nullable().optional(),
     children: z.array(z.lazy(() => navigationItemTreeSchema)).default([]),
   }
 );
@@ -67,9 +59,7 @@ export const navigationItemTreeSchema: z.ZodType<NavigationItemTree> = z.object(
 /**
  * Tree response schema.
  */
-export const navigationTreeResponseSchema = z.object({
-  data: z.array(navigationItemTreeSchema),
-});
+export const navigationTreeResponseSchema = z.array(navigationItemTreeSchema);
 
 /**
  * Helper to build query for tree endpoint (single role, options).

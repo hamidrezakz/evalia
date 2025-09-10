@@ -26,7 +26,6 @@ export async function getNavigationTreeForRole(opts: {
     null,
     navigationTreeResponseSchema
   );
-  const validated = navigationTreeResponseSchema.safeParse(res.data);
-  if (!validated.success) throw new Error("Navigation tree validation failed");
-  return validated.data.data;
+  // اعتبارسنجی قبلاً در apiRequest انجام شده و اگر خطا باشد throw می‌شود
+  return res.data;
 }

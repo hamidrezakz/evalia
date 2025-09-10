@@ -1,6 +1,9 @@
 "use client";
-import { Suspense } from "react";
-import { useAuthContext } from "@/app/auth/context/AuthContext";
+import React from "react";
+import { Suspense, useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import {
   Panel,
   PanelHeader,
@@ -8,242 +11,461 @@ import {
   PanelContent,
   PanelFooter,
 } from "@/components/ui/panel";
-import { Button } from "@/components/ui/button";
+import { useAuthSession } from "@/app/auth/event";
+import { useOrgState } from "@/app/auth/org";
+import { useUserDataContext } from "@/app/auth/user";
+import { useNavigationContext } from "@/app/navigation/context";
 
-import { useEffect, useState } from "react";
+// Helper
+const short = (t: string | null | undefined) =>
+  t ? t.substring(0, 28) + (t.length > 28 ? "…" : "") : "—";
 
-function AuthContextDebugPanel() {
+function PanelSkeleton({ title }: { title: string }) {
+  return (
+    <Panel>
+      <PanelHeader>
+        <PanelTitle>{title}</PanelTitle>
+      </PanelHeader>
+      <PanelContent className="text-xs text-muted-foreground">
+        در حال بارگذاری…
+      </PanelContent>
+    </Panel>
+  );
+}
+
+/* 1) پنل نشست / توکن */
+function SessionPanel() {
   const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
+  useEffect(() => setMounted(true), []);
   const {
     accessToken,
     refreshToken,
     decoded,
     userId,
-    user,
-    organizations,
-    active,
-    platformRoles,
-    organizationRoles,
-    loading,
-    error,
-    refetchAll,
-    signOut,
     isTokenExpired,
-  } = useAuthContext();
-
-  const short = (t: string | null) =>
-    t ? t.substring(0, 24) + (t.length > 24 ? "…" : "") : "—";
-
-  // During SSR/hydration, show placeholders to avoid hydration mismatch
-  if (!mounted) {
-    return (
-      <Panel>
-        <PanelHeader>
-          <PanelTitle>Auth Context Snapshot</PanelTitle>
-        </PanelHeader>
-        <PanelContent className="flex flex-col gap-4 text-xs md:text-sm">
-          <section>
-            <h4 className="font-semibold mb-1">Tokens</h4>
-            <div className="grid gap-1">
-              <div>
-                Access: <span className="text-muted-foreground">—</span>
-              </div>
-              <div>
-                Refresh: <span className="text-muted-foreground">—</span>
-              </div>
-              <div>
-                Expired: <span className="text-muted-foreground">—</span>
-              </div>
-            </div>
-          </section>
-          <section>
-            <h4 className="font-semibold mb-1">User</h4>
-            <div className="grid gap-1">
-              <div>UserId: —</div>
-              <div>FullName: —</div>
-            </div>
-          </section>
-          <section>
-            <h4 className="font-semibold mb-1">Active Selection</h4>
-            <div className="grid gap-1">
-              <div>OrganizationId: —</div>
-              <div>Platform Role: —</div>
-              <div>Org Role: —</div>
-            </div>
-          </section>
-          <section>
-            <h4 className="font-semibold mb-1">Organizations (—)</h4>
-            <ul className="list-disc pr-4 space-y-1">
-              <li className="list-none text-muted-foreground">—</li>
-            </ul>
-          </section>
-          <section>
-            <h4 className="font-semibold mb-1">Platform Roles</h4>
-            <span className="text-muted-foreground">—</span>
-          </section>
-          <section>
-            <h4 className="font-semibold mb-1">Organization Roles Map</h4>
-            <div className="text-muted-foreground">—</div>
-          </section>
-          <section>
-            <h4 className="font-semibold mb-1">Decoded (raw)</h4>
-            <pre className="whitespace-pre-wrap break-all bg-muted/40 p-2 rounded text-[10px] md:text-[11px] max-h-48 overflow-auto">
-              —
-            </pre>
-          </section>
-        </PanelContent>
-        <PanelFooter className="justify-between">
-          <div className="flex gap-2">
-            <Button size="sm" disabled>
-              Refetch All
-            </Button>
-            <Button size="sm" variant="secondary" disabled>
-              Sign Out
-            </Button>
-          </div>
-          <span className="text-xs text-muted-foreground">Loading…</span>
-        </PanelFooter>
-      </Panel>
-    );
-  }
-
-  // Client-only: render real data
+    attemptRefresh,
+    signOut,
+    loading,
+  } = useAuthSession();
+  if (!mounted) return <PanelSkeleton title="نشست احراز هویت" />;
   return (
     <Panel>
       <PanelHeader>
-        <PanelTitle>Auth Context Snapshot</PanelTitle>
+        <PanelTitle>نشست احراز هویت</PanelTitle>
       </PanelHeader>
-      <PanelContent className="flex flex-col gap-4 text-xs md:text-sm">
-        {/* ...existing code... */}
-        <section>
-          <h4 className="font-semibold mb-1">Tokens</h4>
-          <div className="grid gap-1">
-            <div>
-              Access:{" "}
-              <code dir="ltr" className="break-all">
-                {short(accessToken)}
-              </code>
-            </div>
-            <div>
-              Refresh:{" "}
-              <code dir="ltr" className="break-all">
-                {short(refreshToken)}
-              </code>
-            </div>
-            <div>Expired: {isTokenExpired() ? "Yes" : "No"}</div>
-          </div>
-        </section>
-        <section>
-          <h4 className="font-semibold mb-1">User</h4>
-          <div className="grid gap-1">
-            <div>UserId: {userId ?? "—"}</div>
-            <div>
-              FullName:{" "}
-              {user?.fullName ||
-                `${user?.firstName || ""} ${user?.lastName || ""}`.trim() ||
-                "—"}
-            </div>
-          </div>
-        </section>
-        <section>
-          <h4 className="font-semibold mb-1">Active Selection</h4>
-          <div className="grid gap-1">
-            <div>OrganizationId: {active.organizationId ?? "—"}</div>
-            <div>Platform Role: {active.platformRole ?? "—"}</div>
-            <div>Org Role: {active.orgRole ?? "—"}</div>
-          </div>
-        </section>
-        <section>
-          <h4 className="font-semibold mb-1">
-            Organizations ({organizations.length})
-          </h4>
-          <ul className="list-disc pr-4 space-y-1">
-            {organizations.map(
-              (
-                o: import("@/app/organizations/organization/types/organization.types").Organization
-              ) => (
-                <li key={o.id} className="break-all">
-                  {o.id} - {o.name}
-                </li>
-              )
+      <PanelContent className="flex flex-col gap-5 text-[11px] md:text-xs">
+        <section className="space-y-2">
+          <div className="flex flex-wrap gap-3 items-center">
+            <Badge variant={isTokenExpired() ? "destructive" : "secondary"}>
+              {isTokenExpired() ? "Token Expiring Soon" : "Token OK"}
+            </Badge>
+            {userId && <Badge variant="outline">User #{userId}</Badge>}
+            {decoded?.iat && (
+              <Badge variant="outline">iat: {decoded.iat}</Badge>
             )}
-            {organizations.length === 0 && (
-              <li className="list-none text-muted-foreground">—</li>
+            {decoded?.exp && (
+              <Badge variant="outline">exp: {decoded.exp}</Badge>
+            )}
+          </div>
+          <div className="grid gap-1">
+            <div className="font-semibold text-[12px]">توکن‌ها</div>
+            <div className="grid gap-1 rounded-md border bg-background/40 p-2">
+              <div className="flex justify-between gap-2">
+                <span className="text-muted-foreground">Access</span>
+                <code dir="ltr" className="font-mono">
+                  {short(accessToken)}
+                </code>
+              </div>
+              <div className="flex justify-between gap-2">
+                <span className="text-muted-foreground">Refresh</span>
+                <code dir="ltr" className="font-mono">
+                  {short(refreshToken)}
+                </code>
+              </div>
+              <div className="flex justify-between gap-2">
+                <span className="text-muted-foreground">Expiring</span>
+                <span>{isTokenExpired() ? "Yes" : "No"}</span>
+              </div>
+            </div>
+          </div>
+          <Separator className="my-2" />
+          <div className="flex flex-col gap-2">
+            <div className="font-semibold text-[12px]">Payload</div>
+            <pre className="bg-muted/50 backdrop-blur-sm border rounded-md p-2 max-h-48 overflow-auto text-[10px] leading-relaxed whitespace-pre-wrap break-all">
+              {decoded ? JSON.stringify(decoded, null, 2) : "—"}
+            </pre>
+          </div>
+        </section>
+      </PanelContent>
+      <PanelFooter className="justify-between">
+        <div className="flex gap-2">
+          <Button size="sm" disabled={loading} onClick={() => attemptRefresh()}>
+            رفرش دستی
+          </Button>
+          <Button size="sm" variant="secondary" onClick={() => signOut()}>
+            خروج
+          </Button>
+        </div>
+        <span className="text-xs text-muted-foreground">
+          {loading ? "لودینگ" : "آماده"}
+        </span>
+      </PanelFooter>
+    </Panel>
+  );
+}
+
+/* 2) پنل سازمان و نقش فعال */
+function OrgPanel() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const {
+    organizations,
+    organizationRoles,
+    platformRoles,
+    activeOrganizationId,
+    activeRole,
+    activeRoleSource,
+    setActiveOrganization,
+    setPlatformActiveRole,
+    setOrganizationActiveRole,
+    refreshOrganizations,
+    loading,
+  } = useOrgState();
+  if (!mounted) return <PanelSkeleton title="سازمان و نقش" />;
+  return (
+    <Panel>
+      <PanelHeader>
+        <PanelTitle>سازمان و نقش فعال</PanelTitle>
+      </PanelHeader>
+      <PanelContent className="flex flex-col gap-6 text-[11px] md:text-xs">
+        <section className="grid gap-2">
+          <div className="flex flex-wrap gap-2">
+            {activeRole && (
+              <Badge variant="default">Active: {activeRole}</Badge>
+            )}
+            {activeRoleSource && (
+              <Badge variant="secondary">Source: {activeRoleSource}</Badge>
+            )}
+            {typeof activeOrganizationId === "number" && (
+              <Badge variant="outline">Org #{activeOrganizationId}</Badge>
+            )}
+          </div>
+          <div className="grid gap-1 rounded-md border bg-background/40 p-2">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Organization</span>
+              <span>{activeOrganizationId ?? "—"}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Role</span>
+              <span>{activeRole ?? "—"}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Source</span>
+              <span>{activeRoleSource ?? "—"}</span>
+            </div>
+          </div>
+        </section>
+        <Separator />
+        <section className="space-y-2">
+          <div className="flex items-center justify-between">
+            <h4 className="font-semibold">
+              Organizations ({organizations.length})
+            </h4>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => refreshOrganizations()}
+              disabled={loading}>
+              Refresh
+            </Button>
+          </div>
+          <ul className="flex flex-col gap-2">
+            {organizations.map((o) => (
+              <li
+                key={o.id}
+                className="rounded-md border bg-background/40 p-2 flex flex-col gap-2">
+                <div className="flex flex-wrap gap-2 items-center">
+                  <span className="font-medium">{o.name}</span>
+                  <Badge variant="outline">ID {o.id}</Badge>
+                  <Button
+                    size="sm"
+                    variant={
+                      activeOrganizationId === o.id ? "default" : "secondary"
+                    }
+                    onClick={() => setActiveOrganization(o.id)}>
+                    Select
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {(organizationRoles[o.id] || []).map((r) => (
+                    <Button
+                      key={r}
+                      size="sm"
+                      variant={
+                        activeRole === r && activeRoleSource === "organization"
+                          ? "default"
+                          : "outline"
+                      }
+                      onClick={() => setOrganizationActiveRole(r, o.id)}>
+                      {r}
+                    </Button>
+                  ))}
+                  {!(organizationRoles[o.id] || []).length && (
+                    <span className="text-muted-foreground">No roles</span>
+                  )}
+                </div>
+              </li>
+            ))}
+            {!organizations.length && (
+              <li className="text-muted-foreground text-center p-2 border rounded-md">
+                No organizations
+              </li>
             )}
           </ul>
         </section>
-        <section>
-          <h4 className="font-semibold mb-1">Platform Roles</h4>
+        <Separator />
+        <section className="space-y-2">
+          <h4 className="font-semibold">Platform Roles</h4>
           <div className="flex flex-wrap gap-2">
             {platformRoles.length ? (
               platformRoles.map((r) => (
-                <span
+                <Button
                   key={r}
-                  className="rounded bg-muted px-2 py-0.5 text-[11px]">
+                  size="sm"
+                  variant={
+                    activeRole === r && activeRoleSource === "platform"
+                      ? "default"
+                      : "outline"
+                  }
+                  onClick={() => setPlatformActiveRole(r)}>
                   {r}
-                </span>
+                </Button>
               ))
             ) : (
               <span className="text-muted-foreground">—</span>
             )}
           </div>
         </section>
-        <section>
-          <h4 className="font-semibold mb-1">Organization Roles Map</h4>
-          <div className="space-y-1">
-            {Object.keys(organizationRoles).length ? (
-              Object.entries(organizationRoles).map(([orgId, roles]) => (
-                <div key={orgId} className="flex items-start gap-2">
-                  <span className="text-muted-foreground">{orgId}:</span>
-                  <span>{(roles || []).join(", ") || "—"}</span>
-                </div>
-              ))
-            ) : (
-              <div className="text-muted-foreground">—</div>
-            )}
-          </div>
-        </section>
-        <section>
-          <h4 className="font-semibold mb-1">Decoded (raw)</h4>
-          <pre className="whitespace-pre-wrap break-all bg-muted/40 p-2 rounded text-[10px] md:text-[11px] max-h-48 overflow-auto">
-            {decoded ? JSON.stringify(decoded, null, 2) : "—"}
-          </pre>
-        </section>
-        {error && (
-          <section>
-            <h4 className="font-semibold mb-1 text-red-600 dark:text-red-400">
-              Error
-            </h4>
-            <div className="text-red-600 dark:text-red-400 break-all text-xs whitespace-pre-wrap">
-              {typeof error === "string"
-                ? error
-                : (error as any)?.message || "Unknown error"}
-              {error && typeof error === "object" && (
-                <>
-                  {(error as any).status &&
-                    `\nStatus: ${(error as any).status}`}
-                  {(error as any).error && `\nError: ${(error as any).error}`}
-                </>
-              )}
-            </div>
-          </section>
-        )}
       </PanelContent>
       <PanelFooter className="justify-between">
-        <div className="flex gap-2">
-          <Button size="sm" disabled={loading} onClick={() => refetchAll()}>
-            Refetch All
+        <div className="flex gap-2 flex-wrap">
+          <Button
+            size="sm"
+            disabled={loading}
+            onClick={() => refreshOrganizations()}>
+            رفرش سازمان‌ها
           </Button>
-          <Button size="sm" variant="secondary" onClick={() => signOut()}>
-            Sign Out
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              setPlatformActiveRole(null);
+              setOrganizationActiveRole(null);
+            }}>
+            خالی کردن نقش
           </Button>
         </div>
         <span className="text-xs text-muted-foreground">
-          {loading ? "Loading…" : "Idle"}
+          {loading ? "لودینگ" : "آماده"}
+        </span>
+      </PanelFooter>
+    </Panel>
+  );
+}
+
+/* 3) پنل اطلاعات کاربر */
+function UserPanel() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const { user, userId, loading, error, refetch } = useUserDataContext();
+  if (!mounted) return <PanelSkeleton title="کاربر" />;
+  return (
+    <Panel>
+      <PanelHeader>
+        <PanelTitle>اطلاعات کاربر</PanelTitle>
+      </PanelHeader>
+      <PanelContent className="flex flex-col gap-5 text-[11px] md:text-xs">
+        <div className="flex flex-wrap gap-2">
+          {userId && <Badge variant="outline">User #{userId}</Badge>}
+          {user?.email && <Badge variant="secondary">{user.email}</Badge>}
+        </div>
+        <div className="grid gap-1 rounded-md border bg-background/40 p-2">
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Full name</span>
+            <span>
+              {user?.fullName ||
+                `${user?.firstName || ""} ${user?.lastName || ""}`.trim() ||
+                "—"}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Created</span>
+            <span>{user?.createdAt || "—"}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Updated</span>
+            <span>{(user as any)?.updatedAt || "—"}</span>
+          </div>
+        </div>
+        {error && (
+          <div className="text-red-600 dark:text-red-400 break-all">
+            Error: {error}
+          </div>
+        )}
+      </PanelContent>
+      <PanelFooter className="justify-between">
+        <Button size="sm" disabled={loading} onClick={() => refetch()}>
+          دریافت مجدد
+        </Button>
+        <span className="text-xs text-muted-foreground">
+          {loading ? "لودینگ" : "آماده"}
+        </span>
+      </PanelFooter>
+    </Panel>
+  );
+}
+
+// نمایش درخت کامل ناوبری به صورت بازگشتی
+const TreeList = ({ nodes }: { nodes: any[] }): JSX.Element =>
+  !nodes?.length ? (
+    <div className="text-muted-foreground">No items</div>
+  ) : (
+    <ul className="flex flex-col gap-1">
+      {nodes.map((node: any) => (
+        <li key={node.id} className="rounded border bg-background/40 px-2 py-1">
+          <div className="flex justify-between gap-2">
+            <span className="truncate" title={node.label}>
+              {node.label}
+            </span>
+            {node.path && (
+              <code dir="ltr" className="text-[10px] opacity-70">
+                {node.path}
+              </code>
+            )}
+          </div>
+          {node.children && node.children.length > 0 && (
+            <div className="pl-4 border-l mt-2">
+              <TreeList nodes={node.children} />
+            </div>
+          )}
+        </li>
+      ))}
+    </ul>
+  );
+
+/* 4) پنل ناوبری */
+function NavigationPanel() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const {
+    items,
+    flatten,
+    hasPath,
+    findByPath,
+    activeRole,
+    activeRoleSource,
+    loading,
+    error,
+    refetch,
+  } = useNavigationContext();
+  const flat = flatten();
+  if (!mounted) return <PanelSkeleton title="ناوبری" />;
+  return (
+    <Panel>
+      <PanelHeader>
+        <PanelTitle>ناوبری (درخت / فلت)</PanelTitle>
+      </PanelHeader>
+      <PanelContent className="flex flex-col gap-6 text-[11px] md:text-xs">
+        <section className="grid gap-2">
+          <div className="flex flex-wrap gap-2 items-center">
+            {activeRole && <Badge variant="default">Role: {activeRole}</Badge>}
+            {activeRoleSource && (
+              <Badge variant="secondary">Source: {activeRoleSource}</Badge>
+            )}
+            <Badge variant="outline">Tree {items.length}</Badge>
+            <Badge variant="outline">Flat {flat.length}</Badge>
+          </div>
+          <div className="grid gap-1 rounded-md border bg-background/40 p-2">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Active role</span>
+              <span>{activeRole ?? "—"}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Source</span>
+              <span>{activeRoleSource ?? "—"}</span>
+            </div>
+          </div>
+        </section>
+        <Separator />
+        <section className="space-y-2">
+          <h4 className="font-semibold">درخت کامل ناوبری</h4>
+          <TreeList nodes={items} />
+        </section>
+        <Separator />
+        <section className="space-y-2">
+          <h4 className="font-semibold">لیست فلت ناوبری</h4>
+          <ul className="flex flex-col gap-1">
+            {flat.map((it) => (
+              <li
+                key={it.id}
+                className="rounded border bg-background/40 px-2 py-1 flex justify-between gap-2">
+                <span className="truncate" title={it.label}>
+                  {it.label}
+                </span>
+                {it.path && (
+                  <code dir="ltr" className="text-[10px] opacity-70">
+                    {it.path}
+                  </code>
+                )}
+              </li>
+            ))}
+            {!flat.length && (
+              <li className="text-muted-foreground text-center p-2 border rounded-md">
+                No items
+              </li>
+            )}
+          </ul>
+        </section>
+        // ...existing code...
+        <Separator />
+        <section className="space-y-2">
+          <h4 className="font-semibold">Test helpers</h4>
+          <div className="flex gap-2 flex-wrap items-center">
+            <Button size="sm" onClick={() => refetch()}>
+              Refetch
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() =>
+                alert(
+                  hasPath("/dashboard")
+                    ? "dashboard exists"
+                    : "dashboard missing"
+                )
+              }>
+              hasPath('/dashboard')
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                const f = findByPath("/dashboard");
+                alert(f ? `found: ${f.label}` : "not found");
+              }}>
+              findByPath('/dashboard')
+            </Button>
+          </div>
+        </section>
+        {error && (
+          <div className="text-red-600 dark:text-red-400 break-all">
+            Error: {error}
+          </div>
+        )}
+      </PanelContent>
+      <PanelFooter className="justify-end">
+        <span className="text-xs text-muted-foreground">
+          {loading ? "لودینگ" : "آماده"}
         </span>
       </PanelFooter>
     </Panel>
@@ -254,10 +476,17 @@ export default function DashboardPage() {
   return (
     <Suspense
       fallback={
-        <div className="p-4 text-sm text-muted-foreground">Loading…</div>
+        <div className="p-4 text-sm text-muted-foreground">
+          در حال بارگذاری…
+        </div>
       }>
-      <div className="p-2 md:p-4 lg:p-6 max-w-6xl mx-auto">
-        <AuthContextDebugPanel />
+      <div className="p-2 md:p-4 lg:p-6 max-w-7xl mx-auto space-y-6">
+        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-2">
+          <SessionPanel />
+          <OrgPanel />
+          <UserPanel />
+          <NavigationPanel />
+        </div>
       </div>
     </Suspense>
   );
