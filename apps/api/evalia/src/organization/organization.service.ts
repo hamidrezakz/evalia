@@ -168,7 +168,7 @@ export class OrganizationService {
     // Fetch memberships first to avoid unnecessary large joins
     const memberships = await this.prisma.organizationMembership.findMany({
       where: { userId, deletedAt: null },
-      select: { organizationId: true, role: true, id: true },
+      select: { organizationId: true, roles: true, id: true },
       orderBy: { createdAt: 'asc' },
     });
     if (memberships.length === 0) return [];
@@ -178,9 +178,9 @@ export class OrganizationService {
       orderBy: { createdAt: 'desc' },
     });
     // Map roles onto organizations for convenience (optional add later: multiple roles?)
-    const map = new Map<number, { role: string; membershipId: number }>();
+    const map = new Map<number, { roles: string[]; membershipId: number }>();
     memberships.forEach((m) =>
-      map.set(m.organizationId, { role: m.role, membershipId: m.id }),
+      map.set(m.organizationId, { roles: m.roles, membershipId: m.id }),
     );
     return orgs.map((o) => ({ ...o, membership: map.get(o.id) }));
   }

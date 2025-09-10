@@ -20,7 +20,7 @@ export class MembershipService {
     q?: string,
   ) {
     const where: any = { organizationId: orgId, deletedAt: null };
-    if (role) where.role = role;
+    if (role) where.roles = { has: role };
     if (q) where.user = { fullName: { contains: q, mode: 'insensitive' } };
     const total = await this.prisma.organizationMembership.count({ where });
     const items = await this.prisma.organizationMembership.findMany({
@@ -58,7 +58,12 @@ export class MembershipService {
         data: {
           organizationId: orgId,
           userId: dto.userId,
-          role: dto.role,
+          roles: (dto.roles && dto.roles.length > 0
+            ? dto.roles
+            : dto.role
+              ? [dto.role]
+              : []
+          ).filter(Boolean), // Support both roles array and legacy role, filter out undefined
         },
       });
     } catch (e: any) {
@@ -81,22 +86,10 @@ export class MembershipService {
         message: 'Membership not found',
         code: 'MEMBER_NOT_FOUND',
       });
-    if (!dto.role) return membership;
-    // (Optional) enforce at least one OWNER stays
-    if (membership.role === 'OWNER' && dto.role !== 'OWNER') {
-      const owners = await this.prisma.organizationMembership.count({
-        where: { organizationId: orgId, role: 'OWNER' },
-      });
-      if (owners <= 1) {
-        throw new BadRequestException({
-          message: 'Last owner cannot be downgraded',
-          code: 'LAST_OWNER_FORBIDDEN',
-        });
-      }
-    }
+    if (!dto.roles || dto.roles.length === 0) return membership;
     return this.prisma.organizationMembership.update({
       where: { id: membershipId },
-      data: { role: dto.role },
+      data: { roles: dto.roles },
     });
   }
 
@@ -109,22 +102,6 @@ export class MembershipService {
         message: 'Membership not found',
         code: 'MEMBER_NOT_FOUND',
       });
-    // Check owner constraint
-    if (membership.role === 'OWNER') {
-      const owners = await this.prisma.organizationMembership.count({
-        where: {
-          organizationId: orgId,
-          role: 'OWNER',
-          id: { not: membershipId },
-        },
-      });
-      if (owners === 0) {
-        throw new BadRequestException({
-          message: 'Cannot remove last owner',
-          code: 'LAST_OWNER_FORBIDDEN',
-        });
-      }
-    }
     await this.prisma.organizationMembership.delete({
       where: { id: membershipId },
     });

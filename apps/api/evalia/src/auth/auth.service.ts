@@ -186,14 +186,14 @@ export class AuthService {
       where: { id: numericId as any },
       select: {
         globalRoles: true,
-        memberships: { select: { organizationId: true, role: true } },
+        memberships: { select: { organizationId: true, roles: true } },
       },
     });
     return {
       global: user?.globalRoles || [],
       org: (user?.memberships || []).map((m) => ({
         orgId: m.organizationId,
-        role: m.role,
+        roles: m.roles || [],
       })),
     };
   }

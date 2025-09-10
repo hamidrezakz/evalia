@@ -16,7 +16,7 @@ export type UserStatus = z.infer<typeof userStatusEnum>;
  */
 export const userOrganizationSchema = z.object({
   orgId: z.number().int().positive(),
-  role: z.string().min(1),
+  roles: z.array(z.string()).min(1),
 });
 export type UserOrganization = z.infer<typeof userOrganizationSchema>;
 

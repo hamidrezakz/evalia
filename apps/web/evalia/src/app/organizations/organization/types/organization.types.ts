@@ -11,7 +11,7 @@ export const LocaleEnum = z.enum(["FA", "EN"]);
 
 // Base organization schema (full)
 export const OrganizationMembershipSchema = z.object({
-  role: z.string(),
+  roles: z.array(z.string()),
   membershipId: z.number(),
 });
 

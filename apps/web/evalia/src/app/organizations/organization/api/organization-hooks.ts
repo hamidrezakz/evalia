@@ -69,14 +69,23 @@ export function useOrganization(id: number | null) {
 
 /**
  * Organizations the current authenticated user is a member of.
- * Non‑paginated for quick auth context usage, includes membership { role, membershipId }.
+ * Non‑paginated for quick auth context usage, includes membership { roles, membershipId }.
  */
 export function useUserOrganizations(enabled: boolean = true) {
   return useQuery({
     queryKey: orgKeys.userMembership(),
     queryFn: async () => {
       const res = await listUserOrganizations();
-      // Return full envelope for consistency
+      // Ensure membership.roles is always an array
+      if (Array.isArray(res)) {
+        res.forEach((org) => {
+          if (org.membership && !Array.isArray(org.membership.roles)) {
+            org.membership.roles = org.membership.roles
+              ? [org.membership.roles]
+              : [];
+          }
+        });
+      }
       return res;
     },
     enabled,

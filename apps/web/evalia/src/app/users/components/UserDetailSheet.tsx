@@ -70,7 +70,8 @@ export function UserDetailSheet({
                     <span
                       key={o.orgId}
                       className="rounded-md bg-muted px-1.5 py-0.5 text-xs">
-                      {o.orgId} • {o.role}
+                      {o.orgId} •{" "}
+                      {Array.isArray(o.roles) ? o.roles.join(", ") : o.roles}
                     </span>
                   ))}
                 </div>

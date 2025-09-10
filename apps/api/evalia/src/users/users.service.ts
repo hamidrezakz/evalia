@@ -85,7 +85,7 @@ export class UsersService {
           createdAt: true,
           memberships: {
             where: { deletedAt: null },
-            select: { organizationId: true, role: true },
+            select: { organizationId: true, roles: true },
           },
           teams: {
             where: { deletedAt: null },
@@ -107,7 +107,7 @@ export class UsersService {
         globalRoles: u.globalRoles,
         organizations: u.memberships.map((m) => ({
           orgId: m.organizationId,
-          role: m.role,
+          roles: m.roles,
         })),
         teams: u.teams.map((t) => t.team),
         createdAt: u.createdAt,
@@ -139,7 +139,7 @@ export class UsersService {
           select: {
             id: true,
             organizationId: true,
-            role: true,
+            roles: true,
             createdAt: true,
           },
         },
@@ -163,7 +163,7 @@ export class UsersService {
       organizations: user.memberships.map((m) => ({
         membershipId: m.id,
         orgId: m.organizationId,
-        role: m.role,
+        roles: m.roles,
         joinedAt: m.createdAt,
       })),
       teams: user.teams.map((t) => t.team),

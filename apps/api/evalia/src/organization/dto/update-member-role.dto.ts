@@ -1,8 +1,10 @@
-import { IsEnum, IsOptional } from 'class-validator';
+import { IsEnum, IsOptional, IsArray, ArrayNotEmpty } from 'class-validator';
 import { OrgRole } from '@prisma/client';
 
 export class UpdateMemberRoleDto {
   @IsOptional()
-  @IsEnum(OrgRole)
-  role?: OrgRole;
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsEnum(OrgRole, { each: true })
+  roles?: OrgRole[];
 }

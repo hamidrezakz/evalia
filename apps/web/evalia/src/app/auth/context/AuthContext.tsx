@@ -78,9 +78,8 @@ export const AuthProvider: React.FC<ProviderProps> = ({
   const organizationRoles = useMemo<Record<number, string[]>>(() => {
     const out: Record<number, string[]> = {};
     const list = decoded?.roles?.org || [];
-    list.forEach(({ orgId, role }) => {
-      if (!out[orgId]) out[orgId] = [];
-      out[orgId].push(role);
+    list.forEach(({ orgId, roles }) => {
+      out[orgId] = Array.isArray(roles) ? roles : roles ? [roles] : [];
     });
     return out;
   }, [decoded]);

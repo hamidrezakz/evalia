@@ -3,7 +3,7 @@
 
 export interface OrgRoleEntry {
   orgId: number;
-  role: string; // e.g., 'ADMIN', 'MEMBER'
+  roles: string[]; // e.g., ['ADMIN', 'MEMBER']
 }
 
 export interface AccessTokenPayload {
@@ -11,7 +11,7 @@ export interface AccessTokenPayload {
   type: "access";
   roles: {
     global: string[]; // platform-level roles
-    org: OrgRoleEntry[]; // per-organization roles (one entry per membership)
+    org: OrgRoleEntry[]; // per-organization roles (one entry per membership, now with roles array)
   };
   tokenVersion: number; // used for invalidation
   exp?: number; // standard jwt exp (seconds epoch)
@@ -37,7 +37,7 @@ export interface AuthUser {
   organizations?: Array<{
     membershipId?: number;
     orgId: number;
-    role: string;
+    roles: string[];
     joinedAt?: string;
   }>;
   teams?: Array<{

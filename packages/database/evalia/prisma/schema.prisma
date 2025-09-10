@@ -330,7 +330,7 @@ model OrganizationMembership {
   id             Int       @id @default(autoincrement())
   userId         Int
   organizationId Int
-  role           OrgRole   @default(MEMBER)
+  roles          OrgRole[] @default([MEMBER])
   /// Extra permission links | مجوزهای اضافه
   permissions    PermissionOnMembership[] @relation("MembershipPermissions")
   createdAt      DateTime  @default(now())
@@ -341,8 +341,7 @@ model OrganizationMembership {
   organization   Organization @relation("OrganizationMemberships", fields: [organizationId], references: [id])
 
   @@unique([userId, organizationId])
-  @@index([organizationId, role])
-  @@index([organizationId, role, createdAt])
+  // Indexes on array fields are not supported
 }
 
 /// Join table for attaching extra permissions to a membership (مجوزهای اضافه)

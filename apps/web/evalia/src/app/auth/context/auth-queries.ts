@@ -12,7 +12,15 @@ export function useAuthUser(userId: number | null, enabled: boolean) {
     queryKey: authKeys.user(userId || 0),
     queryFn: async () => {
       if (!userId) throw new Error("No user id");
-      return fetchUser(userId) as Promise<AuthUser>;
+      const user = await fetchUser(userId);
+      // If organizations exist, ensure roles is always an array
+      if (user.organizations) {
+        user.organizations = user.organizations.map((o: any) => ({
+          ...o,
+          roles: Array.isArray(o.roles) ? o.roles : [o.roles],
+        }));
+      }
+      return user as AuthUser;
     },
     enabled: enabled && !!userId,
     staleTime: STALE_TIME_USER,
