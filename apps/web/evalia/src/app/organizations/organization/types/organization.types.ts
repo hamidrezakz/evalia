@@ -27,6 +27,13 @@ export const OrganizationSchema = z.object({
   createdAt: z.string(),
   deletedAt: z.string().nullable().optional(),
   membership: OrganizationMembershipSchema.optional(),
+  // --- fields from backend response ---
+  primaryOwnerId: z.number().optional(),
+  settings: z.record(z.string(), z.any()).optional(),
+  trialEndsAt: z.string().nullable().optional(),
+  lockedAt: z.string().nullable().optional(),
+  updatedAt: z.string().optional(),
+  createdById: z.number().optional(),
 });
 
 // Create payload
@@ -80,6 +87,11 @@ export const PaginationMetaSchema = z.object({
 // Inner data schema for list responses (the interceptor already lifts meta to outer envelope)
 export const OrganizationArraySchema = z.array(OrganizationSchema);
 
+export const listOrganizationsResponseSchema = z.object({
+  data: z.array(OrganizationSchema),
+  meta: PaginationMetaSchema.nullable(),
+});
+
 // Types
 export type OrganizationMembership = z.infer<
   typeof OrganizationMembershipSchema
@@ -98,3 +110,6 @@ export type ListOrganizationsQuery = z.infer<
   typeof ListOrganizationsQuerySchema
 >;
 export type OrganizationArray = z.infer<typeof OrganizationArraySchema>;
+export type ListOrganizationsResponse = z.infer<
+  typeof listOrganizationsResponseSchema
+>;

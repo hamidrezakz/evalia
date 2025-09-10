@@ -36,8 +36,8 @@ export type UserTeam = z.infer<typeof userTeamSchema>;
 export const userListItemSchema = z.object({
   id: z.number().int().positive(),
   fullName: z.string().nullable().optional(),
-  email: z.string().email().or(z.null()).optional(),
-  phone: z.string().or(z.null()).optional(),
+  email: z.string().nullable().optional(), // relax: allow null or string
+  phone: z.string().nullable().optional(), // relax: allow null or string
   status: userStatusEnum,
   globalRoles: z.array(z.string()).default([]),
   organizations: z.preprocess(
@@ -59,6 +59,7 @@ export const userDetailSchema = userListItemSchema.extend({
       joinedAt: z.string().optional(),
     })
   ),
+  teams: z.preprocess((v) => (v == null ? [] : v), z.array(userTeamSchema)),
 });
 export type UserDetail = z.infer<typeof userDetailSchema>;
 

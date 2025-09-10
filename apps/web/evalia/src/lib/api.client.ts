@@ -216,14 +216,15 @@ export async function apiRequest<TData = unknown, TBody = unknown>(
       envelope.error.flatten()
     );
   if (responseSchema) {
-    const inner = responseSchema.safeParse(envelope.data.data);
+    // Validate the full envelope.data, not just envelope.data.data
+    const inner = responseSchema.safeParse(envelope.data);
     if (!inner.success)
       throw new ApiError(
         "Inner data validation failed",
         res.status,
         inner.error.flatten()
       );
-    envelope.data.data = inner.data;
+    return inner.data as ApiResponse<TData>;
   }
   return envelope.data as ApiResponse<TData>;
 }

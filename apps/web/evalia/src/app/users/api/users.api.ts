@@ -47,13 +47,15 @@ export async function listUsers(
 ): Promise<{ data: UserListItem[]; meta: any }> {
   const path = buildListPath(params);
   const res = await apiRequest(path, null, listInnerSchema);
-  // Validate inner structure strictly using final schemas
+  // Validate using backend envelope: res.data and res.meta
   const validated = listUsersResponseSchema.safeParse({
-    data: res.data.data,
-    meta: res.data.meta,
+    data: res.data,
+    meta: res.meta,
   });
   if (!validated.success) {
-    throw new Error("User list response validation failed");
+    throw new Error(
+      "User list response validation failed: " + validated.error.message
+    );
   }
   return validated.data;
 }
@@ -66,7 +68,7 @@ export async function getUser(id: number): Promise<UserDetail> {
     throw new Error("User id must be a positive integer");
   const res = await apiRequest(`/users/${id}`, null, detailInnerSchema);
   // Try both res.data.data and res.data for compatibility with different API envelopes
-  const userData = res.data?.data ?? res.data;
+  const userData = res.data;
   const validated = detailUserResponseSchema.safeParse(userData);
   if (!validated.success) {
     throw new Error(

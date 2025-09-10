@@ -28,6 +28,7 @@ import type {
   UpdateOrganizationInput,
   ChangeOrganizationStatusInput,
 } from "../types/organization.types";
+import type { Organization as Org } from "../types/organization.types";
 
 // Centralized default cache policies
 const STALE_TIME_LIST = 60 * 1000; // 1 min
@@ -208,6 +209,47 @@ export function useRestoreOrganization(id: number) {
   return useMutation({
     mutationFn: () => restoreOrganization(id),
     onSuccess: (res) => {
+      qc.setQueryData(orgKeys.byId(id), res.data);
+      qc.invalidateQueries({ queryKey: orgKeys.lists() });
+      qc.invalidateQueries({ queryKey: orgKeys.userMembership() });
+    },
+  });
+}
+
+// ----- Action variants (id provided at mutate-time) -----
+/** Change status by passing { id, status } to mutate. Suitable for tables. */
+export function useChangeOrganizationStatusAction() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { id: number; status: Org["status"] }) =>
+      changeOrganizationStatus(vars.id, { status: vars.status }),
+    onSuccess: (res, vars) => {
+      qc.setQueryData(orgKeys.byId(vars.id), res.data);
+      qc.invalidateQueries({ queryKey: orgKeys.lists() });
+      qc.invalidateQueries({ queryKey: orgKeys.userMembership() });
+    },
+  });
+}
+
+/** Delete by id passed to mutate(id). */
+export function useDeleteOrganizationAction() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => deleteOrganization(id),
+    onSuccess: (_res, id) => {
+      qc.invalidateQueries({ queryKey: orgKeys.userMembership() });
+      qc.invalidateQueries({ queryKey: orgKeys.lists() });
+      qc.removeQueries({ queryKey: orgKeys.byId(id) });
+    },
+  });
+}
+
+/** Restore by id passed to mutate(id). */
+export function useRestoreOrganizationAction() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => restoreOrganization(id),
+    onSuccess: (res, id) => {
       qc.setQueryData(orgKeys.byId(id), res.data);
       qc.invalidateQueries({ queryKey: orgKeys.lists() });
       qc.invalidateQueries({ queryKey: orgKeys.userMembership() });

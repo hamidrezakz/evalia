@@ -162,11 +162,15 @@ function AuthContextDebugPanel() {
             Organizations ({organizations.length})
           </h4>
           <ul className="list-disc pr-4 space-y-1">
-            {organizations.map((o: any) => (
-              <li key={o.id} className="break-all">
-                {o.id} - {o.name}
-              </li>
-            ))}
+            {organizations.map(
+              (
+                o: import("@/app/organizations/organization/types/organization.types").Organization
+              ) => (
+                <li key={o.id} className="break-all">
+                  {o.id} - {o.name}
+                </li>
+              )
+            )}
             {organizations.length === 0 && (
               <li className="list-none text-muted-foreground">—</li>
             )}

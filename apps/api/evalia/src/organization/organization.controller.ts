@@ -11,11 +11,14 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Request } from 'express';
+import { UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { OrganizationService } from './organization.service';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { ListOrganizationsQueryDto } from './dto/list-organizations.dto';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
 import { ChangeOrganizationStatusDto } from './dto/change-org-status.dto';
+@UseGuards(JwtAuthGuard)
 @Controller('organizations')
 export class OrganizationController {
   constructor(private service: OrganizationService) {}
@@ -33,7 +36,8 @@ export class OrganizationController {
   @Get('my')
   listMine(@Req() req: Request) {
     const user = (req as any).user;
-    const userId = user?.sub || user?.id;
+    // JwtStrategy returns userId, not sub/id
+    const userId = user?.userId;
     if (!userId) throw new UnauthorizedException('User not authenticated');
     return this.service.listForUser(Number(userId));
   }

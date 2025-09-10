@@ -6,6 +6,7 @@ import {
   UpdateOrganizationInputSchema,
   ChangeOrganizationStatusSchema,
   ListOrganizationsQuerySchema,
+  listOrganizationsResponseSchema,
   type CreateOrganizationInput,
   type UpdateOrganizationInput,
   type ChangeOrganizationStatusInput,
@@ -38,11 +39,27 @@ export async function listOrganizations(
     throw parsed.error; // can wrap in ApiError if desired
   }
   const qs = buildQuery(params);
-  return apiRequest<OrganizationArray>(
+  // Strict validation: use listOrganizationsResponseSchema
+  const res = await apiRequest(
     `/organizations${qs ? `?${qs}` : ""}`,
     null,
-    OrganizationArraySchema
+    listOrganizationsResponseSchema
   );
+  // Always return a defined value
+  if (!res || !res.data) {
+    return {
+      data: [],
+      meta: {
+        total: 0,
+        page: 1,
+        pageSize: 20,
+        pageCount: 0,
+        hasNext: false,
+        hasPrev: false,
+      },
+    };
+  }
+  return res;
 }
 
 // Get single organization
@@ -117,12 +134,12 @@ export async function ensureOrgSlugAvailable(slug: string) {
 }
 
 // List organizations current authenticated user is member of (non-paginated for auth context usage)
-export async function listUserOrganizations() {
-  // Backend returns organizations with membership field
-  const raw = await apiRequest<OrganizationArray>(
+export async function listUserOrganizations(): Promise<OrganizationArray> {
+  const res = await apiRequest<OrganizationArray>(
     `/organizations/my`,
     null,
     OrganizationArraySchema
   );
-  return raw;
+  // res.data is already validated OrganizationArray
+  return res.data;
 }

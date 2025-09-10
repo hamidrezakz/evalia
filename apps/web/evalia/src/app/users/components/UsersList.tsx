@@ -24,13 +24,21 @@ export function UsersList({
   const [q, setQ] = React.useState(initialQuery?.q || "");
   const [sheetId, setSheetId] = React.useState<number | null>(null);
 
-  const { data, isLoading, isError, refetch } = useUsers({
+  const { data, isLoading, isError, error, refetch } = useUsers({
     q,
     page: 1,
     pageSize: 20,
   });
 
   const rows = data?.data || [];
+
+  let errorMessage = "خطا در دریافت لیست کاربران";
+  if (isError && error) {
+    if (typeof error === "string") errorMessage = error;
+    else if (error instanceof Error) errorMessage = error.message;
+    else if (error && (error as any).message)
+      errorMessage = (error as any).message;
+  }
 
   return (
     <div className="w-full space-y-4">
@@ -52,9 +60,7 @@ export function UsersList({
           در حال دریافت لیست…
         </Panel>
       ) : isError ? (
-        <Panel className="p-8 text-sm text-rose-600">
-          خطا در دریافت لیست کاربران
-        </Panel>
+        <Panel className="p-8 text-sm text-rose-600">{errorMessage}</Panel>
       ) : rows.length === 0 ? (
         <Panel className="p-8 text-sm text-muted-foreground">
           کاربری یافت نشد

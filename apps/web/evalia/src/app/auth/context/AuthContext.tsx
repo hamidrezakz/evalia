@@ -18,9 +18,8 @@ import {
 } from "./auth-types";
 import { useAuthUser, useAuthOrganizations } from "./auth-queries";
 import { unifiedAuthRefetch } from "./auth-refetch";
+import type { Organization } from "@/app/organizations/organization/types/organization.types";
 
-// -------------------------------
-// Types & Shapes
 // -------------------------------
 
 // Interfaces moved to auth-types.ts for cleaner separation of concerns.
@@ -140,16 +139,19 @@ export const AuthProvider: React.FC<ProviderProps> = ({
   const orgsQuery = useAuthOrganizations(enabled);
 
   useEffect(() => {
-    if (orgsQuery.error) {
+    if (orgsQuery.error && orgsQuery.error.message) {
       setError(orgsQuery.error.message);
+    } else if (orgsQuery.error) {
+      setError(String(orgsQuery.error));
     }
   }, [orgsQuery.error]);
 
   // If active org not set but we have organizations & membership constraints, choose first intersection
   useEffect(() => {
-    if (!orgsQuery.data || orgsQuery.data.length === 0) return;
+    const orgs = orgsQuery.data || [];
+    if (orgs.length === 0) return;
     if (!active.organizationId) {
-      const first = (orgsQuery.data as any[])[0]?.id;
+      const first = orgs[0]?.id;
       if (first) setActive((a) => ({ ...a, organizationId: first }));
     }
   }, [orgsQuery.data, active.organizationId]);
@@ -264,6 +266,7 @@ export const AuthProvider: React.FC<ProviderProps> = ({
   }, []);
 
   const loading = userQuery.isLoading || orgsQuery.isLoading;
+  const organizations: Organization[] = orgsQuery.data || [];
 
   const value: AuthContextValue = useMemo(
     () => ({
@@ -271,8 +274,8 @@ export const AuthProvider: React.FC<ProviderProps> = ({
       refreshToken: tokens?.refreshToken || null,
       decoded,
       userId,
-      user: (userQuery.data as any) || null,
-      organizations: (orgsQuery.data as any[]) || [],
+      user: userQuery.data || null,
+      organizations,
       active,
       loading,
       error,
