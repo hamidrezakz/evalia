@@ -1,4 +1,21 @@
-//handy
+/**
+ * Custom Panel UI Components (Not part of ShadCN)
+ * -------------------------------------------------
+ * Author: [Your Name or Team]
+ *
+ * This file contains a set of custom panel components for Evalia UI.
+ * These are NOT part of the official ShadCN UI kit and are written from scratch for project-specific needs.
+ *
+ * Features:
+ * - Flexible layout primitives for dashboard panels and cards
+ * - Consistent slot-based structure for header, content, footer, etc.
+ * - Tailwind-based styling, theme-aware, and easy to extend
+ *
+ * Usage:
+ * import { Panel, PanelHeader, PanelFooter, PanelTitle, PanelAction, PanelDescription, PanelContent } from "@/components/ui/panel";
+ *
+ * Feel free to customize or extend for your own use-case.
+ */
 import * as React from "react";
 
 import { cn } from "@/lib/utils";

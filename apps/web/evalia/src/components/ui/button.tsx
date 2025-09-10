@@ -1,10 +1,12 @@
 //customized
 //add some cursor-pointer and runded-full style
+//add spinner
 import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "@/lib/utils";
+import { LoadingDots, LoadingDotsProps } from "@/components/ui/loading-dots";
 
 const buttonVariants = cva(
   "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all cursor-pointer disabled:cursor-not-allowed data-[disabled]:cursor-not-allowed aria-disabled:cursor-not-allowed disabled:opacity-50 data-[disabled]:opacity-50 aria-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
@@ -42,19 +44,37 @@ function Button({
   variant,
   size,
   asChild = false,
+  isLoading = false,
+  spinnerProps = {},
+  children,
   ...props
 }: React.ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean;
+    isLoading?: boolean;
+    spinnerProps?: LoadingDotsProps;
   }) {
   const Comp = asChild ? Slot : "button";
-
+  const content = (
+    <>
+      {isLoading && (
+        <LoadingDots
+          {...spinnerProps}
+          className={cn("mx-0.5", spinnerProps?.className)}
+        />
+      )}
+      {children}
+    </>
+  );
+  // Always force disabled when loading
+  const restProps = isLoading ? { ...props, disabled: true } : props;
   return (
     <Comp
       data-slot="button"
       className={cn(buttonVariants({ variant, size, className }))}
-      {...props}
-    />
+      {...restProps}>
+      {content}
+    </Comp>
   );
 }
 

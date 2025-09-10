@@ -18,7 +18,6 @@ export class UsersController {
 
   @Get(':id')
   @UseGuards()
-  @Roles('SUPER_ADMIN', 'ORG:OWNER')
   detail(@Param('id') id: string) {
     return this.service.detail(Number(id));
   }
