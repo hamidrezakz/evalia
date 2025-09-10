@@ -11,9 +11,9 @@ import {
   PanelContent,
   PanelFooter,
 } from "@/components/ui/panel";
-import { useAuthSession } from "@/app/auth/event";
-import { useOrgState } from "@/app/auth/org";
-import { useUserDataContext } from "@/app/auth/user";
+import { useAuthSession } from "@/app/auth/event-context";
+import { useOrgState } from "@/app/organizations/organization/context";
+import { useUserDataContext } from "@/app/users/context";
 import { useNavigationContext } from "@/app/navigation/context";
 
 // Helper
@@ -326,7 +326,7 @@ function UserPanel() {
 }
 
 // نمایش درخت کامل ناوبری به صورت بازگشتی
-const TreeList = ({ nodes }: { nodes: any[] }): JSX.Element =>
+const TreeList = ({ nodes }: { nodes: any[] }): React.ReactElement =>
   !nodes?.length ? (
     <div className="text-muted-foreground">No items</div>
   ) : (
