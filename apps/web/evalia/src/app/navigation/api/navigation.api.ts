@@ -15,13 +15,11 @@ export async function getNavigationTreeForRole(opts: {
   platformRole?: PlatformRole;
   orgRole?: OrgRole;
   includeInactive?: boolean;
-  flat?: boolean;
 }): Promise<NavigationItemTree[]> {
   const qs = buildNavigationQuery({
     platformRole: opts.platformRole,
     orgRole: opts.orgRole,
     includeInactive: opts.includeInactive,
-    flat: opts.flat,
   });
   const res = await apiRequest(
     "/navigation/tree" + qs,

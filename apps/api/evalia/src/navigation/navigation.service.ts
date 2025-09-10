@@ -6,7 +6,6 @@ interface SingleRoleOptions {
   platformRole?: PlatformRole | null;
   orgRole?: OrgRole | null;
   includeInactive?: boolean;
-  flat?: boolean; // if true return flat ordered array instead of tree
 }
 
 export interface NavigationNode {
@@ -38,10 +37,8 @@ export class NavigationService {
     };
   }
 
-  async getTreeForRole(
-    opts: SingleRoleOptions,
-  ): Promise<NavigationNode[] | NavigationNode[]> {
-    const { platformRole, orgRole, includeInactive, flat } = opts;
+  async getTreeForRole(opts: SingleRoleOptions): Promise<NavigationNode[]> {
+    const { platformRole, orgRole, includeInactive } = opts;
     if (platformRole && orgRole) {
       throw new BadRequestException(
         'Specify only one of platformRole or orgRole',
@@ -66,10 +63,6 @@ export class NavigationService {
       where: { ...baseWhere, OR: or },
       orderBy: [{ parentId: 'asc' }, { order: 'asc' }, { label: 'asc' }],
     });
-
-    if (flat) {
-      return items.map((i) => this.toNode(i));
-    }
     return this.buildTree(items);
   }
 

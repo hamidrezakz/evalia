@@ -11,13 +11,11 @@ export class NavigationController {
     @Query('platformRole') platformRole?: string,
     @Query('orgRole') orgRole?: string,
     @Query('includeInactive') includeInactive?: string,
-    @Query('flat') flat?: string,
   ) {
     return this.navigation.getTreeForRole({
       platformRole: platformRole ? (platformRole as any) : null,
       orgRole: orgRole ? (orgRole as any) : null,
       includeInactive: includeInactive === 'true',
-      flat: flat === 'true',
     });
   }
 }

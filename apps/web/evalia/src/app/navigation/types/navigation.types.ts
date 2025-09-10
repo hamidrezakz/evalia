@@ -78,7 +78,6 @@ export const listNavigationQuerySchema = z.object({
   platformRole: platformRoleEnum.optional(),
   orgRole: orgRoleEnum.optional(),
   includeInactive: z.coerce.boolean().optional(),
-  flat: z.coerce.boolean().optional(),
 });
 export type ListNavigationQuery = z.infer<typeof listNavigationQuerySchema>;
 
