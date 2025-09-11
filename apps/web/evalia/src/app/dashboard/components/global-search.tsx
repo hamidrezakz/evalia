@@ -1,4 +1,4 @@
-"use client";
+/* "use client";
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
@@ -345,3 +345,4 @@ function iconForItem(item: GlobalSearchItem) {
   - بارگذاری lazy داده های سنگین (مثل لیست کامل کارمندان)
   - اتصال به API واقعی
 */
+ 

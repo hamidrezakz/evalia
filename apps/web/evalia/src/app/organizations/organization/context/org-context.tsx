@@ -75,10 +75,27 @@ export const OrgProvider: React.FC<{ children: React.ReactNode }> = ({
   const queryClient = useQueryClient();
   const setActiveOrganization = useCallback(
     (orgId: number | null) => {
-      setActive((prev) => ({ ...prev, organizationId: orgId }));
+      setActive((prev) => {
+        let newActiveRole = prev.activeRole;
+        let newActiveRoleSource = prev.activeRoleSource;
+        // If previous role was organization role, check if it exists in new org
+        if (prev.activeRoleSource === "organization" && orgId) {
+          const orgRoles = organizationRolesMap[orgId] || [];
+          if (!orgRoles.includes(prev.activeRole || "")) {
+            newActiveRole = orgRoles[0] || null;
+            newActiveRoleSource = newActiveRole ? "organization" : null;
+          }
+        }
+        return {
+          ...prev,
+          organizationId: orgId,
+          activeRole: newActiveRole,
+          activeRoleSource: newActiveRoleSource,
+        };
+      });
       queryClient.invalidateQueries({ queryKey: ["org", orgId] });
     },
-    [queryClient]
+    [queryClient, organizationRolesMap]
   );
 
   const setPlatformActiveRole = useCallback(

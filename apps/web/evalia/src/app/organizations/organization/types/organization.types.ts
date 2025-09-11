@@ -12,9 +12,8 @@ export const LocaleEnum = z.enum(["FA", "EN"]);
 // Base organization schema (full)
 export const OrganizationMembershipSchema = z.object({
   roles: z.array(z.string()),
-  membershipId: z.number(),
+  membershipId: z.number().nullable().optional(),
 });
-
 export const OrganizationSchema = z.object({
   id: z.number(),
   name: z.string(),
@@ -26,14 +25,14 @@ export const OrganizationSchema = z.object({
   billingEmail: z.string().email().optional().nullable(),
   createdAt: z.string(),
   deletedAt: z.string().nullable().optional(),
-  membership: OrganizationMembershipSchema.optional(),
+  membership: OrganizationMembershipSchema.optional().nullable(),
   // --- fields from backend response ---
-  primaryOwnerId: z.number().optional(),
-  settings: z.record(z.string(), z.any()).optional(),
+  primaryOwnerId: z.number().nullable().optional(),
+  settings: z.record(z.string(), z.any()).optional().nullable(),
   trialEndsAt: z.string().nullable().optional(),
   lockedAt: z.string().nullable().optional(),
   updatedAt: z.string().optional(),
-  createdById: z.number().optional(),
+  createdById: z.number().nullable().optional(),
 });
 
 // Create payload

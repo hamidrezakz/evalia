@@ -4,7 +4,6 @@ import React from "react";
 import { SidebarIcon } from "lucide-react";
 import { usePathname } from "next/navigation";
 // جایگزینی سرچ ساده با کامند پالت حرفه ای
-import { GlobalSearch } from "@/app/dashboard/components/global-search";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -98,7 +97,7 @@ export function SiteHeader() {
           </BreadcrumbList>
         </Breadcrumb>
         <div className=" ml-auto w-auto rtl:mr-auto rtl:ml-0">
-          <GlobalSearch />
+          
         </div>
         <div className="ml-auto rtl:ml-0">
           <ModeToggle />
