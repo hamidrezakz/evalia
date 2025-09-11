@@ -55,7 +55,18 @@ function Button({
     spinnerProps?: LoadingDotsProps;
   }) {
   const Comp = asChild ? Slot : "button";
-  const content = (
+  // If asChild (Slot), must pass only one child
+  const content = asChild ? (
+    <span>
+      {isLoading && (
+        <LoadingDots
+          {...spinnerProps}
+          className={cn("mx-0.5", spinnerProps?.className)}
+        />
+      )}
+      {children}
+    </span>
+  ) : (
     <>
       {isLoading && (
         <LoadingDots
