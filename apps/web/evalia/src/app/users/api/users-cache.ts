@@ -78,18 +78,30 @@ export function propagateUserToLists(qc: QueryClient, updated: UserDetail) {
     .getQueryCache()
     .findAll({ queryKey: usersKeys.lists(), exact: false });
   queries.forEach((q) => {
-    const data = q.state.data as any;
-    if (!data || !Array.isArray(data.data)) return;
-    let changed = false;
-    const nextItems: UserListItem[] = data.data.map((item: UserListItem) => {
-      if (item.id === updated.id) {
-        changed = true;
-        return { ...item, fullName: updated.fullName, status: updated.status };
+    const data = q.state.data as unknown;
+    if (
+      typeof data === "object" &&
+      data !== null &&
+      "data" in data &&
+      Array.isArray((data as { data: UserListItem[] }).data)
+    ) {
+      let changed = false;
+      const nextItems: UserListItem[] = (
+        data as { data: UserListItem[] }
+      ).data.map((item) => {
+        if (item.id === updated.id) {
+          changed = true;
+          return {
+            ...item,
+            fullName: updated.fullName,
+            status: updated.status,
+          };
+        }
+        return item;
+      });
+      if (changed) {
+        q.setData({ ...data, data: nextItems });
       }
-      return item;
-    });
-    if (changed) {
-      q.setData({ ...data, data: nextItems });
     }
   });
 }
@@ -101,11 +113,19 @@ export function removeUserFromLists(qc: QueryClient, userId: number) {
     .getQueryCache()
     .findAll({ queryKey: usersKeys.lists(), exact: false });
   queries.forEach((q) => {
-    const data = q.state.data as any;
-    if (!data || !Array.isArray(data.data)) return;
-    const filtered = data.data.filter((u: UserListItem) => u.id !== userId);
-    if (filtered.length !== data.data.length) {
-      q.setData({ ...data, data: filtered });
+    const data = q.state.data as unknown;
+    if (
+      typeof data === "object" &&
+      data !== null &&
+      "data" in data &&
+      Array.isArray((data as { data: UserListItem[] }).data)
+    ) {
+      const filtered = (data as { data: UserListItem[] }).data.filter(
+        (u) => u.id !== userId
+      );
+      if (filtered.length !== (data as { data: UserListItem[] }).data.length) {
+        q.setData({ ...data, data: filtered });
+      }
     }
   });
 }

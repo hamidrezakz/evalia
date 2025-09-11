@@ -94,20 +94,8 @@ export async function apiRequest<TData = unknown, TBody = unknown>(
     );
   // Only validate inner data if responseSchema is provided, without manipulating the structure
   if (responseSchema) {
-    if (process.env.NODE_ENV !== "production") {
-      // eslint-disable-next-line no-console
-      console.log("[apiRequest] envelope.data:", envelope.data.data);
-      // eslint-disable-next-line no-console
-      console.log("[apiRequest] responseSchema shape:", responseSchema);
-    }
     const inner = responseSchema.safeParse(envelope.data.data);
     if (!inner.success) {
-      // eslint-disable-next-line no-console
-      console.error("[apiRequest] Inner data validation failed", {
-        envelopeData: envelope.data.data,
-        schema: responseSchema,
-        error: inner.error,
-      });
       throw new ApiError(
         "Inner data validation failed",
         res.status,

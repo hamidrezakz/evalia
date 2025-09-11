@@ -18,9 +18,19 @@ export function ExampleUsersList() {
     <div>
       <h3>Users</h3>
       <ul>
-        {data?.data.map((u) => (
-          <li key={u.id}>{u.fullName || u.email || `User #${u.id}`}</li>
-        ))}
+        {Array.isArray(data?.data)
+          ? data.data.map((u) =>
+              typeof u === "object" && u !== null && "id" in u ? (
+                <li key={(u as { id: number }).id}>
+                  {(u as { fullName?: string; email?: string; id: number })
+                    .fullName ||
+                    (u as { fullName?: string; email?: string; id: number })
+                      .email ||
+                    `User #${(u as { id: number }).id}`}
+                </li>
+              ) : null
+            )
+          : null}
       </ul>
     </div>
   );
@@ -41,17 +51,45 @@ export function ExampleUserDetail({ id }: { id: number }) {
 export function ExampleInfiniteUsers() {
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useInfiniteUsers({}, 15);
-  const pages = (data as any)?.pages as
-    | Array<{ data: any[]; meta: any }>
-    | undefined;
-  const items = pages ? pages.flatMap((p) => p.data) : [];
+  const rawPages = (data as { pages?: unknown[] })?.pages;
+  const pages = Array.isArray(rawPages)
+    ? rawPages.filter(
+        (p): p is { data: unknown[]; meta: unknown } =>
+          typeof p === "object" &&
+          p !== null &&
+          "data" in p &&
+          "meta" in p &&
+          Array.isArray(
+            typeof p === "object" && p !== null && "data" in p
+              ? (p as { data?: unknown }).data
+              : undefined
+          )
+      )
+    : undefined;
+  const items = pages
+    ? pages.flatMap((p) =>
+        Array.isArray(p.data)
+          ? p.data.filter(
+              (u) => typeof u === "object" && u !== null && "id" in u
+            )
+          : []
+      )
+    : [];
   return (
     <div>
       <h4>Infinite Users</h4>
       <ul>
-        {items.map((u: any) => (
-          <li key={u.id}>{u.fullName || u.email || `User #${u.id}`}</li>
-        ))}
+        {items.map((u) =>
+          typeof u === "object" && u !== null && "id" in u ? (
+            <li key={(u as { id: number }).id}>
+              {(u as { fullName?: string; email?: string; id: number })
+                .fullName ||
+                (u as { fullName?: string; email?: string; id: number })
+                  .email ||
+                `User #${(u as { id: number }).id}`}
+            </li>
+          ) : null
+        )}
       </ul>
       <button
         onClick={() => fetchNextPage()}

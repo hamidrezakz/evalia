@@ -52,10 +52,10 @@ export function useAppSidebarData(): AppSidebarData {
   const { user } = useUserDataContext();
   const navUser = user
     ? {
-        name: user.fullName ?? "",
-        email: user.email,
-        avatar: user.avatar || "/avatars/default.png",
-        phoneNumber: user.phone,
+        name: typeof user.fullName === "string" ? user.fullName : "",
+        email: typeof user.email === "string" ? user.email : "",
+        avatar: typeof user.avatar === "string" ? user.avatar : "/avatars/default.png",
+        phoneNumber: typeof user.phone === "string" ? user.phone : undefined,
       }
     : undefined;
 

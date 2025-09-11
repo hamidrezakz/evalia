@@ -1,7 +1,7 @@
 import { tokenStorage } from "@/lib/token-storage";
 
 // Decodes JWT access token payload (no signature check)
-export function decodeAccessToken<T = any>(): T | null {
+export function decodeAccessToken<T = unknown>(): T | null {
   const token = tokenStorage.get()?.accessToken;
   if (!token) return null;
   const parts = token.split(".");

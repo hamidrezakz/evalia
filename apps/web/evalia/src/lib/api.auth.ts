@@ -1,7 +1,7 @@
 // Standardized API calls for authentication
 import { apiRequest } from "@/lib/api/request";
 
-export async function checkAccessToken(accessToken: string): Promise<any> {
+export async function checkAccessToken(accessToken: string): Promise<unknown> {
   // No body schema or response schema for now, can be added for validation
   return apiRequest("/auth/check-token", null, null, {
     method: "POST",
@@ -12,7 +12,7 @@ export async function checkAccessToken(accessToken: string): Promise<any> {
 }
 
 export async function openPrismaStudio(): Promise<{ url: string }> {
-  const res = await apiRequest("/prisma/studio",null, null, {
+  const res = await apiRequest("/prisma/studio", null, null, {
     method: "POST",
   });
   return res.data.url ? { url: res.data.url } : { url: "" };

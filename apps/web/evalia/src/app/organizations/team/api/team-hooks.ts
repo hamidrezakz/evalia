@@ -11,7 +11,6 @@ import {
 import { teamKeys } from "./team-query-keys";
 import {
   invalidateAllTeams,
-  invalidateTeamDetail,
   invalidateTeamLists,
   prefetchTeam,
   prefetchTeamList,
@@ -84,9 +83,11 @@ export function useCreateTeam(orgId: number) {
         slug: input.slug || input.name.toLowerCase().replace(/\s+/g, "-"),
         description: input.description || null,
         createdAt: new Date().toISOString(),
-      } as any;
+      } as unknown;
       optimisticAddTeamToLists(qc, orgId, temp);
-      return { tempId: temp.id };
+      return typeof temp === "object" && temp !== null && "id" in temp
+        ? { tempId: (temp as { id: number }).id }
+        : { tempId: undefined };
     },
     onError: (_e, _vars, ctx) => {
       if (ctx?.tempId) optimisticRemoveTeamFromLists(qc, orgId, ctx.tempId);

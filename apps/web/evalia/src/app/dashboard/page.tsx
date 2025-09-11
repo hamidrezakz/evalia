@@ -295,14 +295,22 @@ function UserPanel() {
           <div className="flex justify-between">
             <span className="text-muted-foreground">Full name</span>
             <span>
-              {user?.fullName ||
-                `${user?.firstName || ""} ${user?.lastName || ""}`.trim() ||
-                "—"}
+              {typeof user?.fullName === "string" && user.fullName
+                ? user.fullName
+                : (
+                    (typeof user?.firstName === "string"
+                      ? user.firstName
+                      : "") +
+                    " " +
+                    (typeof user?.lastName === "string" ? user.lastName : "")
+                  ).trim() || "—"}
             </span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Created</span>
-            <span>{user?.createdAt || "—"}</span>
+            <span>
+              {typeof user?.createdAt === "string" ? user.createdAt : "—"}
+            </span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Updated</span>

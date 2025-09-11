@@ -7,15 +7,18 @@
 export const usersKeys = {
   all: ["users"] as const,
   lists: () => [...usersKeys.all, "list"] as const,
-  list: (params: Record<string, any> | undefined) =>
+  list: (params: Record<string, unknown> | undefined) =>
     [
       ...usersKeys.lists(),
       params
         ? JSON.stringify(
             Object.keys(params)
               .sort()
-              .reduce((acc: any, k) => {
-                acc[k] = (params as any)[k];
+              .reduce((acc: Record<string, unknown>, k: string) => {
+                if (params && typeof params === "object" && k in params) {
+                  acc[k] = (params as Record<string, unknown>)[k];
+                }
+                return acc;
                 return acc;
               }, {})
           )
@@ -23,7 +26,7 @@ export const usersKeys = {
     ] as const,
   detail: () => [...usersKeys.all, "detail"] as const,
   byId: (id: number) => [...usersKeys.detail(), id] as const,
-  infinite: (base: Record<string, any> | undefined, pageSize: number) =>
+  infinite: (base: Record<string, unknown> | undefined, pageSize: number) =>
     [
       ...usersKeys.all,
       "infinite",
@@ -31,8 +34,11 @@ export const usersKeys = {
         ? JSON.stringify(
             Object.keys(base)
               .sort()
-              .reduce((acc: any, k) => {
-                acc[k] = (base as any)[k];
+              .reduce((acc: Record<string, unknown>, k: string) => {
+                if (base && typeof base === "object" && k in base) {
+                  acc[k] = (base as Record<string, unknown>)[k];
+                }
+                return acc;
                 return acc;
               }, {})
           )

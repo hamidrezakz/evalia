@@ -45,17 +45,26 @@ export function prefetchTeam(qc: QueryClient, orgId: number, teamId: number) {
 export function optimisticAddTeamToLists(
   qc: QueryClient,
   orgId: number,
-  newTeam: any
+  newTeam: unknown
 ) {
   const queries = qc
     .getQueryCache()
     .findAll({ queryKey: teamKeys.lists(orgId), exact: false });
   queries.forEach((q) => {
-    const data = q.state.data as any;
+    const data = q.state.data as unknown;
     if (!data) return;
     if (Array.isArray(data)) q.setData([newTeam, ...data]);
-    else if (Array.isArray(data?.data))
-      q.setData({ ...data, data: [newTeam, ...data.data] });
+    else if (
+      typeof data === "object" &&
+      data !== null &&
+      "data" in data &&
+      Array.isArray((data as { data: unknown[] }).data)
+    ) {
+      q.setData({
+        ...data,
+        data: [newTeam, ...(data as { data: unknown[] }).data],
+      });
+    }
   });
 }
 
@@ -68,13 +77,34 @@ export function optimisticRemoveTeamFromLists(
     .getQueryCache()
     .findAll({ queryKey: teamKeys.lists(orgId), exact: false });
   queries.forEach((q) => {
-    const data = q.state.data as any;
+    const data = q.state.data as unknown;
     if (!data) return;
-    if (Array.isArray(data)) q.setData(data.filter((t) => t.id !== teamId));
-    else if (Array.isArray(data?.data))
+    if (Array.isArray(data))
+      q.setData(
+        data.filter(
+          (t) =>
+            typeof t === "object" &&
+            t !== null &&
+            "id" in t &&
+            (t as { id: unknown }).id !== teamId
+        )
+      );
+    else if (
+      typeof data === "object" &&
+      data !== null &&
+      "data" in data &&
+      Array.isArray((data as { data: unknown[] }).data)
+    ) {
       q.setData({
         ...data,
-        data: data.data.filter((t: any) => t.id !== teamId),
+        data: (data as { data: unknown[] }).data.filter(
+          (t) =>
+            typeof t === "object" &&
+            t !== null &&
+            "id" in t &&
+            (t as { id: unknown }).id !== teamId
+        ),
       });
+    }
   });
 }

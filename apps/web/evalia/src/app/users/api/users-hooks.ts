@@ -89,11 +89,9 @@ export function useInfiniteUsers(
   pageSize = 20
 ) {
   return useInfiniteQuery<
-    { data: UserListItem[]; meta: any },
+    { data: UserListItem[]; meta: unknown },
     Error,
-    { data: UserListItem[]; meta: any },
-    any,
-    number
+    { data: UserListItem[]; meta: unknown }
   >({
     queryKey: ["users", "infinite", baseParams, pageSize],
     initialPageParam: 1,
@@ -102,7 +100,15 @@ export function useInfiniteUsers(
       return listUsers({ ...baseParams, page: pageNum, pageSize });
     },
     getNextPageParam: (lastPage) => {
-      if (lastPage.meta?.hasNext) return (lastPage.meta.page || 1) + 1;
+      if (
+        typeof lastPage.meta === "object" &&
+        lastPage.meta !== null &&
+        "hasNext" in lastPage.meta &&
+        "page" in lastPage.meta
+      ) {
+        const meta = lastPage.meta as { hasNext?: boolean; page?: number };
+        if (meta.hasNext) return (meta.page || 1) + 1;
+      }
       return undefined;
     },
     staleTime: STALE_LIST,

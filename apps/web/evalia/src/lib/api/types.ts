@@ -23,7 +23,7 @@ export interface PaginationMeta {
   pageSize: number;
   total: number;
   pageCount: number;
-  [key: string]: any; // allow forward‑compat extra fields
+  [key: string]: unknown; // allow forward‑compat extra fields
 }
 
 // Helper type for paginated list responses

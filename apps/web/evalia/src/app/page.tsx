@@ -20,7 +20,7 @@ export default function Home() {
       } else {
         setError("لینک دریافت نشد");
       }
-    } catch (e) {
+    } catch {
       setError("خطا در دریافت لینک");
     }
     setLoading(false);

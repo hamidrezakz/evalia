@@ -25,7 +25,6 @@ export const AuthSessionProvider: React.FC<{
   const router = useRouter();
   const queryClient = useQueryClient();
   const [tokens, setTokens] = useState(() => tokenStorage.get());
-  const [error] = useState<string | null>(null);
   const [booting, setBooting] = useState(true);
 
   const decoded = useMemo<AccessTokenPayload | null>(() => {
@@ -77,15 +76,36 @@ export const AuthSessionProvider: React.FC<{
       if (tokens?.accessToken) {
         try {
           const data = await checkAccessToken(tokens.accessToken);
-          // Debug log for diagnosis
-          console.log(
-            "[Auth] checkAccessToken response",
-            data,
-            "tokens",
-            tokens
-          );
-          if (!data?.data?.valid) {
-            console.warn("[Auth] Invalid token, reason:", data?.data?.reason);
+          if (
+            typeof data === "object" &&
+            data !== null &&
+            "data" in data &&
+            typeof (data as Record<string, unknown>).data === "object" &&
+            (data as Record<string, unknown>).data !== null &&
+            typeof (data as Record<string, unknown>).data === "object" &&
+            (data as Record<string, unknown>).data !== null &&
+            "valid" in
+              ((data as Record<string, unknown>).data as Record<
+                string,
+                unknown
+              >) &&
+            !((data as Record<string, unknown>).data as { valid?: boolean })
+              .valid
+          ) {
+            const reason =
+              typeof (data as Record<string, unknown>).data === "object" &&
+              (data as Record<string, unknown>).data !== null &&
+              "reason" in
+                ((data as Record<string, unknown>).data as Record<
+                  string,
+                  unknown
+                >)
+                ? (
+                    (data as Record<string, unknown>).data as {
+                      reason?: unknown;
+                    }
+                  ).reason
+                : undefined;
             signOut();
             return; // stop loop after sign out
           }
@@ -155,7 +175,7 @@ export const AuthSessionProvider: React.FC<{
       signOut,
       attemptRefresh,
       loading: booting,
-      error,
+      error: null,
     }),
     [
       tokens?.accessToken,
@@ -166,7 +186,6 @@ export const AuthSessionProvider: React.FC<{
       signOut,
       attemptRefresh,
       booting,
-      error,
     ]
   );
 

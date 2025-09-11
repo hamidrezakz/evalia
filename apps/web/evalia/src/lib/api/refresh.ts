@@ -20,21 +20,70 @@ async function performRefresh(base: string): Promise<boolean> {
     if (!res.ok) return false;
     const txt = await res.text();
     if (!txt) return false;
-    let json: any;
+    let json: unknown;
     try {
       json = JSON.parse(txt);
     } catch {
       return false;
     }
     const ok = json && typeof json === "object";
-    const accessToken =
-      json?.data?.tokens?.accessToken ||
-      json?.accessToken ||
-      json?.tokens?.accessToken;
-    const refreshToken =
-      json?.data?.tokens?.refreshToken ||
-      json?.refreshToken ||
-      json?.tokens?.refreshToken;
+    let accessToken: string | undefined;
+    let refreshToken: string | undefined;
+    if (ok) {
+      const obj = json as Record<string, unknown>;
+      // Try nested data.tokens
+      if (
+        "data" in obj &&
+        typeof obj.data === "object" &&
+        obj.data !== null &&
+        "tokens" in (obj.data as Record<string, unknown>) &&
+        typeof (obj.data as Record<string, unknown>).tokens === "object" &&
+        (obj.data as Record<string, unknown>).tokens !== null
+      ) {
+        const tokensObj = (obj.data as Record<string, unknown>)
+          .tokens as Record<string, unknown>;
+        accessToken =
+          typeof tokensObj.accessToken === "string"
+            ? tokensObj.accessToken
+            : undefined;
+        refreshToken =
+          typeof tokensObj.refreshToken === "string"
+            ? tokensObj.refreshToken
+            : undefined;
+      }
+      // Try top-level tokens
+      if (
+        !accessToken &&
+        "tokens" in obj &&
+        typeof obj.tokens === "object" &&
+        obj.tokens !== null
+      ) {
+        const tokensObj = obj.tokens as Record<string, unknown>;
+        accessToken =
+          typeof tokensObj.accessToken === "string"
+            ? tokensObj.accessToken
+            : undefined;
+        refreshToken =
+          typeof tokensObj.refreshToken === "string"
+            ? tokensObj.refreshToken
+            : undefined;
+      }
+      // Try top-level accessToken/refreshToken
+      if (
+        !accessToken &&
+        "accessToken" in obj &&
+        typeof obj.accessToken === "string"
+      ) {
+        accessToken = obj.accessToken;
+      }
+      if (
+        !refreshToken &&
+        "refreshToken" in obj &&
+        typeof obj.refreshToken === "string"
+      ) {
+        refreshToken = obj.refreshToken;
+      }
+    }
     if (ok && accessToken && refreshToken) {
       tokenStorage.set({ accessToken, refreshToken });
       return true;

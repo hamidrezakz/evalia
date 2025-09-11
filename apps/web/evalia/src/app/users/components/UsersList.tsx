@@ -42,7 +42,7 @@ export function UsersList({
       error !== null &&
       "message" in error
     )
-      errorMessage = (error as { message?: string }).message;
+      errorMessage = (error as { message?: string }).message || errorMessage;
   }
 
   return (
