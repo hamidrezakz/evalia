@@ -1,9 +1,5 @@
 "use client";
-import {
-  useMutation,
-  useQuery,
-  UseMutationOptions,
-} from "@tanstack/react-query";
+import { useMutation, UseMutationOptions } from "@tanstack/react-query";
 import { ApiResponse } from "@/lib/api/types";
 import {
   authKeys,

@@ -45,20 +45,26 @@ export function optimisticAddMemberToLists(
   teamId: number,
   newItem: TeamMembershipArray[number]
 ) {
-  const queries = qc
-    .getQueryCache()
-    .findAll({
-      queryKey: teamMembershipKeys.lists(orgId, teamId),
-      exact: false,
-    });
+  const queries = qc.getQueryCache().findAll({
+    queryKey: teamMembershipKeys.lists(orgId, teamId),
+    exact: false,
+  });
   queries.forEach((q) => {
-    const data = q.state.data as any;
+    const data = q.state.data as unknown;
     if (!data) return;
     // Expecting plain array for now (API returns TeamMembershipArray)
     if (Array.isArray(data)) {
       q.setData([newItem, ...data]);
-    } else if (Array.isArray(data?.data)) {
-      q.setData({ ...data, data: [newItem, ...data.data] });
+    } else if (
+      typeof data === "object" &&
+      data !== null &&
+      "data" in data &&
+      Array.isArray((data as { data: unknown[] }).data)
+    ) {
+      q.setData({
+        ...data,
+        data: [newItem, ...(data as { data: unknown[] }).data],
+      });
     }
   });
 }
@@ -70,21 +76,32 @@ export function optimisticRemoveMemberFromLists(
   teamId: number,
   membershipId: number
 ) {
-  const queries = qc
-    .getQueryCache()
-    .findAll({
-      queryKey: teamMembershipKeys.lists(orgId, teamId),
-      exact: false,
-    });
+  const queries = qc.getQueryCache().findAll({
+    queryKey: teamMembershipKeys.lists(orgId, teamId),
+    exact: false,
+  });
   queries.forEach((q) => {
-    const data = q.state.data as any;
+    const data = q.state.data as unknown;
     if (!data) return;
     if (Array.isArray(data)) {
       q.setData(data.filter((m) => m.id !== membershipId));
-    } else if (Array.isArray(data?.data)) {
+    } else if (
+      typeof data === "object" &&
+      data !== null &&
+      "data" in data &&
+      Array.isArray((data as { data: unknown[] }).data)
+    ) {
       q.setData({
         ...data,
-        data: data.data.filter((m: any) => m.id !== membershipId),
+        data: Array.isArray((data as { data?: unknown[] }).data)
+          ? (data as { data: unknown[] }).data.filter(
+              (m) =>
+                typeof m === "object" &&
+                m !== null &&
+                "id" in m &&
+                (m as { id: unknown }).id !== membershipId
+            )
+          : [],
       });
     }
   });

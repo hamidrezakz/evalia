@@ -1,17 +1,28 @@
+import React from "react";
 import type { LucideIcon } from "lucide-react";
+
+// Allow only LucideIcon or a lazy/forward ref React component returning an SVG
+// Icon component type: either a LucideIcon (already a React component) or any functional component returning a React element
+// Using unknown for props keeps flexibility while avoiding 'any'
+export type SidebarIconComponent = LucideIcon | ((props: unknown) => React.ReactElement);
+
+export interface SidebarNavItemChild {
+  title: string;
+  url: string;
+}
 
 export interface SidebarNavItem {
   title: string;
   url: string;
-  icon: LucideIcon | any; // allow dynamic fallback
+  icon: SidebarIconComponent;
   isActive?: boolean;
-  items?: { title: string; url: string }[];
+  items?: SidebarNavItemChild[];
 }
 
 export interface SidebarProjectItem {
   name: string;
   url: string;
-  icon: LucideIcon | any;
+  icon: SidebarIconComponent;
 }
 
 export interface OrgAccount {

@@ -4,6 +4,7 @@ import * as React from "react";
 // Note: Command icon no longer used directly here after extraction
 
 import { NavMain } from "@/app/dashboard/components/nav-main";
+import type { SidebarNavItem } from "./sidebar-data/types";
 import { NavProjects } from "@/app/dashboard/components/nav-projects";
 import { NavSecondary } from "@/app/dashboard/components/nav-secondary";
 import { NavUser } from "@/app/dashboard/components/nav-user";
@@ -51,7 +52,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent className="mt-2">
-        <NavMain items={navMain} />
+        <NavMain items={navMain as SidebarNavItem[]} />
         <NavProjects projects={projects} />
         <NavSecondary items={navSecondary} className="mt-auto" />
       </SidebarContent>

@@ -18,8 +18,11 @@ export const teamMembershipKeys = {
         ? JSON.stringify(
             Object.keys(params)
               .sort()
-              .reduce((acc: any, k) => {
-                (acc as any)[k] = (params as any)[k];
+              .reduce((acc: Record<string, unknown>, k: string) => {
+                if (params && typeof params === "object" && k in params) {
+                  acc[k] = (params as Record<string, unknown>)[k];
+                }
+                return acc;
                 return acc;
               }, {})
           )

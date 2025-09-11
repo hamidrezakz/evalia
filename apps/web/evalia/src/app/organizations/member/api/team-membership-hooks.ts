@@ -69,7 +69,7 @@ export function useAddTeamMember(orgId: number, teamId: number) {
       if (ctx?.tempId)
         optimisticRemoveMemberFromLists(qc, orgId, teamId, ctx.tempId);
     },
-    onSuccess: (created) => {
+    onSuccess: () => {
       // replace temp with real (simplify by invalidating)
       invalidateAllTeamMembers(qc, orgId, teamId);
     },
@@ -88,7 +88,7 @@ export function useRemoveTeamMember(orgId: number, teamId: number) {
       optimisticRemoveMemberFromLists(qc, orgId, teamId, membershipId);
       return { removedId: membershipId };
     },
-    onError: (_e, _vars, ctx) => {
+    onError: () => {
       // simplest recovery: refetch lists
       invalidateAllTeamMembers(qc, orgId, teamId);
     },

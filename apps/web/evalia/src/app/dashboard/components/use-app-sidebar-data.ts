@@ -20,16 +20,26 @@ export function useAppSidebarData(): AppSidebarData {
     activeOrganizationId,
     setActiveOrganization,
   } = useOrgState();
-  const accounts: OrgAccount[] = organizations.map((org: any) => ({
-    id: String(org.id),
-    name: org.name,
-    slug: org.slug,
-    plan: org.plan,
-    logo: org.logo,
-    isPrimary: org.isPrimary,
-    roles: org.membership?.roles ?? [],
-    membershipId: org.membership?.membershipId,
-  }));
+  const accounts: OrgAccount[] = organizations.map((org: unknown) => {
+    // Defensive mapping: org may be unknown, so cast and check
+    const o = org as Record<string, unknown>;
+    const membership = o.membership as Record<string, unknown> | undefined;
+    return {
+      id: o.id ? String(o.id) : "",
+      name: o.name ? String(o.name) : "",
+      slug: o.slug ? String(o.slug) : "",
+      plan: typeof o.plan === "string" ? (o.plan as string) : undefined,
+      logo: typeof o.logo === "string" ? (o.logo as string) : undefined,
+      isPrimary: Boolean(o.isPrimary),
+      roles: Array.isArray(membership?.roles)
+        ? (membership.roles as string[])
+        : [],
+      membershipId:
+        typeof membership?.membershipId === "number"
+          ? (membership.membershipId as number)
+          : undefined,
+    };
+  });
   const activeOrgId =
     activeOrganizationId != null ? String(activeOrganizationId) : undefined;
   const activeOrg = accounts.find((a) => a.id === activeOrgId);

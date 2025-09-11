@@ -36,7 +36,7 @@ export type NavigationItemTree = {
   iconName?: string | null;
   order: number;
   isActive?: boolean;
-  meta?: Record<string, any>;
+  meta?: Record<string, unknown>;
   parentId?: number | null;
   children?: NavigationItemTree[];
 };

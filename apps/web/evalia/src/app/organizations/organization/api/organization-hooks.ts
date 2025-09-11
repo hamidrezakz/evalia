@@ -40,11 +40,11 @@ const STALE_TIME_USER_ORGS = 2 * 60 * 1000; // 2 min
  * Paginated/filtered organization listing.
  * Provide the same params object identity to benefit from caching.
  */
-export function useOrganizations(params?: Partial<Record<string, any>>) {
+export function useOrganizations(params?: Partial<Record<string, unknown>>) {
   return useQuery({
     queryKey: orgKeys.list(params),
     queryFn: async () => {
-      const res = await listOrganizations(params || ({} as any));
+      const res = await listOrganizations(params || {});
       // Return full envelope: { data, meta }
       return res;
     },
@@ -113,7 +113,10 @@ export function useCreateOrganization() {
     mutationFn: (input: CreateOrganizationInput) => createOrganization(input),
     onMutate: async (input) => {
       await qc.cancelQueries({ queryKey: orgKeys.lists() });
-      const prev = qc.getQueriesData<{ data: OrganizationArray; meta: any }>({
+      const prev = qc.getQueriesData<{
+        data: OrganizationArray;
+        meta: unknown;
+      }>({
         queryKey: orgKeys.lists(),
       });
       // Optimistically insert into each cached list envelope
@@ -130,7 +133,7 @@ export function useCreateOrganization() {
                 plan: input.plan || "FREE",
                 status: "ACTIVE",
                 createdAt: new Date().toISOString(),
-              } as any,
+              } as unknown,
             ],
           });
         }
@@ -138,7 +141,13 @@ export function useCreateOrganization() {
       return { prev };
     },
     onError: (_err, _vars, ctx) => {
-      ctx?.prev.forEach(([key, data]: any) => qc.setQueryData(key, data));
+      if (Array.isArray(ctx?.prev)) {
+        ctx.prev.forEach((entry) => {
+          if (Array.isArray(entry) && entry.length === 2) {
+            qc.setQueryData(entry[0], entry[1]);
+          }
+        });
+      }
     },
     onSuccess: (res) => {
       // Replace optimistic entries by invalidating
@@ -197,7 +206,7 @@ export function useDeleteOrganization(id: number) {
       await qc.cancelQueries({ queryKey: orgKeys.lists() });
       const prevLists = qc.getQueriesData<{
         data: OrganizationArray;
-        meta: any;
+        meta: unknown;
       }>({
         queryKey: orgKeys.lists(),
       });
@@ -205,14 +214,28 @@ export function useDeleteOrganization(id: number) {
         if (envelope && Array.isArray(envelope.data)) {
           qc.setQueryData(key, {
             ...envelope,
-            data: envelope.data.filter((o: any) => o.id !== id),
+            data: Array.isArray(envelope.data)
+              ? envelope.data.filter(
+                  (o) =>
+                    typeof o === "object" &&
+                    o !== null &&
+                    "id" in o &&
+                    (o as { id: unknown }).id !== id
+                )
+              : [],
           });
         }
       });
       return { prevLists };
     },
     onError: (_e, _v, ctx) => {
-      ctx?.prevLists.forEach(([key, data]: any) => qc.setQueryData(key, data));
+      if (Array.isArray(ctx?.prevLists)) {
+        ctx.prevLists.forEach((entry) => {
+          if (Array.isArray(entry) && entry.length === 2) {
+            qc.setQueryData(entry[0], entry[1]);
+          }
+        });
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: orgKeys.userMembership() });

@@ -25,7 +25,7 @@ export const AuthSessionProvider: React.FC<{
   const router = useRouter();
   const queryClient = useQueryClient();
   const [tokens, setTokens] = useState(() => tokenStorage.get());
-  const [error, setError] = useState<string | null>(null);
+  const [error] = useState<string | null>(null);
   const [booting, setBooting] = useState(true);
 
   const decoded = useMemo<AccessTokenPayload | null>(() => {
@@ -70,7 +70,7 @@ export const AuthSessionProvider: React.FC<{
   useEffect(() => {
     if (booting) return; // don't start until initial auth state resolved
     let cancelled = false;
-    let timer: any;
+    let timer: ReturnType<typeof setTimeout>;
     const intervalMs = 90_000; // 3 minutes
     async function runCheck() {
       if (cancelled) return;
@@ -78,7 +78,6 @@ export const AuthSessionProvider: React.FC<{
         try {
           const data = await checkAccessToken(tokens.accessToken);
           // Debug log for diagnosis
-          // eslint-disable-next-line no-console
           console.log(
             "[Auth] checkAccessToken response",
             data,
@@ -86,7 +85,6 @@ export const AuthSessionProvider: React.FC<{
             tokens
           );
           if (!data?.data?.valid) {
-            // eslint-disable-next-line no-console
             console.warn("[Auth] Invalid token, reason:", data?.data?.reason);
             signOut();
             return; // stop loop after sign out
@@ -106,7 +104,14 @@ export const AuthSessionProvider: React.FC<{
       cancelled = true;
       if (timer) clearTimeout(timer);
     };
-  }, [tokens?.accessToken, booting, isTokenExpired]);
+  }, [
+    tokens?.accessToken,
+    booting,
+    isTokenExpired,
+    attemptRefresh,
+    signOut,
+    tokens,
+  ]);
 
   // Proactive refresh timer
   useEffect(() => {

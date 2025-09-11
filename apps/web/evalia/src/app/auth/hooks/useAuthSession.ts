@@ -7,7 +7,7 @@ interface DecodedAccessToken {
   exp: number;
   iat?: number;
   roles?: string[]; // optional roles claim
-  [k: string]: any;
+  [k: string]: unknown;
 }
 
 interface SessionState {

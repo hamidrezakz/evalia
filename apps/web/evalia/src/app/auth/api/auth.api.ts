@@ -18,7 +18,7 @@ import {
   type LoginPasswordData,
   type CompleteRegistrationData,
 } from "./auth.types";
-import { z } from "zod";
+// import { z } from "zod"; // Removed unused import
 
 /**
  * Auth API design goals:
@@ -27,9 +27,6 @@ import { z } from "zod";
  * - Unified, cache-friendly query/mutation keys for React Query use.
  * - Minimal surface (only actively used endpoints) – future endpoints live elsewhere.
  */
-
-// Envelope inner schemas (apiRequest already validates top-level envelope)
-const innerDataSchema = z.any();
 
 // Helpers -------------------------------------------------------------
 function isEmail(str: string) {

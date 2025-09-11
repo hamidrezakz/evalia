@@ -83,9 +83,9 @@ export function useLoginMachine(onSuccess: () => void) {
   const queryClient = useQueryClient();
 
   const checkIdentifierMutation = useCheckIdentifierMutation({
-    onSuccess: (res) => {
-      dispatch({ type: "EXISTS", exists: res.data.exists });
-      if (res.data.exists) {
+    onSuccess: (data) => {
+      dispatch({ type: "EXISTS", exists: data.data.exists });
+      if (data.data.exists) {
         dispatch({ type: "SET_PHASE", phase: "PASSWORD" });
       } else {
         requestOtpMutation.mutate({
@@ -97,7 +97,7 @@ export function useLoginMachine(onSuccess: () => void) {
     onError: (err: Error) => dispatch({ type: "ERROR", error: err.message }),
   });
   const loginMutation = useLoginMutation({
-    onSuccess: (res) => {
+    onSuccess: () => {
       dispatch({ type: "MODE", mode: "LOGIN" });
       if (state.phone) {
         queryClient.invalidateQueries({
@@ -109,15 +109,15 @@ export function useLoginMachine(onSuccess: () => void) {
     onError: (err: Error) => dispatch({ type: "ERROR", error: err.message }),
   });
   const requestOtpMutation = useRequestOtpMutation({
-    onSuccess: (res) => {
-      dispatch({ type: "DEV_CODE", code: res.data.devCode || null });
+    onSuccess: (data) => {
+      dispatch({ type: "DEV_CODE", code: data.data.devCode || null });
       dispatch({ type: "SET_PHASE", phase: "OTP" });
     },
     onError: (err: Error) => dispatch({ type: "ERROR", error: err.message }),
   });
   const verifyOtpMutation = useVerifyOtpMutation({
-    onSuccess: (res) => {
-      if (res.data.mode === "LOGIN") {
+    onSuccess: (data) => {
+      if (data.data.mode === "LOGIN") {
         dispatch({ type: "MODE", mode: "LOGIN" });
         if (state.phone) {
           queryClient.invalidateQueries({
@@ -125,16 +125,16 @@ export function useLoginMachine(onSuccess: () => void) {
           });
         }
         onSuccess();
-      } else if (res.data.mode === "SIGNUP") {
+      } else if (data.data.mode === "SIGNUP") {
         dispatch({ type: "MODE", mode: "SIGNUP" });
-        dispatch({ type: "SIGNUP_TOKEN", token: res.data.signupToken });
+        dispatch({ type: "SIGNUP_TOKEN", token: data.data.signupToken });
         dispatch({ type: "SET_PHASE", phase: "COMPLETE_REGISTRATION" });
       }
     },
     onError: (err: Error) => dispatch({ type: "ERROR", error: err.message }),
   });
   const completeRegistrationMutation = useCompleteRegistrationMutation({
-    onSuccess: (res) => {
+    onSuccess: () => {
       dispatch({ type: "MODE", mode: "LOGIN" });
       if (state.phone) {
         queryClient.invalidateQueries({

@@ -78,17 +78,6 @@ export const OrgSwitcher = memo(function OrgSwitcher({
     [onSelect]
   );
 
-  const handlePlatformRole = useCallback(
-    (role: string) => () => setPlatformActiveRole(role),
-    [setPlatformActiveRole]
-  );
-
-  const handleOrgRole = useCallback(
-    (role: string) => () =>
-      setOrganizationActiveRole(role, activeOrganizationId),
-    [setOrganizationActiveRole, activeOrganizationId]
-  );
-
   const { isMobile } = useSidebar();
 
   return (

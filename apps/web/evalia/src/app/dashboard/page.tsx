@@ -60,12 +60,14 @@ function SessionPanel() {
               {isTokenExpired() ? "Token Expiring Soon" : "Token OK"}
             </Badge>
             {userId && <Badge variant="outline">User #{userId}</Badge>}
-            {decoded?.iat && (
-              <Badge variant="outline">iat: {decoded.iat}</Badge>
-            )}
-            {decoded?.exp && (
-              <Badge variant="outline">exp: {decoded.exp}</Badge>
-            )}
+            {typeof decoded?.iat === "string" ||
+            typeof decoded?.iat === "number" ? (
+              <Badge variant="outline">iat: {String(decoded.iat)}</Badge>
+            ) : null}
+            {typeof decoded?.exp === "string" ||
+            typeof decoded?.exp === "number" ? (
+              <Badge variant="outline">exp: {String(decoded.exp)}</Badge>
+            ) : null}
           </div>
           <div className="grid gap-1">
             <div className="font-semibold text-[12px]">توکن‌ها</div>
@@ -304,7 +306,11 @@ function UserPanel() {
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Updated</span>
-            <span>{(user as any)?.updatedAt || "—"}</span>
+            <span>
+              {user && "updatedAt" in user
+                ? (user as { updatedAt?: string }).updatedAt ?? "—"
+                : "—"}
+            </span>
           </div>
         </div>
         {error && (
@@ -326,30 +332,35 @@ function UserPanel() {
 }
 
 // نمایش درخت کامل ناوبری به صورت بازگشتی
-const TreeList = ({ nodes }: { nodes: any[] }): React.ReactElement =>
+const TreeList = ({ nodes }: { nodes: unknown[] }): React.ReactElement =>
   !nodes?.length ? (
     <div className="text-muted-foreground">No items</div>
   ) : (
     <ul className="flex flex-col gap-1">
-      {nodes.map((node: any) => (
-        <li key={node.id} className="rounded border bg-background/40 px-2 py-1">
-          <div className="flex justify-between gap-2">
-            <span className="truncate" title={node.label}>
-              {node.label}
-            </span>
-            {node.path && (
-              <code dir="ltr" className="text-[10px] opacity-70">
-                {node.path}
-              </code>
-            )}
-          </div>
-          {node.children && node.children.length > 0 && (
-            <div className="pl-4 border-l mt-2">
-              <TreeList nodes={node.children} />
+      {nodes.map((node) => {
+        const n = node as Record<string, unknown>;
+        return (
+          <li
+            key={String(n.id)}
+            className="rounded border bg-background/40 px-2 py-1">
+            <div className="flex justify-between gap-2">
+              <span className="truncate" title={String(n.label)}>
+                {String(n.label)}
+              </span>
+              {typeof n.path === "string" || typeof n.path === "number" ? (
+                <code dir="ltr" className="text-[10px] opacity-70">
+                  {String(n.path)}
+                </code>
+              ) : null}
             </div>
-          )}
-        </li>
-      ))}
+            {Array.isArray(n.children) && n.children.length > 0 && (
+              <div className="pl-4 border-l mt-2">
+                <TreeList nodes={n.children} />
+              </div>
+            )}
+          </li>
+        );
+      })}
     </ul>
   );
 
@@ -405,20 +416,23 @@ function NavigationPanel() {
         <section className="space-y-2">
           <h4 className="font-semibold">لیست فلت ناوبری</h4>
           <ul className="flex flex-col gap-1">
-            {flat.map((it) => (
-              <li
-                key={it.id}
-                className="rounded border bg-background/40 px-2 py-1 flex justify-between gap-2">
-                <span className="truncate" title={it.label}>
-                  {it.label}
-                </span>
-                {it.path && (
-                  <code dir="ltr" className="text-[10px] opacity-70">
-                    {it.path}
-                  </code>
-                )}
-              </li>
-            ))}
+            {flat.map((it) => {
+              const f = it as Record<string, unknown>;
+              return (
+                <li
+                  key={String(f.id)}
+                  className="rounded border bg-background/40 px-2 py-1 flex justify-between gap-2">
+                  <span className="truncate" title={String(f.label)}>
+                    {String(f.label)}
+                  </span>
+                  {typeof f.path === "string" || typeof f.path === "number" ? (
+                    <code dir="ltr" className="text-[10px] opacity-70">
+                      {String(f.path)}
+                    </code>
+                  ) : null}
+                </li>
+              );
+            })}
             {!flat.length && (
               <li className="text-muted-foreground text-center p-2 border rounded-md">
                 No items
@@ -426,7 +440,7 @@ function NavigationPanel() {
             )}
           </ul>
         </section>
-        // ...existing code...
+        {/* ...existing code... */}
         <Separator />
         <section className="space-y-2">
           <h4 className="font-semibold">Test helpers</h4>
@@ -444,7 +458,7 @@ function NavigationPanel() {
                     : "dashboard missing"
                 )
               }>
-              hasPath('/dashboard')
+              {`hasPath('/dashboard')`}
             </Button>
             <Button
               size="sm"
@@ -453,7 +467,7 @@ function NavigationPanel() {
                 const f = findByPath("/dashboard");
                 alert(f ? `found: ${f.label}` : "not found");
               }}>
-              findByPath('/dashboard')
+              {`findByPath('/dashboard')`}
             </Button>
           </div>
         </section>

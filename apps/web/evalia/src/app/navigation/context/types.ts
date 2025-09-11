@@ -1,7 +1,7 @@
 import type {
   NavigationItemTree,
-  PlatformRole,
-  OrgRole,
+  // PlatformRole, // Removed unused type
+  // OrgRole, // Removed unused type
 } from "../types/navigation.types";
 
 export interface NavigationContextValue {

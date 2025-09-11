@@ -10,8 +10,9 @@ import {
   FileBarChart2,
   Circle,
 } from "lucide-react";
+import type { SidebarIconComponent } from "./types";
 
-export const iconMap: Record<string, any> = {
+export const iconMap: Record<string, SidebarIconComponent> = {
   BookOpen,
   Users,
   Command,

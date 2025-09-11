@@ -1,12 +1,9 @@
-"use client";
+import React from "react";
 
-import {
-  Folder,
-  MoreHorizontal,
-  Share,
-  Trash2,
-  type LucideIcon,
-} from "lucide-react";
+import { Folder, MoreHorizontal, Share, Trash2 } from "lucide-react";
+import type {
+  SidebarProjectItem,
+} from "./sidebar-data/types";
 
 import {
   DropdownMenu,
@@ -25,26 +22,23 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
-export function NavProjects({
-  projects,
-}: {
-  projects: {
-    name: string;
-    url: string;
-    icon: LucideIcon;
-  }[];
-}) {
+export function NavProjects(props: { projects: SidebarProjectItem[] }) {
+  const { projects } = props;
   const { isMobile } = useSidebar();
 
   return (
     <SidebarGroup className="group-data-[collapsible=icon]:hidden">
       <SidebarGroupLabel>project</SidebarGroupLabel>
       <SidebarMenu>
-        {projects.map((item) => (
+        {projects.map((item: SidebarProjectItem) => (
           <SidebarMenuItem key={item.name}>
             <SidebarMenuButton asChild>
               <a href={item.url}>
-                <item.icon />
+                {typeof item.icon === "function" ? (
+                  <item.icon />
+                ) : (
+                  React.createElement(item.icon)
+                )}
                 <span>{item.name}</span>
               </a>
             </SidebarMenuButton>

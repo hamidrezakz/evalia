@@ -1,7 +1,12 @@
 "use client";
 
+import React from "react";
 import Link from "next/link";
-import { ChevronRight, type LucideIcon } from "lucide-react";
+import { ChevronRight } from "lucide-react";
+import type {
+  SidebarNavItem,
+  SidebarNavItemChild,
+} from "./sidebar-data/types";
 
 import {
   Collapsible,
@@ -20,30 +25,22 @@ import {
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
 
-export function NavMain({
-  items,
-}: {
-  items: {
-    title: string;
-    url: string;
-    icon: LucideIcon;
-    isActive?: boolean;
-    items?: {
-      title: string;
-      url: string;
-    }[];
-  }[];
-}) {
+export function NavMain(props: { items: SidebarNavItem[] }) {
+  const { items } = props;
   return (
     <SidebarGroup>
       <SidebarGroupLabel>Platform</SidebarGroupLabel>
       <SidebarMenu>
-        {items.map((item) => (
+        {items.map((item: SidebarNavItem) => (
           <Collapsible key={item.url} asChild defaultOpen={item.isActive}>
             <SidebarMenuItem>
               <SidebarMenuButton asChild tooltip={item.title}>
                 <Link href={item.url}>
-                  <item.icon />
+                  {typeof item.icon === "function" ? (
+                    <item.icon />
+                  ) : (
+                    React.createElement(item.icon)
+                  )}
                   <span>{item.title}</span>
                 </Link>
               </SidebarMenuButton>
@@ -57,7 +54,7 @@ export function NavMain({
                   </CollapsibleTrigger>
                   <CollapsibleContent>
                     <SidebarMenuSub>
-                      {item.items?.map((subItem) => (
+                      {item.items?.map((subItem: SidebarNavItemChild) => (
                         <SidebarMenuSubItem key={subItem.url}>
                           <SidebarMenuSubButton asChild>
                             <Link href={subItem.url}>

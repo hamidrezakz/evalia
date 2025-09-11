@@ -11,7 +11,7 @@ export interface AccessTokenPayload {
     global: string[];
     org: OrgRoleEntry[];
   };
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface AuthSessionValue {
