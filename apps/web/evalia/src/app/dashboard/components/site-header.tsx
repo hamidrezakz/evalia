@@ -59,14 +59,14 @@ export function SiteHeader() {
     <header className="bg-background sticky top-0 z-50 flex w-full items-center border-b">
       <div className="flex h-(--header-height) w-full items-center gap-2 px-4">
         <Button
-          className="h-8 w-8"
+          className="h-10 w-10"
           variant="ghost"
           size="icon"
           onClick={toggleSidebar}>
           <SidebarIcon />
         </Button>
-        <Separator orientation="vertical" className="md:ml-2 h-4" />
-        <Breadcrumb className="hidden sm:block text-xs">
+        <Separator orientation="vertical" className="md:ml-2 h-4 md:mr-1 ml-0.5" />
+        <Breadcrumb className="text-xs mt-0.5">
           <BreadcrumbList>
             {segments.map((segment, idx) => {
               const href = "/" + segments.slice(0, idx + 1).join("/");

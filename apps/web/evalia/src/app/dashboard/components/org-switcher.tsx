@@ -206,8 +206,8 @@ export const OrgSwitcher = memo(function OrgSwitcher({
                     return (
                       <Badge
                         key={r}
-                        variant={active ? "default" : "secondary"}
-                        className={`cursor-pointer text-[0.6rem] px-2 py-1 rounded-full border`}
+                        variant={active ? "default" : "outline"}
+                        className={`cursor-pointer text-[0.64rem]`}
                         onClick={() => setPlatformActiveRole(r)}
                         aria-pressed={active}>
                         {r}
@@ -229,8 +229,8 @@ export const OrgSwitcher = memo(function OrgSwitcher({
                     return (
                       <Badge
                         key={r}
-                        variant={active ? "default" : "secondary"}
-                        className={`cursor-pointer text-[0.6rem] px-2 py-1 rounded-full border`}
+                        variant={active ? "default" : "outline"}
+                        className={`cursor-pointer text-[0.64rem]`}
                         onClick={() =>
                           setOrganizationActiveRole(r, activeOrganizationId)
                         }

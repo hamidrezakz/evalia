@@ -476,11 +476,11 @@ export default function DashboardPage() {
   return (
     <Suspense
       fallback={
-        <div className="p-4 text-sm text-muted-foreground">
+        <div className="flex w-full items-centerp-4 text-sm text-muted-foreground">
           در حال بارگذاری…
         </div>
       }>
-      <div className="p-2 md:p-4 lg:p-6 max-w-7xl mx-auto space-y-6">
+      <div className="flex w-full items-center justify-center space-y-6">
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-2">
           <SessionPanel />
           <OrgPanel />
