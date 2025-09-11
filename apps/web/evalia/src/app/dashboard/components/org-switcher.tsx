@@ -96,7 +96,7 @@ export const OrgSwitcher = memo(function OrgSwitcher({
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          aria-label="تغییر حساب کاری"
+          aria-label="تغییر سازمان فعال"
           className={`flex w-full items-center gap-2 rounded-md text-right focus:outline-none ${className}`}>
           <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg border border-border/40 shadow-sm">
             {activeOrg?.logo ? (
@@ -114,7 +114,8 @@ export const OrgSwitcher = memo(function OrgSwitcher({
           </div>
           <div className="grid flex-1 text-right leading-tight">
             <span className="truncate font-semibold text-sm">
-              {activeOrg?.name || "انتخاب حساب کاری"}
+              {activeOrg?.name ||
+                (accounts.length === 0 ? "بدون سازمان" : "انتخاب سازمان")}
             </span>
             <span className="truncate text-[0.60rem] text-muted-foreground flex items-center gap-1 justify-start">
               {activeOrg?.plan ? (
@@ -127,8 +128,14 @@ export const OrgSwitcher = memo(function OrgSwitcher({
                   )}
                   {activeOrg.plan}
                 </span>
+              ) : accounts.length === 0 ? (
+                <span className="text-[0.55rem] text-muted-foreground">
+                  عضو هیچ سازمانی نیستید
+                </span>
               ) : (
-                "بدون سازمان"
+                <span className="text-[0.55rem] text-muted-foreground">
+                  بدون پلن سازمانی
+                </span>
               )}
             </span>
           </div>
@@ -140,9 +147,11 @@ export const OrgSwitcher = memo(function OrgSwitcher({
         align="start"
         className="w-75 rounded-lg mr--2 sm:mr--4">
         <DropdownMenuLabel className="text-xs tracking-wide text-muted-foreground flex items-center justify-between">
-          <span>حساب‌های کاری</span>
+          <span>سازمان‌های من</span>
           <span className="text-[0.6rem] font-normal text-muted-foreground/70">
-            {accounts.length} حساب
+            {accounts.length === 0
+              ? "بدون سازمان"
+              : `${accounts.length} سازمان`}
           </span>
         </DropdownMenuLabel>
         <DropdownMenuGroup>
@@ -208,7 +217,7 @@ export const OrgSwitcher = memo(function OrgSwitcher({
                 </div>
               </div>
             )}
-            {orgRoles.length > 0 && (
+            {orgRoles.length > 0 ? (
               <div className="px-2 py-1.5">
                 <div className="text-[0.55rem] font-medium text-muted-foreground mb-1 tracking-wide">
                   نقش‌های سازمانی
@@ -231,6 +240,10 @@ export const OrgSwitcher = memo(function OrgSwitcher({
                     );
                   })}
                 </div>
+              </div>
+            ) : (
+              <div className="px-2 py-1.5 text-[0.6rem] text-muted-foreground">
+                عضو هیچ سازمانی نیستید یا نقش سازمانی ندارید
               </div>
             )}
           </>

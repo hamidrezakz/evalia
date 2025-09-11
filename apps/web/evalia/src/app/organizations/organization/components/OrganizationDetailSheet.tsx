@@ -90,7 +90,7 @@ export function OrganizationDetailSheet({
                     <div className="text-sm text-muted-foreground">
                       نقش:{" "}
                       <span className="font-medium">
-                        {data.membership.role}
+                        {data.membership.roles}
                       </span>
                     </div>
                   </div>
