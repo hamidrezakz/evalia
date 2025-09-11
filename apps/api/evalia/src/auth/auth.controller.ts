@@ -54,10 +54,14 @@ export class AuthController {
   health() {
     return { ok: true };
   }
-
   @Public()
   @Post('refresh')
   refresh(@Body() dto: RefreshTokenDto) {
     return this.auth.refreshTokens(dto);
+  }
+  @Public()
+  @Post('check-token')
+  checkToken(@Body() body: { accessToken: string }) {
+    return this.auth.checkAccessToken(body.accessToken);
   }
 }

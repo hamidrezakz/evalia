@@ -10,6 +10,7 @@ import React, {
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { decodeAccessToken, refreshTokens } from "@/lib/api.client";
+import { checkAccessToken } from "@/lib/api.auth";
 import { tokenStorage } from "@/lib/token-storage";
 import type { AuthSessionValue, AccessTokenPayload } from "./types";
 
@@ -64,6 +65,48 @@ export const AuthSessionProvider: React.FC<{
     }
     return ok;
   }, []);
+
+  // Periodic token version / validity check
+  useEffect(() => {
+    if (booting) return; // don't start until initial auth state resolved
+    let cancelled = false;
+    let timer: any;
+    const intervalMs = 90_000; // 3 minutes
+    async function runCheck() {
+      if (cancelled) return;
+      if (tokens?.accessToken) {
+        try {
+          const data = await checkAccessToken(tokens.accessToken);
+          // Debug log for diagnosis
+          // eslint-disable-next-line no-console
+          console.log(
+            "[Auth] checkAccessToken response",
+            data,
+            "tokens",
+            tokens
+          );
+          if (!data?.data?.valid) {
+            // eslint-disable-next-line no-console
+            console.warn("[Auth] Invalid token, reason:", data?.data?.reason);
+            signOut();
+            return; // stop loop after sign out
+          }
+          // If valid but near expiry attempt silent refresh
+          if (isTokenExpired()) {
+            await attemptRefresh();
+          }
+        } catch {
+          // ignore transient network errors; next interval will retry
+        }
+      }
+      timer = setTimeout(runCheck, intervalMs);
+    }
+    runCheck();
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [tokens?.accessToken, booting, isTokenExpired]);
 
   // Proactive refresh timer
   useEffect(() => {

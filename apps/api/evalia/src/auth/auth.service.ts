@@ -246,4 +246,38 @@ export class AuthService {
     const tokens = await this.issueTokens(userId);
     return { user: this.toPublicUser(user), tokens };
   }
+
+  /**
+   * Checks access token validity and tokenVersion for a given token.
+   * Returns { valid: boolean, reason?: string, tokenVersion?: number, currentVersion?: number }
+   */
+  async checkAccessToken(token: string) {
+    let payload: any;
+    try {
+      payload = this.jwt.verify(token);
+    } catch {
+      return { valid: false, reason: 'Access token is invalid' };
+    }
+    if (payload.type !== 'access' || !payload.sub) {
+      return { valid: false, reason: 'Token is not a valid access token' };
+    }
+    const userId = payload.sub;
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return { valid: false, reason: 'User not found' };
+    const tokenVersionFromToken = payload.tokenVersion ?? 1;
+    const currentVersion = user.tokenVersion ?? 1;
+    if (tokenVersionFromToken !== currentVersion) {
+      return {
+        valid: false,
+        reason: 'Token version mismatch',
+        tokenVersion: tokenVersionFromToken,
+        currentVersion,
+      };
+    }
+    return {
+      valid: true,
+      tokenVersion: tokenVersionFromToken,
+      currentVersion,
+    };
+  }
 }
