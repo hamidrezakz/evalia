@@ -6,7 +6,7 @@ export { UsersRowActions } from "./UsersRowActions";
 
 // Optional demo wrapper for quick embedding
 export default function UsersComponent() {
-  const UsersListComp = require("./UsersList")
+  const UsersListComp = await import("./UsersList");
     .UsersList as typeof import("./UsersList").UsersList;
   return (
     <div className="container max-w-5xl py-6">

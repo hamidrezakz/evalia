@@ -9,9 +9,10 @@ import {
   HeartPulse,
   Presentation,
   Sprout,
+  type LucideIcon,
 } from "lucide-react";
 
-const ROI_ITEMS: { text: string; icon: React.ComponentType<any> }[] = [
+const ROI_ITEMS: { text: string; icon: LucideIcon }[] = [
   { text: "افزایش مشارکت و تعامل تیمی", icon: Handshake },
   { text: "تصمیم‌گیری علمی در استخدام و ارتقاء", icon: BarChart3 },
   { text: "کاهش هزینه آموزش‌های تکراری", icon: Wallet },

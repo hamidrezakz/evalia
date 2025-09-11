@@ -1,10 +1,16 @@
 "use client";
 import { PageSection } from "@/components/sections";
 import { Panel } from "@/components/ui/panel";
-import { Zap, Handshake, LineChart, FlaskConical } from "lucide-react";
+import {
+  Zap,
+  Handshake,
+  LineChart,
+  FlaskConical,
+  type LucideIcon,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
-const PROBLEMS: { icon: React.ComponentType<any>; p: string; s: string }[] = [
+const PROBLEMS: { icon: LucideIcon; p: string; s: string }[] = [
   {
     icon: Zap,
     p: "انگیزه کارکنان ناپایدار است",

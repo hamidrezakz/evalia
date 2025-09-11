@@ -27,12 +27,23 @@ interface PersistedActive {
 export const OrgProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const { userId, decoded, loading: sessionLoading } = useAuthSession() as any;
-  const platformRoles: string[] = decoded?.roles?.global || [];
+  const { userId, decoded, loading: sessionLoading } = useAuthSession();
+  const platformRoles: string[] = useMemo(
+    () => decoded?.roles?.global || [],
+    [decoded]
+  );
   const organizationRolesMap: Record<number, string[]> = useMemo(() => {
     const out: Record<number, string[]> = {};
-    (decoded?.roles?.org || []).forEach(({ orgId, roles }: any) => {
-      out[orgId] = Array.isArray(roles) ? roles : roles ? [roles] : [];
+    (decoded?.roles?.org || []).forEach((orgRole) => {
+      if (
+        typeof orgRole === "object" &&
+        orgRole !== null &&
+        "orgId" in orgRole &&
+        "roles" in orgRole
+      ) {
+        const { orgId, roles } = orgRole as { orgId: number; roles: string[] };
+        out[orgId] = Array.isArray(roles) ? roles : roles ? [roles] : [];
+      }
     });
     return out;
   }, [decoded]);

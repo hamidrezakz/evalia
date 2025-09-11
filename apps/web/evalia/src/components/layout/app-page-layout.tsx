@@ -20,7 +20,6 @@ export function AppPageLayout({
   children,
   className = "",
   mainClassName = "w-full flex flex-col items-center space-y-8 md:space-y-16",
-  gutterWidth = "2.5rem",
 }: AppPageLayoutProps) {
   return (
     <div className="max-w-screen overflow-x-hidden">

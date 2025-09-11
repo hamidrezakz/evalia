@@ -4,7 +4,7 @@
 export const orgKeys = {
   all: ["organizations"] as const,
   lists: () => [...orgKeys.all, "list"] as const,
-  list: (params: Record<string, any> | undefined) =>
+  list: (params: Record<string, unknown> | undefined) =>
     [...orgKeys.lists(), params ? JSON.stringify(params) : "all"] as const,
   detail: () => [...orgKeys.all, "detail"] as const,
   byId: (id: number) => [...orgKeys.detail(), id] as const,

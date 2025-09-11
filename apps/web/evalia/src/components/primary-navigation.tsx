@@ -21,6 +21,7 @@ import {
   Puzzle,
   BookOpen,
   Sparkles,
+  type LucideIcon,
 } from "lucide-react";
 
 /**
@@ -37,7 +38,7 @@ const PRODUCTS: Array<{
   title: string;
   href: string;
   desc: string;
-  icon: React.ComponentType<any>;
+  icon: LucideIcon;
 }> = [
   {
     title: "داشبورد منابع انسانی",
@@ -69,7 +70,7 @@ const RESOURCES: Array<{
   title: string;
   href: string;
   desc: string;
-  icon: React.ComponentType<any>;
+  icon: LucideIcon;
 }> = [
   {
     title: "مستندات",
@@ -93,7 +94,9 @@ const RESOURCES: Array<{
 
 function MenuPanel({ children }: { children: React.ReactNode }) {
   return (
-    <Panel dir="rtl" className="w-auto min-w-[320px] md:min-w-[400px] p-3 md:p-4 grid gap-2">
+    <Panel
+      dir="rtl"
+      className="w-auto min-w-[320px] md:min-w-[400px] p-3 md:p-4 grid gap-2">
       {children}
     </Panel>
   );

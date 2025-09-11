@@ -2,7 +2,6 @@
 import { PageSection } from "@/components/sections";
 import { Badge } from "@/components/ui/badge";
 import { Panel } from "@/components/ui/panel";
-import { Separator } from "@/components/ui/separator";
 
 const POINTS = [
   "بدون فیلتر: رفتار طبیعی و واقعی",

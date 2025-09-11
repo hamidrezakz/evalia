@@ -7,7 +7,6 @@ import {
   UpdateOrganizationInputSchema,
   ChangeOrganizationStatusSchema,
   ListOrganizationsQuerySchema,
-  listOrganizationsResponseSchema,
   type CreateOrganizationInput,
   type UpdateOrganizationInput,
   type ChangeOrganizationStatusInput,

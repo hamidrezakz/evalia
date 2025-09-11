@@ -10,12 +10,13 @@ import {
   Rocket,
   Workflow,
   BarChart3,
+  type LucideIcon,
 } from "lucide-react";
 
 const FEATURES: {
   title: string;
   desc: string;
-  icon: React.ComponentType<any>;
+  icon: LucideIcon;
 }[] = [
   {
     title: "تحلیل رفتاری عمیق",

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { apiRequest, unwrap } from "@/lib/api.client";
+import { apiRequest } from "@/lib/api.client";
 import { usersKeys } from "./users-query-keys"; // authoritative keys (moved out for consistency)
 import {
   userListItemSchema,
@@ -49,7 +49,7 @@ function buildListPath(raw?: Partial<ListUsersQuery>): string {
  */
 export async function listUsers(
   params?: Partial<ListUsersQuery>
-): Promise<{ data: UserListItem[]; meta: any }> {
+): Promise<{ data: UserListItem[]; meta: unknown }> {
   const path = buildListPath(params);
   const res = await apiRequest(path, null, null); // envelope: { data, meta }
   const validated = listEnvelopeSchema.safeParse({

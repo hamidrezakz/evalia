@@ -3,5 +3,5 @@ import type { Organization } from "@/app/organizations/organization/types/organi
 
 export async function fetchUserOrganizations(): Promise<Organization[]> {
   const res = await listUserOrganizations();
-  return (res as any) || [];
+  return Array.isArray(res) ? (res as Organization[]) : [];
 }

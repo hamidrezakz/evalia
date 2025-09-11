@@ -4,7 +4,7 @@ export interface AuthUser {
   name?: string | null;
   avatarUrl?: string | null;
   // Add any other fields your getUser endpoint returns
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface UserDataContextValue {
