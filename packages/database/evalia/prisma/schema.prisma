@@ -264,15 +264,13 @@ model Organization {
   timezone       String                     @default("Asia/Tehran")
   locale         Locale                     @default(FA)
   primaryOwnerId Int?
-  /// Primary owner relation | مالک اصلی سازمان
   primaryOwner   User?                      @relation("OrgPrimaryOwner", fields: [primaryOwnerId], references: [id])
-  settings       Json                       @default("{}") /// arbitrary org-level settings
+  settings       Json                       @default("{}")
   status         OrganizationStatus         @default(ACTIVE)
   trialEndsAt    DateTime?
   billingEmail   String?
-  lockedAt       DateTime?                  /// if suspended/locked
-  createdById    Int?                       /// platform user who created the org
-  /// Platform user who created this org | کاربر پلتفرمی سازنده
+  lockedAt       DateTime?
+  createdById    Int?
   createdBy      User?                      @relation("OrganizationsCreated", fields: [createdById], references: [id])
   createdAt      DateTime                   @default(now())
   updatedAt      DateTime                   @updatedAt
@@ -281,7 +279,7 @@ model Organization {
   memberships    OrganizationMembership[]      @relation("OrganizationMemberships")
   teams          Team[]                        @relation("OrganizationTeams")
   questionBanks  QuestionBank[]                @relation("OrganizationQuestionBanks")
-  assessments    AssessmentTemplate[]          @relation("OrganizationAssessmentTemplates")
+  templateLinks  OrganizationAssessmentTemplateLink[] @relation("OrgTemplateLinks")
   sessions       AssessmentSession[]           @relation("OrganizationAssessmentSessions")
   invites        Invitation[]                  @relation("InvitationOrg")
   notifications  Notification[]                @relation("OrganizationNotifications")
@@ -455,10 +453,10 @@ model QuestionOption {
   @@index([questionId])
 }
 
-/// Assessment template (قالب ارزیابی)
+/// Assessment template (قالب ارزیابی) - reusable across organizations
 model AssessmentTemplate {
   id             Int                   @id @default(autoincrement())
-  organizationId Int
+  slug           String                @unique
   name           String
   description    String?
   state          AssessmentState       @default(DRAFT)
@@ -467,12 +465,13 @@ model AssessmentTemplate {
   updatedAt      DateTime              @updatedAt
   deletedAt      DateTime?
 
-  organization   Organization                @relation("OrganizationAssessmentTemplates", fields: [organizationId], references: [id])
+  /// Link records to organizations allowed to use this template
+  organizationLinks OrganizationAssessmentTemplateLink[] @relation("TemplateOrgLinks")
   sections       AssessmentTemplateSection[] @relation("TemplateSections")
   sessions       AssessmentSession[]         @relation("TemplateSessions")
 
-  @@unique([organizationId, name])
-  @@index([organizationId, state])
+  @@index([state])
+  @@index([name])
 }
 
 /// Section inside a template for grouping (بخش)
@@ -509,6 +508,28 @@ model AssessmentTemplateQuestion {
 
   @@unique([sectionId, questionId])
   @@index([questionId])
+}
+
+/// Join table for many-to-many relation between Organization and AssessmentTemplate
+/// Migration steps (safe rollout):
+/// 1. Deploy schema with new table while old organization-bound templates still work (if keeping old column temporarily in a transition branch).
+/// 2. Insert link rows: for each existing template with organizationId=X create {organizationId:X, templateId}.
+/// 3. (If previously had organizationId column) After backfill & verification, remove organizationId column from template in a follow-up migration (already removed here).
+/// 4. Update application code to query Organization -> templateLinks -> template.
+model OrganizationAssessmentTemplateLink {
+  id             Int              @id @default(autoincrement())
+  organizationId Int
+  templateId     Int
+  createdAt      DateTime         @default(now())
+  visibility     String?          /// optional classification: PUBLIC / PRIVATE / INTERNAL
+  meta           Json             @default("{}")
+
+  organization   Organization     @relation("OrgTemplateLinks", fields: [organizationId], references: [id], onDelete: Cascade)
+  template       AssessmentTemplate @relation("TemplateOrgLinks", fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, templateId])
+  @@index([organizationId])
+  @@index([templateId])
 }
 
 /// A scheduled execution of a template (جلسه ارزیابی)
