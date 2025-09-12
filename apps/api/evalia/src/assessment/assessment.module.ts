@@ -1,9 +1,15 @@
 import { TemplateController } from './controllers/template.controller';
 import { SectionController } from './controllers/section.controller';
 import { TemplateQuestionController } from './controllers/template-question.controller';
+import { SessionController } from './controllers/session.controller';
+import { AssignmentController } from './controllers/assignment.controller';
+import { ResponseController } from './controllers/response.controller';
 import { TemplateService } from './services/template.service';
 import { SectionService } from './services/section.service';
 import { TemplateQuestionService } from './services/template-question.service';
+import { SessionService } from './services/session.service';
+import { AssignmentService } from './services/assignment.service';
+import { ResponseService } from './services/response.service';
 import { Module } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { QuestionBankService } from './services/question-bank.service';
@@ -25,6 +31,9 @@ import { OptionSetOptionController } from './controllers/option-set-option.contr
     TemplateController,
     SectionController,
     TemplateQuestionController,
+    SessionController,
+    AssignmentController,
+    ResponseController,
   ],
   providers: [
     PrismaService,
@@ -35,6 +44,9 @@ import { OptionSetOptionController } from './controllers/option-set-option.contr
     TemplateService,
     SectionService,
     TemplateQuestionService,
+    SessionService,
+    AssignmentService,
+    ResponseService,
   ],
   exports: [
     QuestionBankService,
@@ -44,6 +56,9 @@ import { OptionSetOptionController } from './controllers/option-set-option.contr
     TemplateService,
     SectionService,
     TemplateQuestionService,
+    SessionService,
+    AssignmentService,
+    ResponseService,
   ],
 })
 export class AssessmentModule {}
