@@ -64,23 +64,6 @@ enum OrgRole {
   MEMBER
 }
 
-/// Generic permission enumerations (مجوزها) - can be extended
-enum PermissionCode {
-  ORG_MANAGE
-  USER_INVITE
-  TEAM_MANAGE
-  DASHBOARD_CONFIGURE
-  ASSESSMENT_TEMPLATE_MANAGE
-  ASSESSMENT_SESSION_MANAGE
-  ASSESSMENT_RESPONSE_VIEW
-  ASSESSMENT_AI_ANALYZE
-  BILLING_VIEW
-  BILLING_MANAGE
-  REPORT_VIEW
-  REPORT_EXPORT
-  NOTIFICATION_MANAGE
-}
-
 /// Assessment lifecycle state (وضعیت ارزیابی)
 enum AssessmentState {
   DRAFT
@@ -202,6 +185,13 @@ enum VerificationPurpose {
   PHONE_VERIFY
   SENSITIVE_ACTION
 }
+  /// Type of AI analysis result (نوع تحلیل هوش مصنوعی)
+  enum AIAnalysisKind {
+    SUMMARY
+      THEME
+      SENTIMENT
+      RISK
+  }
 
 /// Soft delete strategy: each soft-deletable model has deletedAt nullable timestamp
 
@@ -257,7 +247,6 @@ model User {
   createdOrganizations Organization[] @relation("OrganizationsCreated")
   /// Service assignments (facilitator / analysis manager) | تخصیص‌های خدماتی
   serviceAssignments OrganizationServiceAssignment[] @relation("UserServiceAssignments")
-  refreshTokens RefreshToken[]
   /// Increment to invalidate previously issued access tokens (JWT tokenVersion strategy)
   tokenVersion  Int           @default(1)
 
@@ -331,8 +320,6 @@ model OrganizationMembership {
   userId         Int
   organizationId Int
   roles          OrgRole[] @default([MEMBER])
-  /// Extra permission links | مجوزهای اضافه
-  permissions    PermissionOnMembership[] @relation("MembershipPermissions")
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   deletedAt      DateTime?
@@ -344,18 +331,6 @@ model OrganizationMembership {
   // Indexes on array fields are not supported
 }
 
-/// Join table for attaching extra permissions to a membership (مجوزهای اضافه)
-model PermissionOnMembership {
-  id          Int            @id @default(autoincrement())
-  membershipId Int
-  code        PermissionCode
-  createdAt   DateTime       @default(now())
-
-  membership  OrganizationMembership @relation("MembershipPermissions", fields: [membershipId], references: [id], onDelete: Cascade)
-
-  @@unique([membershipId, code])
-  @@index([code])
-}
 
 /// Team within organization (تیم)
 model Team {
@@ -649,7 +624,7 @@ model AIAnalysisJob {
 model AIAnalysisResult {
   id        Int           @id @default(autoincrement())
   jobId     Int
-  kind      String        /// e.g., "SUMMARY", "THEME", "SENTIMENT", "RISK"
+  kind      AIAnalysisKind 
   payload   Json          @default("{}")
   createdAt DateTime      @default(now())
 
@@ -774,27 +749,6 @@ model VerificationCode {
   @@index([expiresAt])
   @@index([consumedAt])
   @@index([identifier, purpose, expiresAt])
-}
-
-/// Persisted refresh tokens for sessions (توکن رفرش ذخیره شده)
-model RefreshToken {
-  id          Int      @id @default(autoincrement())
-  userId      Int
-  jti         String   @unique               /// JWT ID claim stored for reference
-  tokenHash   String   @db.VarChar(128)      /// SHA-256 hash of the raw refresh token (never store raw)
-  ipAddress   String?  @db.VarChar(64)
-  userAgent   String?  @db.VarChar(256)
-  expiresAt   DateTime
-  revokedAt   DateTime?
-  replacedById Int?
-  createdAt   DateTime @default(now())
-
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  replacedBy  RefreshToken? @relation("RefreshTokenReplacement", fields: [replacedById], references: [id])
-  previous    RefreshToken[] @relation("RefreshTokenReplacement")
-
-  @@index([userId])
-  @@index([expiresAt])
 }
 
 // ------------------------------
