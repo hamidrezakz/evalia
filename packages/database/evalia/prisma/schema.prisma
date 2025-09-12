@@ -144,14 +144,6 @@ enum AssetType {
   OTHER
 }
 
-/// Dashboard widget kind (نوع ویجت)
-enum WidgetKind {
-  KPI
-  CHART
-  TABLE
-  TEXT_BLOCK
-  CUSTOM
-}
 
 /// Platform-level global roles (نقش های پلتفرمی جهانی)
 enum PlatformRole {
@@ -185,13 +177,13 @@ enum VerificationPurpose {
   PHONE_VERIFY
   SENSITIVE_ACTION
 }
-  /// Type of AI analysis result (نوع تحلیل هوش مصنوعی)
-  enum AIAnalysisKind {
-    SUMMARY
-      THEME
-      SENTIMENT
-      RISK
-  }
+/// Type of AI analysis result (نوع تحلیل هوش مصنوعی)
+enum AIAnalysisKind {
+  SUMMARY
+  THEME
+  SENTIMENT
+  RISK
+}
 
 /// Soft delete strategy: each soft-deletable model has deletedAt nullable timestamp
 
@@ -278,10 +270,9 @@ model Organization {
 
   memberships    OrganizationMembership[]      @relation("OrganizationMemberships")
   teams          Team[]                        @relation("OrganizationTeams")
-  questionBanks  QuestionBank[]                @relation("OrganizationQuestionBanks")
-  templateLinks  OrganizationAssessmentTemplateLink[] @relation("OrgTemplateLinks")
+  // (v2 removed) organization-linked question banks / template links
   sessions       AssessmentSession[]           @relation("OrganizationAssessmentSessions")
-  optionSets     OptionSet[]                   @relation("OrganizationOptionSets")
+  // (v2 removed) organization-linked option sets
   invites        Invitation[]                  @relation("InvitationOrg")
   notifications  Notification[]                @relation("OrganizationNotifications")
   auditLogs      AuditLog[]                    @relation("OrganizationAuditLogs")
@@ -400,21 +391,19 @@ model NavigationItem {
 // ------------------------------
 
 /// Bank of questions - can be global (organizationId null) or org-specific (بانک سوال)
+/// Global question bank (نسخه اول: بدون سازمان) - v2 می‌توان org scope افزود
 model QuestionBank {
-  id             Int             @id @default(autoincrement())
-  organizationId Int?
-  name           String
-  description    String?
-  isSystem       Boolean         @default(false)
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  deletedAt      DateTime?
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
 
-  organization   Organization?   @relation("OrganizationQuestionBanks", fields: [organizationId], references: [id])
-  questions      Question[]
+  questions   Question[]
 
-  @@index([organizationId])
-  @@unique([organizationId, name])
+  @@index([name])
 }
 
 /// A single question in a bank (سوال)
@@ -458,43 +447,22 @@ model QuestionOption {
   @@index([questionId])
 }
 
-/// ------------------------------
-/// Option Set Normalization (مجموعه گزینه های قابل استفاده مجدد)
-/// ------------------------------
-/// New models to allow reusing the same option list across many questions & organizations.
-/// Migration Strategy (پیشنهاد مهاجرت):
-/// 1. Deploy this schema (adds OptionSet / OptionSetOption + nullable Question.optionSetId).
-/// 2. Identify repeated groups of QuestionOption rows (same (value,label,order) pattern) across questions.
-///    You can hash JSON array of sorted options per question to cluster.
-/// 3. For each distinct pattern create one OptionSet (organizationId = NULL for globally shared, or set org if proprietary).
-/// 4. Insert OptionSetOption rows for that set preserving order.
-/// 5. Update all Questions in that cluster: set optionSetId = created OptionSet.id.
-/// 6. (App logic) When optionSetId IS NOT NULL ignore QuestionOption rows and serve OptionSet.options instead.
-/// 7. After full backfill & verification you may: (a) hard-delete / archive duplicate per-question QuestionOption rows
-///    or (b) keep them temporarily for rollback window.
-/// 8. Eventually (optional) deprecate QuestionOption model by making optionSetId required for MCQ/SCQ types.
-/// Notes:
-/// - Mixed state supported: some legacy questions still use QuestionOption; newer use OptionSet.
-/// - Access control: OptionSet.organizationId NULL means globally shareable; otherwise restricted.
-/// - You can later add versioning fields if option evolutions must be tracked.
+/// Option sets (مجموعه گزینه‌ها) – reusable shared lists (global only در نسخه اول)
 model OptionSet {
-  id             Int           @id @default(autoincrement())
-  organizationId Int?          /// NULL = global/shared (سراسری)
-  name           String
-  code           String?       @unique /// Optional stable code/slug
-  description    String?
-  isSystem       Boolean       @default(false)
-  meta           Json          @default("{}")
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  deletedAt      DateTime?
+  id          Int             @id @default(autoincrement())
+  name        String          @unique
+  code        String?         @unique
+  description String?
+  isSystem    Boolean         @default(false)
+  meta        Json            @default("{}")
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  deletedAt   DateTime?
 
-  organization   Organization? @relation("OrganizationOptionSets", fields: [organizationId], references: [id])
-  options        OptionSetOption[] @relation("OptionSetOptions")
-  questions      Question[]    @relation("QuestionsUsingOptionSet")
+  options     OptionSetOption[] @relation("OptionSetOptions")
+  questions   Question[]        @relation("QuestionsUsingOptionSet")
 
-  @@index([organizationId])
-  @@unique([organizationId, name])
+  @@index([name])
 }
 
 /// Single option inside an OptionSet
@@ -526,8 +494,7 @@ model AssessmentTemplate {
   updatedAt      DateTime              @updatedAt
   deletedAt      DateTime?
 
-  /// Link records to organizations allowed to use this template
-  organizationLinks OrganizationAssessmentTemplateLink[] @relation("TemplateOrgLinks")
+  // (v2 removed) organizationLinks join table
   sections       AssessmentTemplateSection[] @relation("TemplateSections")
   sessions       AssessmentSession[]         @relation("TemplateSessions")
 
@@ -571,27 +538,7 @@ model AssessmentTemplateQuestion {
   @@index([questionId])
 }
 
-/// Join table for many-to-many relation between Organization and AssessmentTemplate
-/// Migration steps (safe rollout):
-/// 1. Deploy schema with new table while old organization-bound templates still work (if keeping old column temporarily in a transition branch).
-/// 2. Insert link rows: for each existing template with organizationId=X create {organizationId:X, templateId}.
-/// 3. (If previously had organizationId column) After backfill & verification, remove organizationId column from template in a follow-up migration (already removed here).
-/// 4. Update application code to query Organization -> templateLinks -> template.
-model OrganizationAssessmentTemplateLink {
-  id             Int              @id @default(autoincrement())
-  organizationId Int
-  templateId     Int
-  createdAt      DateTime         @default(now())
-  visibility     String?          /// optional classification: PUBLIC / PRIVATE / INTERNAL
-  meta           Json             @default("{}")
-
-  organization   Organization     @relation("OrgTemplateLinks", fields: [organizationId], references: [id], onDelete: Cascade)
-  template       AssessmentTemplate @relation("TemplateOrgLinks", fields: [templateId], references: [id], onDelete: Cascade)
-
-  @@unique([organizationId, templateId])
-  @@index([organizationId])
-  @@index([templateId])
-}
+// (v2 removed) OrganizationAssessmentTemplateLink join model
 
 /// A scheduled execution of a template (جلسه ارزیابی)
 model AssessmentSession {
