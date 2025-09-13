@@ -14,9 +14,9 @@ import {
   useCreateOptionSet,
   useUpdateOptionSet,
   useDeleteOptionSet,
-  useOptionSetOptions,
-  useBulkReplaceOptionSetOptions,
 } from "../api/hooks";
+import { OptionSetOptionsEditor } from "./option-set-options-editor";
+import { useOptionSetOptions } from "../api/hooks";
 
 interface OptionSetPanelProps {
   selectedOptionSetId?: number | null;
@@ -34,7 +34,6 @@ export const OptionSetPanel: React.FC<OptionSetPanelProps> = ({
   const createMutation = useCreateOptionSet();
   const updateMutation = useUpdateOptionSet();
   const deleteMutation = useDeleteOptionSet();
-  const bulkOptionsMutation = useBulkReplaceOptionSetOptions();
   const [creating, setCreating] = React.useState(false);
   const [newName, setNewName] = React.useState("");
   const [editingId, setEditingId] = React.useState<number | null>(null);
@@ -42,24 +41,15 @@ export const OptionSetPanel: React.FC<OptionSetPanelProps> = ({
   const [editingOptions, setEditingOptions] = React.useState(false);
   const selected =
     data?.data?.find((o) => o.id === selectedOptionSetId) || null;
-  const { data: optionsData } = useOptionSetOptions(
-    selectedOptionSetId ?? null
-  );
-  const [optionsDraft, setOptionsDraft] = React.useState<
-    { value: string; label: string; order?: number }[]
-  >([]);
+  const optionsQuery = useOptionSetOptions(selected?.id ?? null);
 
+  // Auto open editor if a set is selected but has zero options loaded
   React.useEffect(() => {
-    if (editingOptions && optionsData) {
-      setOptionsDraft(
-        optionsData.map((o) => ({
-          value: o.value,
-          label: o.label,
-          order: o.order,
-        }))
-      );
+    if (selected && optionsQuery.data && optionsQuery.data.length === 0) {
+      setEditingOptions(true);
     }
-  }, [editingOptions, optionsData]);
+  }, [selected, optionsQuery.data]);
+  // moved option editing logic to child editor
 
   function handleCreate() {
     if (!newName.trim()) return;
@@ -85,13 +75,7 @@ export const OptionSetPanel: React.FC<OptionSetPanelProps> = ({
       }
     );
   }
-  function handleSaveOptions() {
-    if (!selectedOptionSetId) return;
-    bulkOptionsMutation.mutate(
-      { optionSetId: selectedOptionSetId, body: { options: optionsDraft } },
-      { onSuccess: () => setEditingOptions(false) }
-    );
-  }
+  // removed inline save function
 
   return (
     <Panel className={className}>
@@ -212,119 +196,53 @@ export const OptionSetPanel: React.FC<OptionSetPanelProps> = ({
         {selected && (
           <div className="border rounded-md p-3 space-y-3">
             <div className="flex items-center justify-between">
-              <h4 className="font-medium text-sm">
-                گزینه ها ({optionsData?.length || 0})
-              </h4>
-              {!editingOptions && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setEditingOptions(true)}>
-                  ویرایش گزینه ها
-                </Button>
-              )}
+              <h4 className="font-medium text-sm">گزینه ها</h4>
+              <Button
+                size="sm"
+                variant={editingOptions ? "secondary" : "outline"}
+                onClick={() => setEditingOptions((e) => !e)}>
+                {editingOptions ? "بستن" : "ویرایش"}
+              </Button>
             </div>
             {!editingOptions && (
-              <ul className="text-xs space-y-1 max-h-40 overflow-auto">
-                {optionsData?.map((op) => (
-                  <li key={op.id} className="flex items-center gap-2">
-                    <span className="text-muted-foreground">
-                      {op.order ?? "-"}
-                    </span>
-                    <span>{op.label}</span>
-                    <code className="px-1 bg-muted rounded text-[10px]">
-                      {op.value}
-                    </code>
-                  </li>
-                ))}
-              </ul>
+              <div className="space-y-2">
+                {optionsQuery.isLoading && (
+                  <p className="text-[11px] text-muted-foreground">
+                    در حال بارگذاری...
+                  </p>
+                )}
+                {!optionsQuery.isLoading && (
+                  <>
+                    {optionsQuery.data && optionsQuery.data.length > 0 && (
+                      <ul className="text-xs space-y-1 max-h-44 overflow-auto">
+                        {optionsQuery.data.map((op) => (
+                          <li key={op.id} className="flex items-center gap-2">
+                            <span className="text-muted-foreground w-5 text-[10px]">
+                              {op.order ?? "-"}
+                            </span>
+                            <span className="flex-1 truncate">{op.label}</span>
+                            <code className="px-1 bg-muted rounded text-[10px]">
+                              {op.value}
+                            </code>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {optionsQuery.data && optionsQuery.data.length === 0 && (
+                      <p className="text-[11px] text-muted-foreground">
+                        هنوز گزینه‌ای ثبت نشده است. روی «ویرایش» کلیک کنید تا
+                        اولین گزینه را اضافه کنید.
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
             )}
             {editingOptions && (
-              <div className="space-y-2">
-                {optionsDraft.map((op, idx) => (
-                  <div key={idx} className="flex items-center gap-2 text-xs">
-                    <Input
-                      value={op.label}
-                      onChange={(e) =>
-                        setOptionsDraft((d) =>
-                          d.map((o, i) =>
-                            i === idx ? { ...o, label: e.target.value } : o
-                          )
-                        )
-                      }
-                      className="h-8"
-                      placeholder="label"
-                    />
-                    <Input
-                      value={op.value}
-                      onChange={(e) =>
-                        setOptionsDraft((d) =>
-                          d.map((o, i) =>
-                            i === idx ? { ...o, value: e.target.value } : o
-                          )
-                        )
-                      }
-                      className="h-8 w-28"
-                      placeholder="value"
-                    />
-                    <Input
-                      value={op.order?.toString() || ""}
-                      onChange={(e) =>
-                        setOptionsDraft((d) =>
-                          d.map((o, i) =>
-                            i === idx
-                              ? {
-                                  ...o,
-                                  order: e.target.value
-                                    ? Number(e.target.value)
-                                    : undefined,
-                                }
-                              : o
-                          )
-                        )
-                      }
-                      className="h-8 w-16"
-                      placeholder="order"
-                    />
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() =>
-                        setOptionsDraft((d) => d.filter((_, i) => i !== idx))
-                      }>
-                      🗑
-                    </Button>
-                  </div>
-                ))}
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() =>
-                    setOptionsDraft((d) => [
-                      ...d,
-                      { label: "", value: "", order: d.length },
-                    ])
-                  }>
-                  افزودن گزینه
-                </Button>
-                <div className="flex gap-2 pt-2">
-                  <Button
-                    size="sm"
-                    onClick={handleSaveOptions}
-                    isLoading={bulkOptionsMutation.isPending}>
-                    ذخیره
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => {
-                      setEditingOptions(false);
-                      setOptionsDraft([]);
-                    }}>
-                    لغو
-                  </Button>
-                </div>
-              </div>
+              <OptionSetOptionsEditor
+                optionSetId={selected.id}
+                onSaved={() => setEditingOptions(false)}
+              />
             )}
           </div>
         )}
