@@ -2,7 +2,13 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Tag, List, Type } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Panel,
+  PanelContent,
+} from "@/components/ui/panel";
 import {
   useOptionSetOptions,
   useBulkReplaceOptionSetOptions,
@@ -13,6 +19,7 @@ interface OptionSetOptionsEditorProps {
   onSaved?: () => void;
   className?: string;
 }
+
 type DraftItem = { id?: number; value: string; label: string; order?: number };
 
 export const OptionSetOptionsEditor: React.FC<OptionSetOptionsEditorProps> = ({
@@ -24,19 +31,22 @@ export const OptionSetOptionsEditor: React.FC<OptionSetOptionsEditorProps> = ({
   const bulkMutation = useBulkReplaceOptionSetOptions();
   const [draft, setDraft] = React.useState<DraftItem[]>([]);
   const [dirty, setDirty] = React.useState(false);
-  const [filter, setFilter] = React.useState("");
-  const [compact, setCompact] = React.useState(false);
 
+  // Initialize / update draft from server data when not dirty.
   React.useEffect(() => {
-    if (data && !dirty) {
-      setDraft(
-        data.map((o) => ({
+    if (!dirty) {
+      const arr = Array.isArray(data) ? data : data ? (data as any).data : [];
+      if (arr && Array.isArray(arr)) {
+        const next = arr.map((o: any) => ({
           id: o.id,
           value: o.value,
           label: o.label,
           order: o.order,
-        }))
-      );
+        }));
+        setDraft(next.length ? next : [{ value: "", label: "", order: 0 }]);
+      } else {
+        setDraft([{ value: "", label: "", order: 0 }]);
+      }
     }
   }, [data, dirty]);
   function mark(fn: (prev: DraftItem[]) => DraftItem[]) {
@@ -70,15 +80,19 @@ export const OptionSetOptionsEditor: React.FC<OptionSetOptionsEditorProps> = ({
   }
   function reset() {
     setDirty(false);
-    if (data)
+    const arr = Array.isArray(data) ? data : data ? (data as any).data : [];
+    if (arr && Array.isArray(arr) && arr.length) {
       setDraft(
-        data.map((o) => ({
+        arr.map((o: any) => ({
           id: o.id,
           value: o.value,
           label: o.label,
           order: o.order,
         }))
       );
+    } else {
+      setDraft([{ value: "", label: "", order: 0 }]);
+    }
   }
   function save() {
     bulkMutation.mutate(
@@ -101,121 +115,107 @@ export const OptionSetOptionsEditor: React.FC<OptionSetOptionsEditorProps> = ({
     );
   }
 
-  const filtered = draft.filter(
-    (d) => !filter || d.label.includes(filter) || d.value.includes(filter)
-  );
+  // Remove filter/search feature
   const invalid = draft.some((d) => !d.value.trim() || !d.label.trim());
 
   return (
-    <div className={className}>
-      <div className="flex flex-wrap gap-2 items-center mb-3">
-        <Input
-          placeholder="فیلتر"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          className="h-8 w-40"
-        />
-        <Button size="sm" variant="secondary" onClick={add}>
-          افزودن
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => setCompact((c) => !c)}>
-          {compact ? "نمای کامل" : "نمای فشرده"}
-        </Button>
-        <div className="ms-auto flex gap-2">
-          <Button
-            size="sm"
-            onClick={save}
-            disabled={!dirty || invalid}
-            isLoading={bulkMutation.isPending}>
-            ذخیره
-          </Button>
-          <Button size="sm" variant="ghost" onClick={reset} disabled={!dirty}>
-            ریست
-          </Button>
+    <Panel className={className}>
+      <PanelContent className="flex-col gap-2 bg-transparent px-0">
+        <div className="flex flex-wrap gap-2 items-center">
+          <div className="ms-auto flex gap-2"></div>
         </div>
-      </div>
-      {isLoading && (
-        <div className="space-y-2">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-9" />
-          ))}
-        </div>
-      )}
-      {!isLoading && (
-        <div className="flex flex-col gap-2 max-h-80 overflow-auto pe-1">
-          {filtered.map((op, i) => (
-            <div
-              key={i}
-              className={`grid ${
-                compact
-                  ? "grid-cols-[32px_1fr_1fr_110px]"
-                  : "grid-cols-[32px_1fr_1fr_90px_90px]"
-              } items-center gap-2 border rounded-md p-2 bg-background/40`}>
-              <span className="text-[10px] text-muted-foreground w-6 text-center">
-                {op.order}
-              </span>
-              <Input
-                value={op.label}
-                onChange={(e) => update(i, { label: e.target.value })}
-                placeholder="label"
-                className="h-8 text-xs"
-              />
-              <Input
-                value={op.value}
-                onChange={(e) => update(i, { value: e.target.value })}
-                placeholder="value"
-                className="h-8 text-xs"
-              />
-              {!compact && (
-                <Input
-                  value={op.order?.toString() || ""}
-                  onChange={(e) =>
-                    update(i, {
-                      order: e.target.value
-                        ? Number(e.target.value)
-                        : undefined,
-                    })
-                  }
-                  placeholder="order"
-                  className="h-8 text-xs"
-                />
-              )}
-              <div className="flex items-center gap-1 justify-end">
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => move(i, -1)}
-                  disabled={i === 0}>
-                  ↑
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => move(i, 1)}
-                  disabled={i === draft.length - 1}>
-                  ↓
-                </Button>
-                <Button size="icon" variant="ghost" onClick={() => remove(i)}>
-                  🗑
-                </Button>
+        {isLoading && (
+          <div className="space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-9" />
+            ))}
+          </div>
+        )}
+        {!isLoading && (
+          <div className="@container flex flex-col gap-2 max-h-160 overflow-auto">
+            {draft.map((op, i) => (
+              <div
+                key={i}
+                className="grid grid-cols-1 @xl:grid-cols-[minmax(60px,80px)_2fr_minmax(80px,120px)] items-center gap-2 border rounded-md p-2 bg-background/40">
+                <div className="relative flex items-center">
+                  <Tag className="absolute left-2 w-3 h-3 text-muted-foreground pointer-events-none" />
+                  <Input
+                    value={op.label}
+                    onChange={(e) => update(i, { label: e.target.value })}
+                    placeholder="label"
+                    className="h-8 text-xs pl-8 flex-1"
+                  />
+                </div>
+                <div className="relative flex items-center">
+                  <Type className="absolute left-2 top-2 w-3 h-3 text-muted-foreground pointer-events-none" />
+                  <Textarea
+                    value={op.value}
+                    onChange={(e) => update(i, { value: e.target.value })}
+                    placeholder="value"
+                    className="min-h-8 text-xs pl-8 flex-1 resize-y"
+                  />
+                </div>
+
+                {/* Order is now only shown as a number, changed by arrows */}
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex-shrink-0 text-xs text-muted-foreground mr-0.5">
+                    شماره گزینه:{" "}
+                    {(typeof op.order === "number" ? op.order : 0) + 1}
+                  </div>
+                  <div className="flex items-center gap-0 justify-end">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => move(i, -1)}
+                      disabled={i === 0}>
+                      ↑
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => move(i, 1)}
+                      disabled={i === draft.length - 1}>
+                      ↓
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => remove(i)}>
+                      🗑
+                    </Button>
+                  </div>
+                </div>
               </div>
+            ))}
+            <div className="flex gap-1 flex-row space-between mt-1">
+              {" "}
+              <div></div>
+              <Button
+                size="sm"
+                onClick={save}
+                disabled={!dirty || invalid}
+                isLoading={bulkMutation.isPending}>
+                ذخیره
+              </Button>
+              <Button size="sm" variant="outline" onClick={add}>
+                افزودن
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={reset}
+                disabled={!dirty}>
+                ریست
+              </Button>
             </div>
-          ))}
-          {!filtered.length && (
-            <div className="text-center text-[11px] text-muted-foreground py-4">
-              موردی یافت نشد
-            </div>
-          )}
-        </div>
-      )}
-      {invalid && (
-        <p className="text-[10px] text-destructive mt-2">
-          همه گزینه ها باید label و value داشته باشند.
-        </p>
-      )}
-    </div>
+            {!draft.length && (
+              <div className="text-center text-[11px] text-muted-foreground py-4">
+                موردی یافت نشد
+              </div>
+            )}
+          </div>
+        )}
+      </PanelContent>
+    </Panel>
   );
 };

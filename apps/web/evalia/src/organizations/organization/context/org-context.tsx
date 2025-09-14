@@ -8,7 +8,7 @@ import React, {
   useCallback,
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useAuthSession } from "../../../auth/event-context";
+import { useAuthSession } from "../../../app/auth/event-context";
 import { useOrganizations } from "./queries";
 import type { Organization } from "@/organizations/organization/types/organization.types";
 import type { OrgStateValue } from "./types";

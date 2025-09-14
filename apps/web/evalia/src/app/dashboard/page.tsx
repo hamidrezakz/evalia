@@ -11,7 +11,7 @@ import {
   PanelContent,
   PanelFooter,
 } from "@/components/ui/panel";
-import { useAuthSession } from "@/auth/event-context";
+import { useAuthSession } from "@/app/auth/event-context";
 import { useOrgState } from "@/organizations/organization/context";
 import { useUserDataContext } from "@/users/context";
 import { useNavigationContext } from "@/navigation/context";

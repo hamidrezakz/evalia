@@ -1,6 +1,6 @@
 "use client";
 import React, { createContext, useContext, useMemo, useCallback } from "react";
-import { useAuthSession } from "../../auth/event-context/session-context";
+import { useAuthSession } from "../../app/auth/event-context/session-context";
 import { useUserData } from "./queries";
 import type { UserDataContextValue } from "./types";
 
