@@ -9,7 +9,8 @@ import React, {
 } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { decodeAccessToken, refreshTokens } from "@/lib/api.client";
+import { refreshTokens } from "@/lib/api.client";
+import { decodeJwtRaw, getJwtExp } from "@/lib/jwt-utils";
 import { checkAccessToken } from "@/lib/api.auth";
 import { tokenStorage } from "@/lib/token-storage";
 import type { AuthSessionValue, AccessTokenPayload } from "./types";
@@ -29,7 +30,7 @@ export const AuthSessionProvider: React.FC<{
 
   const decoded = useMemo<AccessTokenPayload | null>(() => {
     if (!tokens?.accessToken) return null;
-    return decodeAccessToken<AccessTokenPayload>();
+    return decodeJwtRaw<AccessTokenPayload>(tokens.accessToken);
   }, [tokens?.accessToken]);
 
   const userId = useMemo<number | null>(() => {
@@ -44,10 +45,11 @@ export const AuthSessionProvider: React.FC<{
   }, [decoded]);
 
   const isTokenExpired = useCallback(() => {
-    if (!decoded?.exp) return false;
+    const exp = tokens?.accessToken ? getJwtExp(tokens.accessToken) : null;
+    if (!exp) return false;
     const now = Date.now() / 1000;
-    return decoded.exp < now + 30;
-  }, [decoded?.exp]);
+    return exp < now + 30;
+  }, [tokens?.accessToken]);
 
   const signOut = useCallback(() => {
     tokenStorage.clear();
@@ -135,16 +137,17 @@ export const AuthSessionProvider: React.FC<{
 
   // Proactive refresh timer
   useEffect(() => {
-    if (!decoded?.exp) return;
+    const exp = tokens?.accessToken ? getJwtExp(tokens.accessToken) : null;
+    if (!exp) return;
     const lead = 60; // seconds before expiry
     const now = Date.now() / 1000;
-    const delay = (decoded.exp - lead - now) * 1000;
+    const delay = (exp - lead - now) * 1000;
     if (delay <= 0) return;
     const id = setTimeout(() => {
       attemptRefresh();
     }, delay);
     return () => clearTimeout(id);
-  }, [decoded?.exp, attemptRefresh]);
+  }, [tokens?.accessToken, attemptRefresh]);
 
   // Storage sync (multi-tab)
   useEffect(() => {

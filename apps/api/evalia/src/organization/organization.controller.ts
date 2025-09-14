@@ -11,14 +11,12 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Request } from 'express';
-import { UseGuards } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+// Global JwtAuthGuard is applied via APP_GUARD; no need to use @UseGuards here.
 import { OrganizationService } from './organization.service';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { ListOrganizationsQueryDto } from './dto/list-organizations.dto';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
 import { ChangeOrganizationStatusDto } from './dto/change-org-status.dto';
-@UseGuards(JwtAuthGuard)
 @Controller('organizations')
 export class OrganizationController {
   constructor(private service: OrganizationService) {}

@@ -17,7 +17,7 @@ import { OptionalJwtGuard } from '../common/optional-jwt.guard';
   imports: [
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.register({
-      secret: process.env.JWT_SECRET || 'dev_jwt_secret_change_me',
+      secret: process.env.JWT_ACCESS_SECRET || 'dev_jwt_secret_change_me',
       signOptions: { expiresIn: '15m' },
     }),
   ],

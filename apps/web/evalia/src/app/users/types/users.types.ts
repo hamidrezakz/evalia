@@ -1,15 +1,12 @@
 import { z } from "zod";
+// UserStatus type is imported below via type-only import
 
 /**
  * Canonical user status enum (mirror backend). Adjust if backend enum changes.
  */
-export const userStatusEnum = z.enum([
-  "ACTIVE",
-  "INACTIVE",
-  "PENDING",
-  "BLOCKED",
-]);
-export type UserStatus = z.infer<typeof userStatusEnum>;
+import { UserStatusEnum } from "@/lib/enums";
+export const userStatusEnum = z.enum([...UserStatusEnum.values]);
+export type UserStatus = import("@/lib/enums").UserStatus;
 
 /**
  * Organization membership (flattened) for a user.
