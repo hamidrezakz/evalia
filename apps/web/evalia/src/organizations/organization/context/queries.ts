@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetchUserOrganizations } from "./api";
-import type { Organization } from "@/app/organizations/organization/types/organization.types";
+import type { Organization } from "@/organizations/organization/types/organization.types";
 
 const STALE_TIME_ORGS = 2 * 60 * 1000; // 2 minutes
 

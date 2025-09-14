@@ -1,8 +1,8 @@
 "use client";
 import * as React from "react";
-import { useOrgState } from "@/app/organizations/organization/context/org-context";
-import { useUserDataContext } from "@/app/users/context/context";
-import { useNavigationContext } from "@/app/navigation/context/navigation-context";
+import { useOrgState } from "@/organizations/organization/context/org-context";
+import { useUserDataContext } from "@/users/context/context";
+import { useNavigationContext } from "@/navigation/context/navigation-context";
 
 import { navSecondaryStatic } from "./sidebar-data/constants";
 import type {
@@ -54,7 +54,10 @@ export function useAppSidebarData(): AppSidebarData {
     ? {
         name: typeof user.fullName === "string" ? user.fullName : "",
         email: typeof user.email === "string" ? user.email : "",
-        avatar: typeof user.avatar === "string" ? user.avatar : "/avatars/default.png",
+        avatar:
+          typeof user.avatar === "string"
+            ? user.avatar
+            : "/avatars/default.png",
         phoneNumber: typeof user.phone === "string" ? user.phone : undefined,
       }
     : undefined;

@@ -1,6 +1,6 @@
 "use client";
 import React, { createContext, useContext, useMemo, useCallback } from "react";
-import { useOrgState } from "@/app/organizations/organization/context/org-context";
+import { useOrgState } from "@/organizations/organization/context/org-context";
 import { useNavigationTree } from "./queries";
 import type { NavigationContextValue } from "./types";
 import type { NavigationItemTree } from "../types/navigation.types";

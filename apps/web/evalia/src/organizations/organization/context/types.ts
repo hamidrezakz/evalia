@@ -1,4 +1,4 @@
-import type { Organization } from "@/app/organizations/organization/types/organization.types";
+import type { Organization } from "@/organizations/organization/types/organization.types";
 
 export interface OrgStateValue {
   organizations: Organization[];

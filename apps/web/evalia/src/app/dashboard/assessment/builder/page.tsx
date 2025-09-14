@@ -1,5 +1,5 @@
 import React from "react";
-import { QuestionBuilderContainer } from "@/app/assessment/components";
+import { QuestionBuilderContainer } from "@/assessment/components";
 import {
   Panel,
   PanelHeader,

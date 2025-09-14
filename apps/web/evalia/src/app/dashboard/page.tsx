@@ -11,10 +11,10 @@ import {
   PanelContent,
   PanelFooter,
 } from "@/components/ui/panel";
-import { useAuthSession } from "@/app/auth/event-context";
-import { useOrgState } from "@/app/organizations/organization/context";
-import { useUserDataContext } from "@/app/users/context";
-import { useNavigationContext } from "@/app/navigation/context";
+import { useAuthSession } from "@/auth/event-context";
+import { useOrgState } from "@/organizations/organization/context";
+import { useUserDataContext } from "@/users/context";
+import { useNavigationContext } from "@/navigation/context";
 
 // Helper
 const short = (t: string | null | undefined) =>

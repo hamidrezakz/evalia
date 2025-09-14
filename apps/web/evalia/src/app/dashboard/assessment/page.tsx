@@ -11,7 +11,7 @@ import {
   RecentQuestionsPanel,
   QuestionBankListPanel,
   OptionSetPanel,
-} from "@/app/assessment/components";
+} from "@/assessment/components";
 
 export const metadata = { title: "ارزیابی - نمای کلی" };
 

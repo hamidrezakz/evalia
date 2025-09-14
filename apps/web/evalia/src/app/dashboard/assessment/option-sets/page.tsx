@@ -1,8 +1,5 @@
 import React from "react";
-import {
-  OptionSetPanel,
-  QuestionBankListPanel,
-} from "@/app/assessment/components";
+import { OptionSetPanel, QuestionBankListPanel } from "@/assessment/components";
 import {
   Panel,
   PanelHeader,

@@ -4,10 +4,10 @@ import { SiteHeader } from "@/app/dashboard/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { MobileSidebarAutoClose } from "@/app/dashboard/components/mobile-sidebar-auto-close";
 // Replaced legacy AuthProvider with modular providers
-import { AuthSessionProvider } from "@/app/auth/event-context";
-import { OrgProvider } from "@/app/organizations/organization/context";
-import { UserDataProvider } from "@/app/users/context";
-import { NavigationProvider } from "@/app/navigation/context";
+import { AuthSessionProvider } from "@/auth/event-context";
+import { OrgProvider } from "@/organizations/organization/context";
+import { UserDataProvider } from "@/users/context";
+import { NavigationProvider } from "@/navigation/context";
 
 import { ReactNode, Suspense } from "react";
 

@@ -8,7 +8,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Panel } from "@/components/ui/panel";
-import { OrganizationsList } from "@/app/organizations/organization/components/OrganizationsList";
+import { OrganizationsList } from "@/organizations/organization/components/OrganizationsList";
 
 export default function DashboardOrganizationsPage() {
   return (

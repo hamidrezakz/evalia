@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useCallback, useMemo } from "react";
-import { useOrgState } from "@/app/organizations/organization/context/org-context";
+import { useOrgState } from "@/organizations/organization/context/org-context";
 import type { OrgAccount as SidebarOrgAccount } from "./sidebar-data/types";
 import {
   DropdownMenu,

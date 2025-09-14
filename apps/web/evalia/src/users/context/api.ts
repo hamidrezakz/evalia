@@ -1,4 +1,4 @@
-import { getUser } from "@/app/users/api/users.api";
+import { getUser } from "@/users/api/users.api";
 import type { AuthUser } from "./types";
 
 export async function fetchUserById(userId: number): Promise<AuthUser | null> {

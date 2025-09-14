@@ -8,7 +8,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Panel } from "@/components/ui/panel";
-import { UsersList } from "@/app/users/components";
+import { UsersList } from "@/users/components";
 
 export default function DashboardUsersPage() {
   return (
