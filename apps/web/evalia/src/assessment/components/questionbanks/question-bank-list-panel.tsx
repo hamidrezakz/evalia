@@ -8,12 +8,32 @@ import {
   PanelAction,
   PanelDescription,
 } from "@/components/ui/panel";
-import { Library, ListOrdered, Search, PlusCircle, Edit } from "lucide-react";
+import {
+  Library,
+  ListOrdered,
+  Search,
+  PlusCircle,
+  Edit,
+  Save,
+  X,
+  Trash2,
+} from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { fadeSlideUp, listItem, growY } from "@/lib/motion/presets";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
 import {
   useQuestionBanks,
   useCreateQuestionBank,
@@ -86,7 +106,10 @@ export const QuestionBankListPanel: React.FC<QuestionBankListPanelProps> = ({
         <PanelDescription>مدیریت بانک‌های سوالات</PanelDescription>
         <PanelAction>
           {!creating && (
-            <Button size="sm" onClick={() => setCreating(true)}>
+            <Button
+              size="sm"
+              onClick={() => setCreating(true)}
+              icon={<PlusCircle className="w-4 h-4" />}>
               ایجاد
             </Button>
           )}
@@ -105,10 +128,6 @@ export const QuestionBankListPanel: React.FC<QuestionBankListPanelProps> = ({
               />
               <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
             </div>
-            <Button variant="outline" size="sm" onClick={() => refetch()}>
-              <Search className="w-4 h-4 mr-1" />
-              جستجو
-            </Button>
           </div>
           {/* Create form expand/collapse animation */}
           <AnimatePresence initial={false}>
@@ -124,13 +143,14 @@ export const QuestionBankListPanel: React.FC<QuestionBankListPanelProps> = ({
                     onChange={(e) => setNewName(e.target.value)}
                     className="pl-8"
                   />
-                  <PlusCircle className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                  <Library className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
                 </div>
                 <Button
                   size="sm"
                   onClick={handleCreate}
-                  isLoading={createMutation.isPending}>
-                  <PlusCircle className="w-2 h-2" />
+                  isLoading={createMutation.isPending}
+                  disabled={!newName.trim()}
+                  icon={<PlusCircle className="w-4 h-4" />}>
                   ثبت
                 </Button>
                 <Button
@@ -139,9 +159,8 @@ export const QuestionBankListPanel: React.FC<QuestionBankListPanelProps> = ({
                   onClick={() => {
                     setCreating(false);
                     setNewName("");
-                  }}>
-                  انصراف
-                </Button>
+                  }}
+                  icon={<X className="w-4 h-4" />}></Button>
               </motion.div>
             )}
           </AnimatePresence>
@@ -176,11 +195,11 @@ export const QuestionBankListPanel: React.FC<QuestionBankListPanelProps> = ({
                         </div>
                       ) : (
                         <>
-                          <span className="truncate flex items-center gap-1">
+                          <span className="truncate flex items-center gap-2">
                             <Library className="w-4 h-4 text-muted-foreground" />
                             {b.name}
                           </span>
-                          <span className="flex items-center gap-1">
+                          <span className="flex items-center gap-2">
                             <BankCountBadge bankId={b.id} />
                           </span>
                         </>
@@ -192,7 +211,8 @@ export const QuestionBankListPanel: React.FC<QuestionBankListPanelProps> = ({
                           size="sm"
                           variant="secondary"
                           onClick={handleSaveEdit}
-                          isLoading={updateMutation.isPending}>
+                          isLoading={updateMutation.isPending}
+                          icon={<Save className="w-4 h-4" />}>
                           ذخیره
                         </Button>
                         <Button
@@ -201,24 +221,54 @@ export const QuestionBankListPanel: React.FC<QuestionBankListPanelProps> = ({
                           onClick={() => {
                             setEditingId(null);
                             setEditName("");
-                          }}>
-                          لغو
-                        </Button>
+                          }}
+                          icon={<X className="w-4 h-4" />}></Button>
                       </div>
                     ) : (
                       <div className="flex items-center gap-1">
                         <Button
                           size="icon"
                           variant="ghost"
-                          onClick={() => handleEdit(b.id, b.name)}>
-                          ✎
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => deleteMutation.mutate(b.id)}>
-                          🗑
-                        </Button>
+                          onClick={() => handleEdit(b.id, b.name)}
+                          icon={<Edit className="w-4 h-4" />}
+                          aria-label="ویرایش"
+                        />
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={(e) => e.stopPropagation()}
+                              icon={<Trash2 className="w-4 h-4" />}
+                              aria-label="حذف"
+                            />
+                          </AlertDialogTrigger>
+                          <AlertDialogContent
+                            onClick={(e) => e.stopPropagation()}>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>حذف بانک سوال</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                آیا از حذف این بانک مطمئن هستید؟ این عملیات
+                                غیرقابل بازگشت است.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>انصراف</AlertDialogCancel>
+                              <AlertDialogAction
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                onClick={() => deleteMutation.mutate(b.id)}
+                                disabled={
+                                  deleteMutation.isPending &&
+                                  (deleteMutation as any).variables === b.id
+                                }>
+                                {deleteMutation.isPending &&
+                                (deleteMutation as any).variables === b.id
+                                  ? "در حال حذف..."
+                                  : "حذف"}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     )}
                   </motion.div>

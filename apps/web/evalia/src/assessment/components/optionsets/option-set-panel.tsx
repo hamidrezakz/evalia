@@ -3,11 +3,33 @@ import * as React from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { fade, fadeSlideUp, growY, listItem } from "@/lib/motion/presets";
 import { Button } from "@/components/ui/button";
+import {
+  Search,
+  PlusCircle,
+  Save,
+  X,
+  Edit,
+  ListChecks,
+  Trash2,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
+import {
   Panel,
+  PanelAction,
   PanelContent,
+  PanelDescription,
   PanelHeader,
   PanelTitle,
 } from "@/components/ui/panel";
@@ -38,7 +60,7 @@ export const OptionSetPanel: React.FC<OptionSetPanelProps> = ({
     return () => clearTimeout(id);
   }, [searchText]);
 
-  const { data, isLoading, refetch, error } = useOptionSets({ search });
+  const { data, isLoading, error } = useOptionSets({ search });
   const createMutation = useCreateOptionSet();
   const updateMutation = useUpdateOptionSet();
   const deleteMutation = useDeleteOptionSet();
@@ -57,15 +79,10 @@ export const OptionSetPanel: React.FC<OptionSetPanelProps> = ({
   const selected = sets.find((s) => s.id === effectiveSelectedId) || null;
   const optionsQuery = useOptionSetOptions(selected?.id ?? null);
 
-  React.useEffect(() => {
-    if (selected && optionsQuery.data && optionsQuery.data.length === 0)
-      setEditingOptions(true);
-  }, [selected, optionsQuery.data]);
-
   function selectSet(s: { id: number; name: string }) {
     if (selectedOptionSetId == null) setInternalSelectedId(s.id);
     onSelect?.(s);
-    setEditingOptions(true); // Open options editor automatically
+    setEditingOptions(false); // Open options editor automatically
   }
   function handleCreate() {
     const name = newName.trim();
@@ -115,42 +132,54 @@ export const OptionSetPanel: React.FC<OptionSetPanelProps> = ({
   return (
     <Panel className={className}>
       <PanelHeader>
-        <PanelTitle>ست های گزینه</PanelTitle>
+        <div className="flex items-center gap-2">
+          {" "}
+          <ListChecks className="w-5 h-5 text-primary" />
+          <PanelTitle>دسته گزینه‌ها</PanelTitle>
+        </div>
+        <PanelDescription>مدیریت دسته‌های گزینه</PanelDescription>
+
+        {!creating && (
+          <PanelAction>
+            <Button
+              size="sm"
+              onClick={() => setCreating(true)}
+              icon={<PlusCircle className="w-4 h-4" />}>
+              ایجاد دسته
+            </Button>
+          </PanelAction>
+        )}
       </PanelHeader>
       <PanelContent className="flex-col gap-4">
         <div className="flex gap-2 items-center">
-          <Input
-            placeholder="جستجو..."
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-          />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => refetch()}
-            disabled={isLoading}>
-            جستجو
-          </Button>
-          {!creating && (
-            <Button size="sm" onClick={() => setCreating(true)}>
-              ایجاد ست
-            </Button>
-          )}
+          <div className="relative flex-1">
+            <Input
+              placeholder="جستجو..."
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              className="pl-8"
+            />
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+          </div>
         </div>
         <AnimatePresence>
           {creating && (
             <motion.div {...growY} className="flex gap-2 items-center">
-              <Input
-                placeholder="نام ست"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                className="flex-1"
-              />
+              <div className="relative flex-1">
+                <Input
+                  placeholder="نام دسته"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  className="pl-8"
+                />
+                <ListChecks className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+              </div>
               <Button
                 size="sm"
                 onClick={handleCreate}
                 isLoading={createMutation.isPending}
-                disabled={!newName.trim()}>
+                disabled={!newName.trim()}
+                icon={<Save className="w-4 h-4" />}>
                 ثبت
               </Button>
               <Button
@@ -159,9 +188,8 @@ export const OptionSetPanel: React.FC<OptionSetPanelProps> = ({
                 onClick={() => {
                   setCreating(false);
                   setNewName("");
-                }}>
-                انصراف
-              </Button>
+                }}
+                icon={<X className="w-4 h-4" />}></Button>
             </motion.div>
           )}
         </AnimatePresence>
@@ -184,33 +212,39 @@ export const OptionSetPanel: React.FC<OptionSetPanelProps> = ({
                   <motion.div
                     key={s.id}
                     layout
+                    onClick={() => selectSet(s)}
                     {...listItem}
-                    className={`flex items-center gap-2 px-3 py-2 text-sm transition-colors ${
+                    className={`cursor-pointer flex items-center gap-2 px-3 py-2 text-sm transition-colors ${
                       isSelected ? "bg-primary/10" : "hover:bg-muted/40"
                     }`}>
                     {isEditing ? (
-                      <Input
-                        value={editName}
-                        autoFocus
-                        onChange={(e) => setEditName(e.target.value)}
-                        className="h-8 flex-1"
-                      />
+                      <div className="flex-1 w-full">
+                        <Input
+                          value={editName}
+                          autoFocus
+                          onChange={(e) => setEditName(e.target.value)}
+                          className="flex-1 w-full"
+                        />
+                      </div>
                     ) : (
-                      <button
-                        className="flex-1 text-start"
-                        onClick={() => selectSet(s)}
-                        disabled={isEditing}>
-                        {s.name}
-                      </button>
+                      <div className="flex flex-row items-center gap-2 w-full">
+                        <ListChecks className="w-4 h-4 text-muted-foreground" />
+                        <span className="flex-1 text-start">{s.name}</span>
+                      </div>
                     )}
+
                     {isEditing ? (
-                      <motion.div className="flex gap-1" {...fadeSlideUp}>
+                      <motion.div
+                        className="flex gap-0.5 items-center"
+                        {...fadeSlideUp}>
                         <Button
                           size="sm"
                           variant="secondary"
+                          className="mr-2"
                           onClick={handleSaveEdit}
                           isLoading={updateMutation.isPending}
-                          disabled={!editName.trim()}>
+                          disabled={!editName.trim()}
+                          icon={<Save className="w-4 h-4" />}>
                           ذخیره
                         </Button>
                         <Button
@@ -219,9 +253,8 @@ export const OptionSetPanel: React.FC<OptionSetPanelProps> = ({
                           onClick={() => {
                             setEditingId(null);
                             setEditName("");
-                          }}>
-                          لغو
-                        </Button>
+                          }}
+                          icon={<X className="w-4 h-4" />}></Button>
                       </motion.div>
                     ) : (
                       <div className="flex items-center gap-1">
@@ -231,19 +264,48 @@ export const OptionSetPanel: React.FC<OptionSetPanelProps> = ({
                           onClick={() => {
                             setEditingId(s.id);
                             setEditName(s.name);
-                          }}>
-                          ✎
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => handleDelete(s.id)}
-                          isLoading={
-                            deleteMutation.isPending &&
-                            (deleteMutation as any).variables === s.id
-                          }>
-                          🗑
-                        </Button>
+                          }}
+                          icon={<Edit className="w-4 h-4" />}
+                          aria-label="ویرایش"
+                        />
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={(e) => e.stopPropagation()}
+                              icon={<Trash2 className="w-4 h-4" />}
+                              aria-label="حذف"
+                            />
+                          </AlertDialogTrigger>
+                          <AlertDialogContent
+                            onClick={(e) => e.stopPropagation()}>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>
+                                حذف دسته گزینه‌ها
+                              </AlertDialogTitle>
+                              <AlertDialogDescription>
+                                آیا از حذف این دسته مطمئن هستید؟ این عملیات
+                                غیرقابل بازگشت است.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>انصراف</AlertDialogCancel>
+                              <AlertDialogAction
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                onClick={() => handleDelete(s.id)}
+                                disabled={
+                                  deleteMutation.isPending &&
+                                  (deleteMutation as any).variables === s.id
+                                }>
+                                {deleteMutation.isPending &&
+                                (deleteMutation as any).variables === s.id
+                                  ? "در حال حذف..."
+                                  : "حذف"}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     )}
                   </motion.div>
@@ -256,12 +318,12 @@ export const OptionSetPanel: React.FC<OptionSetPanelProps> = ({
                 key="empty"
                 {...fade}
                 className="p-4 text-center text-xs text-muted-foreground space-y-2">
-                <p>هنوز ست گزینه‌ای ایجاد نشده است.</p>
+                <p>هنوز هیچ دسته گزینه‌ای ایجاد نشده است.</p>
                 <Button
                   size="sm"
                   variant="secondary"
                   onClick={() => setCreating(true)}>
-                  ایجاد اولین ست
+                  ایجاد اولین دسته
                 </Button>
               </motion.div>
             )}
@@ -277,28 +339,33 @@ export const OptionSetPanel: React.FC<OptionSetPanelProps> = ({
             )}
           </AnimatePresence>
         </div>
-        <AnimatePresence>
-          {!selected && sets.length > 0 && (
-            <motion.div
-              key="hint"
-              {...fadeSlideUp}
-              className="border rounded-md p-4 text-[11px] text-muted-foreground text-center">
-              یک ست را از لیست بالا انتخاب کنید یا ست جدید بسازید.
-            </motion.div>
-          )}
-        </AnimatePresence>
+
+        {!selected && sets.length > 0 && (
+          <div
+            key="hint"
+            className="border rounded-md p-4 text-[11px] text-muted-foreground text-center">
+            یک دسته را از لیست بالا انتخاب کنید یا دسته جدید بسازید.
+          </div>
+        )}
+
         <AnimatePresence>
           {selected && (
             <motion.div
               key="selected"
-              {...fadeSlideUp}
               className="border rounded-md p-3 space-y-1">
               <div className="flex items-center justify-between">
                 <h4 className="font-medium text-sm">گزینه ها</h4>
                 <Button
                   size="sm"
                   variant={editingOptions ? "secondary" : "outline"}
-                  onClick={() => setEditingOptions((e) => !e)}>
+                  onClick={() => setEditingOptions((e) => !e)}
+                  icon={
+                    editingOptions ? (
+                      <X className="w-4 h-4" />
+                    ) : (
+                      <Edit className="w-4 h-4" />
+                    )
+                  }>
                   {editingOptions ? "بستن" : "ویرایش"}
                 </Button>
               </div>

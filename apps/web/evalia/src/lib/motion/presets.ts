@@ -7,7 +7,7 @@
 import type { Transition } from "motion/react";
 
 /** Root timing scale (seconds). Adjusting these scales propagates project-wide. */
-const basetime = 1;
+const basetime = 1.6;
 export const motionTimings = {
   xFast: basetime * 0.1,
   fast: basetime * 0.16,

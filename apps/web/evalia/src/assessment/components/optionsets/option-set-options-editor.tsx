@@ -3,7 +3,16 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Tag, List, Type } from "lucide-react";
+import {
+  Tag,
+  Type,
+  Trash2,
+  ArrowUp,
+  ArrowDown,
+  PlusCircle,
+  Save,
+  RotateCcw,
+} from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Panel, PanelContent } from "@/components/ui/panel";
 import {
@@ -164,22 +173,25 @@ export const OptionSetOptionsEditor: React.FC<OptionSetOptionsEditorProps> = ({
                       size="icon"
                       variant="ghost"
                       onClick={() => move(i, -1)}
-                      disabled={i === 0}>
-                      ↑
-                    </Button>
+                      disabled={i === 0}
+                      icon={<ArrowUp className="w-4 h-4" />}
+                      aria-label="بالا"
+                    />
                     <Button
                       size="icon"
                       variant="ghost"
                       onClick={() => move(i, 1)}
-                      disabled={i === draft.length - 1}>
-                      ↓
-                    </Button>
+                      disabled={i === draft.length - 1}
+                      icon={<ArrowDown className="w-4 h-4" />}
+                      aria-label="پایین"
+                    />
                     <Button
                       size="icon"
                       variant="ghost"
-                      onClick={() => remove(i)}>
-                      🗑
-                    </Button>
+                      onClick={() => remove(i)}
+                      icon={<Trash2 className="w-4 h-4" />}
+                      aria-label="حذف"
+                    />
                   </div>
                 </div>
               </div>
@@ -191,17 +203,23 @@ export const OptionSetOptionsEditor: React.FC<OptionSetOptionsEditorProps> = ({
                 size="sm"
                 onClick={save}
                 disabled={!dirty || invalid}
-                isLoading={bulkMutation.isPending}>
+                isLoading={bulkMutation.isPending}
+                icon={<Save className="w-4 h-4" />}>
                 ذخیره
               </Button>
-              <Button size="sm" variant="outline" onClick={add}>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={add}
+                icon={<PlusCircle className="w-4 h-4" />}>
                 افزودن
               </Button>
               <Button
                 size="sm"
                 variant="ghost"
                 onClick={reset}
-                disabled={!dirty}>
+                disabled={!dirty}
+                icon={<RotateCcw className="w-4 h-4" />}>
                 ریست
               </Button>
             </div>
