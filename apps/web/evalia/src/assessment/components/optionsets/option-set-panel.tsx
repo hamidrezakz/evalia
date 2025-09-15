@@ -17,7 +17,7 @@ import {
   useUpdateOptionSet,
   useDeleteOptionSet,
   useOptionSetOptions,
-} from "../api/hooks";
+} from "../../api/hooks";
 import { OptionSetOptionsEditor } from "./option-set-options-editor";
 
 interface OptionSetPanelProps {

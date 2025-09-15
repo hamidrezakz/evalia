@@ -7,7 +7,7 @@ import {
   PanelContent,
 } from "@/components/ui/panel";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useQuestions } from "../api/hooks";
+import { useQuestions } from "../../api/hooks";
 import Link from "next/link";
 
 interface RecentQuestionsPanelProps {

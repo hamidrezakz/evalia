@@ -15,7 +15,7 @@ import {
   useCreateQuestionBank,
   useUpdateQuestionBank,
   useDeleteQuestionBank,
-} from "../api/hooks";
+} from "../../api/hooks";
 
 interface QuestionBankListPanelProps {
   onSelect?: (bank: { id: number; name: string }) => void;

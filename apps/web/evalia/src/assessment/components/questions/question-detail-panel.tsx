@@ -11,7 +11,7 @@ import {
   useQuestionBank,
   useOptionSetOptions,
   useOptionSet,
-} from "../api/hooks";
+} from "../../api/hooks";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface QuestionDetailPanelProps {

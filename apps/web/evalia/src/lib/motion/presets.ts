@@ -7,13 +7,14 @@
 import type { Transition } from "motion/react";
 
 /** Root timing scale (seconds). Adjusting these scales propagates project-wide. */
+const basetime = 1;
 export const motionTimings = {
-  xFast: 0.1,
-  fast: 0.16,
-  base: 0.22,
-  medium: 0.3,
-  slow: 0.4,
-  xSlow: 0.55,
+  xFast: basetime * 0.1,
+  fast: basetime * 0.16,
+  base: basetime * 0.22,
+  medium: basetime * 0.3,
+  slow: basetime * 0.4,
+  xSlow: basetime * 0.55,
 } as const;
 
 /** Shared easing curves */
@@ -32,6 +33,8 @@ export function t(
 ): Transition {
   return { duration, ease, ...extra };
 }
+/*use: const transition = t(motionTimings.fast, motionEasings.pop, { delay: 0.1 });
+<motion.div transition={transition}>...</motion.div> */
 
 export interface MotionPresetShape {
   initial: Record<string, any>;
@@ -91,6 +94,29 @@ export function overridePreset<T extends { transition?: Transition }>(
     transition: { ...base.transition, ...patch.transition },
   } as T;
 }
+
+/**
+ * Example usage:
+ *
+ * import { fade, overridePreset } from "@/lib/motion/presets";
+ *
+ * // Create a custom fade preset with longer duration and custom easing
+ * const customFade = overridePreset(fade, {
+ *   transition: { duration: 0.5, ease: "easeInOut" },
+ *   animate: { opacity: 1, scale: 1.05 }, // you can override any key
+ * });
+ *
+ * // Use in a motion.div
+ * <motion.div {...customFade}>
+ *   Custom animated content
+ * </motion.div>
+ *
+ * // You can also override only one property:
+ * const fastFade = overridePreset(fade, { transition: { duration: 0.1 } });
+ *
+ * // Or use with other presets
+ * const popFade = overridePreset(popIn, { animate: { scale: 1.1 } });
+ */
 
 /** Registry (optional) - could be extended for dynamic lookups */
 export const motionPresets = {

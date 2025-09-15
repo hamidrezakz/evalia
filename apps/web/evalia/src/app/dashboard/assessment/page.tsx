@@ -4,6 +4,7 @@ import {
   PanelHeader,
   PanelTitle,
   PanelContent,
+  PanelDescription,
 } from "@/components/ui/panel";
 import Link from "next/link";
 import {
@@ -30,35 +31,27 @@ export default function AssessmentOverviewPage() {
   ];
   return (
     <div className="space-y-8">
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2 grid gap-6 sm:grid-cols-2">
-          {features.map((f) => (
-            <Panel key={f.title} className="h-full">
-              <PanelHeader>
-                <PanelTitle>{f.title}</PanelTitle>
-              </PanelHeader>
-              <PanelContent className="flex-col gap-4 text-sm">
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  {f.desc}
-                </p>
-                <Link
-                  href={f.href}
-                  className="text-primary text-[11px] underline underline-offset-4">
-                  رفتن به {f.title}
-                </Link>
-              </PanelContent>
-            </Panel>
-          ))}
-        </div>
+      <div className="grid gap-6 lg:grid-cols-4">
         <AssessmentStatsPanel />
       </div>
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2 grid gap-6 md:grid-cols-2">
-          <QuestionBankListPanel />
-          <OptionSetPanel />
-        </div>
-        <RecentQuestionsPanel />
+      <div className="lg:col-span-2 grid gap-6 sm:grid-cols-2">
+        {features.map((f) => (
+          <Panel key={f.title} className="h-full">
+            <PanelHeader>
+              <PanelTitle>{f.title}</PanelTitle>
+              <PanelDescription>{f.desc}</PanelDescription>
+            </PanelHeader>
+            <PanelContent className="text-sm">
+              <Link
+                href={f.href}
+                className="text-primary text-[11px] underline underline-offset-4">
+                رفتن به {f.title}
+              </Link>
+            </PanelContent>
+          </Panel>
+        ))}
       </div>
+      <RecentQuestionsPanel />
     </div>
   );
 }

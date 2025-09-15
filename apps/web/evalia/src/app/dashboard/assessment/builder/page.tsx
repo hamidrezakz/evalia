@@ -1,11 +1,5 @@
 import React from "react";
 import { QuestionBuilderContainer } from "@/assessment/components";
-import {
-  Panel,
-  PanelHeader,
-  PanelTitle,
-  PanelContent,
-} from "@/components/ui/panel";
 
 export const metadata = { title: "Builder سوالات" };
 
@@ -19,27 +13,7 @@ export default function QuestionBuilderPage() {
           جزئیات کامل هر سوال از جمله ست گزینه و مقادیر آن را مشاهده کنید.
         </p>
       </div>
-      <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
         <QuestionBuilderContainer />
-        <Panel className="hidden xl:flex flex-col text-[11px] md:text-xs">
-          <PanelHeader>
-            <PanelTitle>راهنما</PanelTitle>
-          </PanelHeader>
-          <PanelContent className="flex-col gap-3">
-            <p>
-              1. ابتدا یک بانک سوال ایجاد یا انتخاب کنید.
-              <br />
-              2. سوالات را بسازید یا انتخاب کنید.
-              <br />
-              3. در پنل جزئیات، اطلاعات کامل و Option Set مرتبط نمایش داده
-              می‌شود.
-            </p>
-            <p className="text-muted-foreground">
-              برای مدیریت ست‌های گزینه به بخش "ست گزینه‌ها" بروید.
-            </p>
-          </PanelContent>
-        </Panel>
-      </div>
     </div>
   );
 }

@@ -5,14 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tag, List, Type } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Panel,
-  PanelContent,
-} from "@/components/ui/panel";
+import { Panel, PanelContent } from "@/components/ui/panel";
 import {
   useOptionSetOptions,
   useBulkReplaceOptionSetOptions,
-} from "../api/hooks";
+} from "../../api/hooks";
 
 interface OptionSetOptionsEditorProps {
   optionSetId: number;

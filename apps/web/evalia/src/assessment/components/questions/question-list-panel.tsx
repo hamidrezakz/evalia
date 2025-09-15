@@ -14,8 +14,8 @@ import {
   useCreateQuestion,
   useUpdateQuestion,
   useDeleteQuestion,
-} from "../api/hooks";
-import { useOptionSets } from "../api/hooks";
+} from "../../api/hooks";
+import { useOptionSets } from "../../api/hooks";
 
 interface QuestionListPanelProps {
   bankId?: number | null;

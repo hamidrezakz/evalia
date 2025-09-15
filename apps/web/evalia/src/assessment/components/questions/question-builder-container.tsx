@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
-import { QuestionBankListPanel } from "./question-bank-list-panel";
-import { OptionSetPanel } from "./option-set-panel";
+import { QuestionBankListPanel } from "../questionbanks/question-bank-list-panel";
+import { OptionSetPanel } from "../optionsets/option-set-panel";
 import { QuestionListPanel } from "./question-list-panel";
 import { QuestionDetailPanel } from "./question-detail-panel";
 
