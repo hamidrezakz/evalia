@@ -19,6 +19,7 @@ export const questionBanksKeys = {
     ] as const,
   detail: () => [...questionBanksKeys.all, "detail"] as const,
   byId: (id: number) => [...questionBanksKeys.detail(), id] as const,
+  count: (id: number) => [...questionBanksKeys.byId(id), "count"] as const,
 };
 
 export const questionsKeys = {

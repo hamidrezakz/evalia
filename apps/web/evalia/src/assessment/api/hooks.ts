@@ -9,6 +9,7 @@ import {
   type CreateQuestionBankBody,
   type UpdateQuestionBankBody,
 } from "./question-banks.api";
+import { getQuestionBankCount } from "./question-bank-count.api";
 import {
   listQuestions,
   getQuestion,
@@ -51,6 +52,20 @@ export function useQuestionBank(id: number | null) {
       return getQuestionBank(id);
     },
     enabled: !!id,
+  });
+}
+// Lightweight count (decoupled from full bank detail)
+export function useQuestionBankCount(bankId: number | null) {
+  return useQuery({
+    queryKey: bankId
+      ? questionBanksKeys.count(bankId)
+      : ["question-banks", "count", "disabled"],
+    queryFn: () => {
+      if (!bankId) throw new Error("no bankId");
+      return getQuestionBankCount(bankId);
+    },
+    enabled: !!bankId,
+    staleTime: 30_000,
   });
 }
 export function useCreateQuestionBank() {
@@ -100,7 +115,15 @@ export function useCreateQuestion() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: CreateQuestionBody) => createQuestion(body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: questionsKeys.all }),
+    onSuccess: (_created, vars) => {
+      qc.invalidateQueries({ queryKey: questionsKeys.all });
+      // Invalidate count cache for the related bank
+      if (vars?.bankId) {
+        qc.invalidateQueries({
+          queryKey: questionBanksKeys.count(vars.bankId),
+        });
+      }
+    },
   });
 }
 export function useUpdateQuestion() {

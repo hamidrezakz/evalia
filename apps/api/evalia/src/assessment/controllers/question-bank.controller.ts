@@ -43,4 +43,9 @@ export class QuestionBankController {
   remove(@Param('id') id: string) {
     return this.service.softDelete(Number(id));
   }
+
+  @Get(':id/questions-count')
+  count(@Param('id') id: string) {
+    return this.service.countQuestions(Number(id));
+  }
 }

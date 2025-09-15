@@ -65,4 +65,19 @@ export class QuestionBankService {
       data: { deletedAt: new Date() },
     });
   }
+
+  async countQuestions(bankId: number) {
+    // تأیید وجود بانک (می‌توان برای سبک‌تر بودن حذف کرد ولی خطای شفاف بهتر است)
+    const bank = await this.prisma.questionBank.findFirst({
+      where: { id: bankId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!bank) throw new NotFoundException('QuestionBank not found');
+
+    const questionsCount = await this.prisma.question.count({
+      where: { bankId, deletedAt: null },
+    });
+
+    return { bankId, questionsCount };
+  }
 }
