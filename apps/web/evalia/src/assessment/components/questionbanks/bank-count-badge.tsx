@@ -23,8 +23,9 @@ export const BankCountBadge: React.FC<BankCountBadgeProps> = ({
       aria-label={isLoading ? "در حال بارگذاری" : `تعداد سوالات: ${value}`}>
       <Badge
         variant="secondary"
-        className="min-w-[1.75rem] h-5 px-1 text-[10px] leading-[18px] font-medium inline-flex items-center justify-center">
+        className="text-[10px]">
         {isLoading ? "…" : value.toLocaleString("fa-IR")}
+        <span>سوال</span>
       </Badge>
     </motion.span>
   );

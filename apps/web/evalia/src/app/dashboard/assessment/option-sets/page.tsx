@@ -17,9 +17,8 @@ export default function OptionSetsManagementPage() {
           گروه‌بندی منطقی سوالات را ممکن می‌سازد.
         </p>
       </div>
-      <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
-          <OptionSetPanel />
-          <QuestionBankListPanel />
+      <div>
+        <OptionSetPanel />{" "}
       </div>
     </div>
   );

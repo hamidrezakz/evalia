@@ -6,7 +6,8 @@ import React from "react";
 const links: { href: string; label: string }[] = [
   { href: "/dashboard/assessment", label: "نمای کلی" },
   { href: "/dashboard/assessment/builder", label: "ساخت سوال" },
-  { href: "/dashboard/assessment/option-sets", label: "ست گزینه‌ها" },
+  { href: "/dashboard/assessment/option-sets", label: "دسته گزینه‌ها" },
+  { href: "/dashboard/assessment/questionbank", label: "بانک سوال" },
 ];
 
 export function AssessmentNav() {

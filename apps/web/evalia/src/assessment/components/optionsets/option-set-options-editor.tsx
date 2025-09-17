@@ -7,8 +7,6 @@ import {
   Tag,
   Type,
   Trash2,
-  ArrowUp,
-  ArrowDown,
   PlusCircle,
   Save,
   RotateCcw,
@@ -70,17 +68,7 @@ export const OptionSetOptionsEditor: React.FC<OptionSetOptionsEditorProps> = ({
       d.filter((_, idx) => idx !== i).map((it, idx) => ({ ...it, order: idx }))
     );
   }
-  function move(i: number, dir: -1 | 1) {
-    mark((d) => {
-      const arr = [...d];
-      const ni = i + dir;
-      if (ni < 0 || ni >= arr.length) return arr;
-      const tmp = arr[i];
-      arr[i] = arr[ni];
-      arr[ni] = tmp;
-      return arr.map((it, idx) => ({ ...it, order: idx }));
-    });
-  }
+
   function update(i: number, patch: Partial<DraftItem>) {
     mark((d) => d.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
   }
@@ -168,23 +156,7 @@ export const OptionSetOptionsEditor: React.FC<OptionSetOptionsEditorProps> = ({
                     شماره گزینه:{" "}
                     {(typeof op.order === "number" ? op.order : 0) + 1}
                   </div>
-                  <div className="flex items-center gap-0 justify-end">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => move(i, -1)}
-                      disabled={i === 0}
-                      icon={<ArrowUp className="w-4 h-4" />}
-                      aria-label="بالا"
-                    />
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => move(i, 1)}
-                      disabled={i === draft.length - 1}
-                      icon={<ArrowDown className="w-4 h-4" />}
-                      aria-label="پایین"
-                    />
+                  <div className="flex items-center gap-1 justify-end">
                     <Button
                       size="icon"
                       variant="ghost"

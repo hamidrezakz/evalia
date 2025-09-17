@@ -46,7 +46,7 @@ export const questionSchema = z.object({
   minScale: z.number().int().nullable().optional(),
   maxScale: z.number().int().nullable().optional(),
   meta: z.any().optional(),
-  createdAt: z.string(),
+  createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
 });
 export type Question = z.infer<typeof questionSchema>;

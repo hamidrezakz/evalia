@@ -145,7 +145,7 @@ export const OptionSetPanel: React.FC<OptionSetPanelProps> = ({
               size="sm"
               onClick={() => setCreating(true)}
               icon={<PlusCircle className="w-4 h-4" />}>
-              ایجاد دسته
+              دسته جدید
             </Button>
           </PanelAction>
         )}
@@ -169,6 +169,7 @@ export const OptionSetPanel: React.FC<OptionSetPanelProps> = ({
                 <Input
                   placeholder="نام دسته"
                   value={newName}
+                  autoFocus   
                   onChange={(e) => setNewName(e.target.value)}
                   className="pl-8"
                 />

@@ -110,7 +110,7 @@ export const QuestionBankListPanel: React.FC<QuestionBankListPanelProps> = ({
               size="sm"
               onClick={() => setCreating(true)}
               icon={<PlusCircle className="w-4 h-4" />}>
-              ایجاد
+              بانک جدید{" "}
             </Button>
           )}
         </PanelAction>
@@ -140,6 +140,7 @@ export const QuestionBankListPanel: React.FC<QuestionBankListPanelProps> = ({
                   <Input
                     placeholder="نام بانک"
                     value={newName}
+                    autoFocus
                     onChange={(e) => setNewName(e.target.value)}
                     className="pl-8"
                   />
@@ -189,6 +190,7 @@ export const QuestionBankListPanel: React.FC<QuestionBankListPanelProps> = ({
                           <Input
                             value={editName}
                             onChange={(e) => setEditName(e.target.value)}
+                            autoFocus
                             className="h-8 pl-8"
                           />
                           <Edit className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />

@@ -1,4 +1,8 @@
 import { z } from "zod";
+import {
+  QuestionTypeEnum,
+  type QuestionType as QuestionTypeLib,
+} from "@/lib/enums";
 
 // Shared pagination meta (aligned with backend envelope meta expectations)
 export const paginationMetaSchema = z.object({
@@ -12,11 +16,10 @@ export const paginationMetaSchema = z.object({
 export type PaginationMeta = z.infer<typeof paginationMetaSchema>;
 
 // Question type enum (subset mirror of backend QuestionType)
-export const questionTypeEnum = z.enum([
-  "SCALE",
-  "TEXT",
-  "MULTI_CHOICE",
-  "SINGLE_CHOICE",
-  "BOOLEAN",
-]);
-export type QuestionType = z.infer<typeof questionTypeEnum>;
+// Build Zod enum from centralized enum values to keep single source of truth
+const questionTypeLiterals = QuestionTypeEnum.values as unknown as [
+  QuestionTypeLib,
+  ...QuestionTypeLib[]
+];
+export const questionTypeEnum = z.enum(questionTypeLiterals);
+export type QuestionType = QuestionTypeLib;
