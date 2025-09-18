@@ -1,7 +1,8 @@
 "use client";
 import type { Question } from "@/assessment/types/question-banks.types";
 import type { AnswerRecord, OptionItem } from "../types";
-import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -13,6 +14,7 @@ interface Props {
     value: string[],
     strategy: "immediate" | "debounce"
   ) => void;
+  hideTitle?: boolean;
 }
 
 export function MultiChoiceQuestion({
@@ -20,6 +22,7 @@ export function MultiChoiceQuestion({
   record,
   options,
   setValue,
+  hideTitle,
 }: Props) {
   const current = Array.isArray(record.value) ? (record.value as string[]) : [];
   const toggle = (val: string) => {
@@ -29,23 +32,29 @@ export function MultiChoiceQuestion({
     setValue(question, next, "immediate");
   };
   return (
-    <div className="flex flex-col gap-2">
-      <div className="text-sm font-medium">{question.text}</div>
+    <div className="flex flex-col gap-3">
+      {!hideTitle && <div className="text-sm font-medium">{question.text}</div>}
       <div className="flex flex-col gap-2">
-        {options.map((o) => {
+        {options.map((o, idx) => {
+          const id = `q-${question.id}-opt-${idx}`;
           const selected = current.includes(o.value);
           return (
-            <Button
+            <div
               key={o.value}
-              variant={selected ? "default" : "outline"}
-              disabled={record.status === "SUBMITTING"}
-              onClick={() => toggle(o.value)}
               className={cn(
-                "justify-start",
-                selected && "ring-2 ring-offset-1 ring-primary/50"
+                "flex items-center gap-3 rounded-md border p-2",
+                selected ? "border-primary/50 bg-primary/5" : "border-border"
               )}>
-              {o.label}
-            </Button>
+              <Checkbox
+                id={id}
+                checked={selected}
+                onCheckedChange={() => toggle(o.value)}
+                disabled={record.status === "SUBMITTING"}
+              />
+              <Label htmlFor={id} className="flex-1 cursor-pointer">
+                {o.label}
+              </Label>
+            </div>
           );
         })}
       </div>

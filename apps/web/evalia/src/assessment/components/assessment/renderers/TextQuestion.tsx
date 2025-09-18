@@ -13,9 +13,11 @@ interface Props {
     value: string,
     strategy: "debounce" | "immediate"
   ) => void;
+  autoFocus?: boolean;
+  hideTitle?: boolean;
 }
 
-export function TextQuestion({ question, record, setValue }: Props) {
+export function TextQuestion({ question, record, setValue, autoFocus, hideTitle }: Props) {
   const [val, setVal] = useState(
     record.status === "UNANSWERED" ? "" : (record.value as string) ?? ""
   );
@@ -30,8 +32,9 @@ export function TextQuestion({ question, record, setValue }: Props) {
 
   return (
     <div className="flex flex-col gap-2">
-      <label className="font-medium text-sm">{question.text}</label>
+      {!hideTitle && <label className="font-medium text-sm">{question.text}</label>}
       <Input
+        autoFocus={autoFocus}
         value={val}
         disabled={record.status === "SUBMITTING"}
         onChange={(e) => {

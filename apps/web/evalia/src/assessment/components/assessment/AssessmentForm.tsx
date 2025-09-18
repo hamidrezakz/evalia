@@ -43,6 +43,35 @@ export function AssessmentForm(props: AssessmentFormProps) {
     initialAnswers,
   });
 
+  // Track focus/highlight index (suggested next to answer)
+  const [activeIndex, setActiveIndex] = React.useState<number>(0);
+  const itemRefs = React.useRef<Record<number, HTMLDivElement | null>>({});
+
+  // Compute progress
+  const answeredCount = React.useMemo(
+    () => questions.filter((q) => answerState.getDisplayState(q).status === "ANSWERED").length,
+    [questions, answerState]
+  );
+  const progress = questions.length ? Math.round((answeredCount / questions.length) * 100) : 0;
+
+  // When an answer transitions to ANSWERED, move to next unanswered and scroll
+  React.useEffect(() => {
+    // Find first unanswered from current activeIndex forward
+    const nextIdx = questions.findIndex((q, idx) => {
+      if (idx <= activeIndex) return false;
+      const st = answerState.getDisplayState(q).status;
+      return st !== "ANSWERED";
+    });
+    if (nextIdx !== -1 && nextIdx !== activeIndex) {
+      // optional: wait a tick for DOM update
+      const el = itemRefs.current[questions[nextIdx].id];
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        setActiveIndex(nextIdx);
+      }
+    }
+  }, [answeredCount]);
+
   const handleFirstVisible = React.useCallback((q: Question) => {
     // Trigger remote answer load (lazy) by calling ensureRemoteAnswerLoaded indirectly; currently integrated inside hook via ensureOptions call.
     // For clarity we could expose a method but design kept minimal; remote answer load occurs when renderer mounts.
@@ -51,16 +80,54 @@ export function AssessmentForm(props: AssessmentFormProps) {
 
   return (
     <div className={cn("flex flex-col gap-6", className)}>
+      {/* Sticky progress bar */}
+      <div className="sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-background/60 bg-background/90 border-b">
+        <div className="mx-auto max-w-3xl px-4 py-2 flex items-center gap-3">
+          <div className="text-xs text-muted-foreground">
+            پیشرفت: {answeredCount}/{questions.length} ({progress}%)
+          </div>
+          <div className="flex-1">
+            <div className="bg-primary/15 h-2 rounded-full">
+              <div
+                className="bg-primary h-2 rounded-full transition-all"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
       {questions.map((q, idx) => {
         const rec = answerState.getDisplayState(q);
+        const isActive = idx === activeIndex;
         return (
-          <Card key={q.id} className="p-4 flex flex-col gap-3">
+          <div
+            key={q.id}
+            ref={(el) => {
+              itemRefs.current[q.id] = el;
+            }}
+            className={cn(
+              "p-4 flex flex-col gap-3 max-w-2xl rounded-lg border",
+              isActive ? "border-primary/60 bg-primary/5" : "border-transparent"
+            )}
+          >
+            <div className="flex items-center gap-2">
+              <div className={cn("text-xs font-bold w-6 h-6 rounded-full grid place-items-center",
+                isActive ? "bg-primary text-primary-foreground" : "bg-muted text-foreground")}
+              >
+                {idx + 1}
+              </div>
+              <div className="text-[13px] text-muted-foreground">
+                سوال {idx + 1} از {questions.length}
+              </div>
+            </div>
             <QuestionRenderer
               question={q}
               record={rec}
               ensureOptions={answerState.ensureOptions}
               getOptionsSync={answerState.getOptionsSync}
               setValue={answerState.setLocalValue as any}
+              hideTitle={false}
               onFirstVisible={() => handleFirstVisible(q)}
             />
             <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
@@ -71,8 +138,7 @@ export function AssessmentForm(props: AssessmentFormProps) {
                 </span>
               )}
             </div>
-            {idx < questions.length - 1 && <Separator className="mt-2" />}
-          </Card>
+          </div>
         );
       })}
     </div>

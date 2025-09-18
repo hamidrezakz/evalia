@@ -13,6 +13,7 @@ interface Props {
     value: string,
     strategy: "immediate" | "debounce"
   ) => void;
+  hideTitle?: boolean;
 }
 
 export function BooleanQuestion({
@@ -20,6 +21,7 @@ export function BooleanQuestion({
   record,
   options,
   setValue,
+  hideTitle,
 }: Props) {
   const current =
     record.value === true
@@ -30,7 +32,7 @@ export function BooleanQuestion({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="text-sm font-medium">{question.text}</div>
+      {!hideTitle && <div className="text-sm font-medium">{question.text}</div>}
       <div className="flex gap-2">
         {options.map((o) => {
           const selected = current === o.value;

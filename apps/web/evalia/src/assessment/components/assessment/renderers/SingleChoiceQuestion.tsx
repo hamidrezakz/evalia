@@ -1,7 +1,8 @@
 "use client";
 import type { Question } from "@/assessment/types/question-banks.types";
 import type { AnswerRecord, OptionItem } from "../types";
-import { Button } from "@/components/ui/button";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -13,6 +14,7 @@ interface Props {
     value: string,
     strategy: "immediate" | "debounce"
   ) => void;
+  hideTitle?: boolean;
 }
 
 export function SingleChoiceQuestion({
@@ -20,29 +22,39 @@ export function SingleChoiceQuestion({
   record,
   options,
   setValue,
+  hideTitle,
 }: Props) {
   const current = typeof record.value === "string" ? record.value : undefined;
   return (
-    <div className="flex flex-col gap-2">
-      <div className="text-sm font-medium">{question.text}</div>
-      <div className="flex flex-col gap-2">
-        {options.map((o) => {
+    <div className="flex flex-col gap-3">
+      {!hideTitle && <div className="text-sm font-medium">{question.text}</div>}
+      <RadioGroup
+        value={current}
+        onValueChange={(val) => setValue(question, val, "immediate")}
+        className="gap-2">
+        {options.map((o, idx) => {
+          const id = `q-${question.id}-opt-${idx}`;
           const selected = current === o.value;
           return (
-            <Button
+            <div
               key={o.value}
-              variant={selected ? "default" : "outline"}
-              disabled={record.status === "SUBMITTING"}
-              onClick={() => setValue(question, o.value, "immediate")}
               className={cn(
-                "justify-start",
-                selected && "ring-2 ring-offset-1 ring-primary/50"
-              )}>
-              {o.label}
-            </Button>
+                "flex items-center gap-3 rounded-md border p-2 justify-start",
+                selected ? "border-primary/50 bg-primary/5" : "border-border"
+              )}
+              data-disabled={record.status === "SUBMITTING"}>
+              <RadioGroupItem
+                id={id}
+                value={o.value}
+                disabled={record.status === "SUBMITTING"}
+              />
+              <Label htmlFor={id} className="flex-1 cursor-pointer">
+                {o.label}
+              </Label>
+            </div>
           );
         })}
-      </div>
+      </RadioGroup>
       {record.status === "ERROR" && (
         <p className="text-xs text-destructive">ذخیره با خطا مواجه شد</p>
       )}

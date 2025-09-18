@@ -1,3 +1,6 @@
+//customized
+//add dir="rtl" in <RadioGroup>
+
 "use client"
 
 import * as React from "react"
@@ -12,6 +15,7 @@ function RadioGroup({
 }: React.ComponentProps<typeof RadioGroupPrimitive.Root>) {
   return (
     <RadioGroupPrimitive.Root
+      dir="rtl"
       data-slot="radio-group"
       className={cn("grid gap-3", className)}
       {...props}

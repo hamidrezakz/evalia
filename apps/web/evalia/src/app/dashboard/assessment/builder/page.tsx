@@ -1,10 +1,11 @@
 import React from "react";
-import { QuestionBuilderContainer } from "@/assessment/components";
+import { QuestionCreateWithPreview } from "@/assessment/components";
 
 export const metadata = { title: "Builder سوالات" };
 
 export default function QuestionBuilderPage() {
   return (
+   
     <div className="space-y-6">
       <div className="flex flex-col gap-2">
         <h1 className="text-base font-semibold">ساخت و مدیریت سوالات</h1>
@@ -13,7 +14,7 @@ export default function QuestionBuilderPage() {
           جزئیات کامل هر سوال از جمله ست گزینه و مقادیر آن را مشاهده کنید.
         </p>
       </div>
-        <QuestionBuilderContainer />
+      <QuestionCreateWithPreview />
     </div>
   );
 }

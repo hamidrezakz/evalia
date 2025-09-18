@@ -19,17 +19,11 @@ interface Props {
     strategy: "immediate" | "debounce"
   ) => void;
   onFirstVisible?: () => void; // triggers remote answer lazy load
+  hideTitle?: boolean;
 }
 
 export function QuestionRenderer(props: Props) {
-  const {
-    question,
-    ensureOptions,
-    getOptionsSync,
-    setValue,
-    record,
-    onFirstVisible,
-  } = props;
+  const { question, ensureOptions, getOptionsSync, setValue, record, onFirstVisible, hideTitle } = props;
   const [options, setOptions] = useState<OptionItem[] | null>();
 
   useEffect(() => {
@@ -51,6 +45,7 @@ export function QuestionRenderer(props: Props) {
       return (
         <TextQuestion
           question={question}
+          hideTitle={hideTitle}
           record={record}
           setValue={setValue as any}
         />
@@ -60,6 +55,7 @@ export function QuestionRenderer(props: Props) {
         <BooleanQuestion
           question={question}
           record={record}
+          hideTitle={hideTitle}
           options={options || []}
           setValue={setValue as any}
         />
@@ -69,6 +65,7 @@ export function QuestionRenderer(props: Props) {
         <ScaleQuestion
           question={question}
           record={record}
+          hideTitle={hideTitle}
           options={options || []}
           setValue={setValue as any}
         />
@@ -78,6 +75,7 @@ export function QuestionRenderer(props: Props) {
         <SingleChoiceQuestion
           question={question}
           record={record}
+          hideTitle={hideTitle}
           options={options || []}
           setValue={setValue as any}
         />
@@ -87,6 +85,7 @@ export function QuestionRenderer(props: Props) {
         <MultiChoiceQuestion
           question={question}
           record={record}
+          hideTitle={hideTitle}
           options={options || []}
           setValue={setValue as any}
         />
