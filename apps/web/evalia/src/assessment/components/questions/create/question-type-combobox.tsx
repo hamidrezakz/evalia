@@ -1,21 +1,7 @@
 "use client";
 import * as React from "react";
-import { Button } from "@/components/ui/button";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
-import { CheckIcon, ChevronsUpDownIcon, HelpCircle } from "lucide-react";
+import { Combobox } from "@/components/ui/combobox";
+import { HelpCircle, ChevronsUpDownIcon } from "lucide-react";
 import { QuestionTypeEnum } from "@/lib/enums";
 
 interface QuestionTypeComboboxProps {
@@ -33,72 +19,37 @@ export const QuestionTypeCombobox: React.FC<QuestionTypeComboboxProps> = ({
   disabled,
   className,
 }) => {
-  const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState("");
   const all = QuestionTypeEnum.options();
-  const filtered = search
-    ? all.filter(
-        (o) =>
-          o.label.toLowerCase().includes(search.toLowerCase()) ||
-          o.rawLabel.toLowerCase().includes(search.toLowerCase())
-      )
-    : all;
-  const selected = all.find((o) => o.value === value) || null;
+  const items = React.useMemo(() => {
+    const q = search.toLowerCase();
+    return q
+      ? all.filter(
+          (o: any) =>
+            String(o.label).toLowerCase().includes(q) ||
+            String(o.rawLabel || "")
+              .toLowerCase()
+              .includes(q)
+        )
+      : all;
+  }, [all, search]);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className={cn("justify-between w-full", className)}
-          disabled={disabled}>
-          <span className="flex items-center gap-2 truncate">
-            <HelpCircle className="w-4 h-4 text-muted-foreground" />
-            {selected ? selected.label : placeholder}
-          </span>
-          <ChevronsUpDownIcon className="ms-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent
-        className="w-[var(--radix-popover-trigger-width)] p-0"
-        align="start">
-        <Command>
-          <CommandInput
-            placeholder="جستجوی نوع..."
-            value={search}
-            onValueChange={(v) => setSearch(v)}
-          />
-          <CommandList>
-            <CommandEmpty>موردی یافت نشد</CommandEmpty>
-            <CommandGroup>
-              {filtered.map((o) => (
-                <CommandItem
-                  key={o.value}
-                  value={o.value}
-                  onSelect={() => {
-                    const next = o.value === value ? null : (o.value as any);
-                    onChange(next);
-                    setOpen(false);
-                  }}>
-                  <div className="flex w-full flex-row justify-between items-center">
-                    <span className="truncate flex-1">{o.label}</span>
-                    <span className="flex-shrink-0">
-                      <CheckIcon
-                        className={cn(
-                          "ml-2 h-4 w-4",
-                          value === o.value ? "opacity-100" : "opacity-0"
-                        )}
-                      />
-                    </span>
-                  </div>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+    <Combobox<{ value: string; label: string; rawLabel?: string }>
+      items={items as any}
+      value={value}
+      onChange={(val) => onChange((val as string) ?? null)}
+      placeholder={placeholder}
+      disabled={disabled}
+      className={className}
+      getKey={(o) => o.value}
+      getLabel={(o) => o.label}
+      searchable
+      searchValue={search}
+      onSearchChange={setSearch}
+      leadingIcon={HelpCircle}
+      trailingIcon={ChevronsUpDownIcon}
+      emptyText="موردی یافت نشد"
+    />
   );
 };

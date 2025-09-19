@@ -1,19 +1,10 @@
 "use client";
 import * as React from "react";
 import { useForm } from "react-hook-form";
-import {
-  Plus,
-  CheckCircle2,
-  X,
-  ListChecks,
-  HelpCircle,
-  Layers,
-  SquareCheck,
-} from "lucide-react";
+import { Plus, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import {
   Panel,
   PanelHeader,
@@ -22,26 +13,7 @@ import {
   PanelContent,
   PanelDescription,
 } from "@/components/ui/panel";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+// Removed inline combobox UI imports after refactor
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
@@ -49,8 +21,8 @@ import { cn } from "@/lib/utils";
 import {
   useTemplateSections,
   useAddTemplateQuestion,
+  useTemplateSectionQuestions,
 } from "@/assessment/api/templates-hooks";
-import { useQuestions } from "@/assessment/api/hooks";
 import type {
   Template,
   TemplateSection,
@@ -63,6 +35,7 @@ type FormVals = {
   questionId: number | null;
   perspectives: string[];
   required: boolean;
+  order: number | null;
 };
 
 function getZodEnumOptions(z: unknown): string[] {
@@ -74,84 +47,8 @@ function getZodEnumOptions(z: unknown): string[] {
   return [];
 }
 
-function Combobox<
-  T extends { id: number; label?: string; name?: string; text?: string }
->(props: {
-  items: T[];
-  value: number | null;
-  onChange: (id: number | null, item?: T) => void;
-  placeholder: string;
-  getLabel?: (it: T) => string;
-  disabled?: boolean;
-}) {
-  const { items, value, onChange, placeholder, getLabel, disabled } = props;
-  const [open, setOpen] = React.useState(false);
-  const [search, setSearch] = React.useState("");
-  const selected = items.find((i) => i.id === value) || null;
-  const labelOf = (it: T) =>
-    getLabel ? getLabel(it) : it.label || it.name || it.text || String(it.id);
-
-  const filtered = items.filter((it) =>
-    labelOf(it).toLowerCase().includes(search.toLowerCase())
-  );
-
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className="justify-between w-full"
-          disabled={disabled}>
-          <span className="flex items-center gap-2 truncate">
-            <ListChecks className="w-4 h-4 text-muted-foreground" />
-            {selected ? labelOf(selected) : placeholder}
-          </span>
-          <SquareCheck className="ms-2 h-4 w-4 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent
-        className="w-[var(--radix-popover-trigger-width)] p-0"
-        align="start">
-        <Command shouldFilter={false}>
-          <CommandInput
-            placeholder="جستجو..."
-            value={search}
-            onValueChange={setSearch}
-          />
-          <CommandList>
-            <CommandEmpty>موردی یافت نشد</CommandEmpty>
-            <CommandGroup>
-              {filtered.map((it) => (
-                <CommandItem
-                  key={it.id}
-                  value={String(it.id)}
-                  onSelect={() => {
-                    const next = it.id === value ? null : it.id;
-                    onChange(next, next ? it : undefined);
-                    setOpen(false);
-                  }}>
-                  <div className="flex w-full flex-row justify-between items-center">
-                    <span className="truncate flex-1">{labelOf(it)}</span>
-                    <span className="flex-shrink-0">
-                      <CheckCircle2
-                        className={cn(
-                          "ml-2 h-4 w-4",
-                          value === it.id ? "opacity-100" : "opacity-0"
-                        )}
-                      />
-                    </span>
-                  </div>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
-  );
-}
+import SectionCombobox from "../combobox/SectionCombobox";
+import QuestionSearchCombobox from "../combobox/QuestionSearchCombobox";
 
 export default function AssignQuestionToSection({
   template,
@@ -172,12 +69,7 @@ export default function AssignQuestionToSection({
       .sort((a, b) => (a?.order ?? 0) - (b?.order ?? 0));
   }, [sections]);
 
-  const [qSearch, setQSearch] = React.useState("");
-  const { data: qData, isLoading: qLoading } = useQuestions({
-    search: qSearch,
-    pageSize: 50,
-  });
-  const questionList: Question[] = (qData?.data as Question[]) || [];
+  // Question search is now handled inside QuestionSearchCombobox
 
   const perspectiveOptions = React.useMemo(
     () => getZodEnumOptions(responsePerspectiveEnum),
@@ -191,6 +83,7 @@ export default function AssignQuestionToSection({
       questionId: null,
       perspectives: [],
       required: false,
+      order: null,
     },
   });
 
@@ -198,6 +91,24 @@ export default function AssignQuestionToSection({
   const questionId = watch("questionId");
   const perspectives = watch("perspectives");
   const required = watch("required");
+  const order = watch("order");
+
+  // Prefill order as max(current)+1 when section changes
+  const { data: sectionQuestions } = useTemplateSectionQuestions(
+    sectionId || null
+  );
+  React.useEffect(() => {
+    if (!sectionId) return;
+    const list: any[] = Array.isArray(sectionQuestions)
+      ? (sectionQuestions as any)
+      : [];
+    const maxOrder = list.reduce(
+      (acc, it: any) => Math.max(acc, it?.order ?? 0),
+      -1
+    );
+    const suggested = Math.max(0, maxOrder + 1);
+    setValue("order", suggested);
+  }, [sectionId, sectionQuestions, setValue]);
 
   const onSubmit = handleSubmit(async (vals) => {
     if (!vals.sectionId || !vals.questionId || vals.perspectives.length === 0)
@@ -206,13 +117,16 @@ export default function AssignQuestionToSection({
       sectionId: vals.sectionId,
       questionId: vals.questionId,
       perspectives: vals.perspectives,
-      required: vals.required,
+      required: !!vals.required,
+      order:
+        typeof vals.order === "number" ? Math.max(0, vals.order) : undefined,
     });
     reset({
       sectionId: vals.sectionId,
       questionId: null,
       perspectives: [],
       required: false,
+      order: typeof vals.order === "number" ? vals.order + 1 : null,
     });
   });
 
@@ -244,12 +158,11 @@ export default function AssignQuestionToSection({
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <div className="lg:col-span-1 space-y-2">
             <Label>سکشن تمپلیت</Label>
-            <Combobox
+            <SectionCombobox
               items={sectionList}
               value={sectionId}
               onChange={(id) => setValue("sectionId", id)}
               placeholder="انتخاب سکشن"
-              getLabel={(s) => s.title}
               disabled={!templateId}
             />
           </div>
@@ -257,12 +170,10 @@ export default function AssignQuestionToSection({
             <div className="flex items-center justify-between">
               <Label>سوال</Label>
             </div>
-            <Combobox
-              items={questionList}
+            <QuestionSearchCombobox
               value={questionId}
               onChange={(id) => setValue("questionId", id)}
-              placeholder={qLoading ? "در حال بارگذاری..." : "انتخاب سوال"}
-              getLabel={(q) => q.text}
+              placeholder="انتخاب سوال"
             />
           </div>
         </div>
@@ -296,7 +207,7 @@ export default function AssignQuestionToSection({
               })}
             </div>
           </div>
-          <div className="lg:col-span-1 space-y-2">
+          <div className="lg:col-span-1 space-y-4">
             <Label className="flex items-center gap-2">
               <Layers className="h-4 w-4" /> الزامی بودن
             </Label>
@@ -308,6 +219,23 @@ export default function AssignQuestionToSection({
               <span className="text-xs text-muted-foreground">
                 در صورت فعال بودن، پاسخ به سوال ضروری است.
               </span>
+            </div>
+
+            <div className="space-y-2">
+              <Label>ترتیب سوال</Label>
+              <Input
+                type="number"
+                inputMode="numeric"
+                value={order ?? ""}
+                onChange={(e) => {
+                  const n = Number(e.target.value);
+                  setValue("order", Number.isFinite(n) ? n : null);
+                }}
+                placeholder="مثلا 0، 1، 2 ..."
+              />
+              <p className="text-xs text-muted-foreground">
+                در صورت خالی بودن، به صورت پیش‌فرض در انتهای لیست قرار می‌گیرد.
+              </p>
             </div>
           </div>
         </div>

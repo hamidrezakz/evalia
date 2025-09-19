@@ -152,6 +152,7 @@ export const addTemplateQuestionBody = z.object({
   questionId: z.number().int().positive(),
   perspectives: z.array(z.string()).min(1),
   required: z.boolean().optional(),
+  order: z.number().int().nonnegative().optional(),
 });
 export type AddTemplateQuestionBody = z.infer<typeof addTemplateQuestionBody>;
 export async function addTemplateQuestion(body: AddTemplateQuestionBody) {

@@ -1,21 +1,7 @@
 "use client";
 import * as React from "react";
-import { Button } from "@/components/ui/button";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
-import { CheckIcon, ChevronsUpDownIcon, Library } from "lucide-react";
+import { Combobox } from "@/components/ui/combobox";
+import { Library, ChevronsUpDownIcon } from "lucide-react";
 import { useQuestionBanks } from "../../../api/hooks";
 
 interface QuestionBankComboboxProps {
@@ -33,68 +19,27 @@ export const QuestionBankCombobox: React.FC<QuestionBankComboboxProps> = ({
   disabled,
   className,
 }) => {
-  const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState("");
   const { data, isLoading } = useQuestionBanks({ search });
   const banks = data?.data || [];
-  const selected = banks.find((b) => b.id === value) || null;
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className={cn("justify-between w-full", className)}
-          disabled={disabled || isLoading}>
-          <span className="flex items-center gap-2 truncate">
-            <Library className="w-4 h-4 text-muted-foreground" />
-            {selected ? selected.name : placeholder}
-          </span>
-          <ChevronsUpDownIcon className="ms-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent
-        className="w-[var(--radix-popover-trigger-width)] p-0"
-        align="start">
-        <Command shouldFilter={false}>
-          <CommandInput
-            placeholder="جستجوی بانک..."
-            value={search}
-            onValueChange={(v) => setSearch(v)}
-          />
-          <CommandList>
-            <CommandEmpty>
-              {isLoading ? "در حال بارگذاری..." : "موردی یافت نشد"}
-            </CommandEmpty>
-            <CommandGroup>
-              {banks.map((b) => (
-                <CommandItem
-                  key={b.id}
-                  value={String(b.id)}
-                  onSelect={() => {
-                    const next = b.id === value ? null : b.id;
-                    onChange(next, next ? b : undefined);
-                    setOpen(false);
-                  }}>
-                  <div className="flex w-full flex-row justify-between items-center">
-                    <span className="truncate flex-1">{b.name}</span>
-                    <span className="flex-shrink-0">
-                      <CheckIcon
-                        className={cn(
-                          "ml-2 h-4 w-4",
-                          value === b.id ? "opacity-100" : "opacity-0"
-                        )}
-                      />
-                    </span>
-                  </div>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+    <Combobox<{ id: number; name: string }>
+      items={banks}
+      value={value}
+      onChange={(val, item) => onChange((val as number) ?? null, item)}
+      placeholder={isLoading ? "در حال بارگذاری..." : placeholder}
+      disabled={disabled}
+      className={className}
+      getKey={(b) => b.id}
+      getLabel={(b) => b.name}
+      searchable
+      searchValue={search}
+      onSearchChange={setSearch}
+      leadingIcon={Library}
+      trailingIcon={ChevronsUpDownIcon}
+      loading={isLoading}
+      emptyText="موردی یافت نشد"
+    />
   );
 };

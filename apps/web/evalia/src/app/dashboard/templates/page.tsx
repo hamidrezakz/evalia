@@ -13,9 +13,9 @@ export default function TemplatesPage() {
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
       <div className="lg:col-span-1 space-y-4">
         <TemplateManager onSelect={setSelected} />
+        <TemplateSectionsPanel template={selected} />
       </div>
       <div className="lg:col-span-2 space-y-4">
-        <TemplateSectionsPanel template={selected} />
         <AssignQuestionToSection template={selected} />
       </div>
     </div>
