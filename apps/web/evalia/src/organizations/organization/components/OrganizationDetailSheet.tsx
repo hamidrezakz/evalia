@@ -9,6 +9,8 @@ import {
 } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 import { OrganizationStatusBadge } from "./OrganizationStatusBadge";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export interface OrganizationDetailSheetProps {
   organizationId: number | null;
@@ -96,6 +98,15 @@ export function OrganizationDetailSheet({
                   </div>
                 </>
               )}
+
+              <Separator />
+              <div className="flex justify-end">
+                <Link href={`/dashboard/organizations/${data.id}/teams/manage`}>
+                  <Button size="sm" variant="outline">
+                    مدیریت تیم‌ها
+                  </Button>
+                </Link>
+              </div>
             </>
           ) : null}
         </div>

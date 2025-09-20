@@ -105,7 +105,11 @@ export function Combobox<T>(props: ComboboxProps<T>) {
     if (!searchable) return items;
     const q = (search || "").toLowerCase();
     if (filter) return items.filter((it) => filter(it, q));
-    return items.filter((it) => labelOf(it).toLowerCase().includes(q));
+    return items.filter((it) => {
+      const lbl = labelOf(it);
+      const hay = (lbl ?? "").toString().toLowerCase();
+      return hay.includes(q);
+    });
   }, [items, search, searchable, filter, labelOf]);
 
   const setSearch = (val: string) => {
