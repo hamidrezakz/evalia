@@ -6,6 +6,7 @@ import React from "react";
 const links: { href: string; label: string }[] = [
   { href: "/dashboard/templates", label: "نمای کلی" },
   { href: "/dashboard/sessions", label: "جلسات" },
+  { href: "/dashboard/sessions/assignments", label: "اختصاص به کاربر/تیم" },
 ];
 
 export function TemplateNav() {

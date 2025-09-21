@@ -117,8 +117,17 @@ export type ListUsersQuery = z.infer<typeof listUsersQuerySchema>;
  */
 export function buildUsersQuery(params: Partial<ListUsersQuery>): string {
   const entries: [string, string][] = [];
-  for (const [k, v] of Object.entries(params)) {
+  for (let [k, v] of Object.entries(params)) {
     if (v === undefined || v === null || v === "") continue;
+    // Normalize aliases: map organizationId->orgId and search->q; do NOT duplicate keys
+    if (k === "organizationId") k = "orgId";
+    if (k === "search") k = "q";
+    // Force orgId to be an integer
+    if (k === "orgId") {
+      const n = typeof v === "string" ? parseInt(v, 10) : Number(v);
+      if (!Number.isFinite(n) || !Number.isInteger(n) || n < 1) continue;
+      v = n;
+    }
     if (Array.isArray(v)) {
       if (!v.length) continue;
       if (k === "statuses") entries.push([k, v.join(",")]);

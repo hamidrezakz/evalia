@@ -19,6 +19,9 @@ export class ListUsersDto {
   q?: string; // search in fullName / email / phone
 
   @IsOptional()
+  @Transform(({ value }) =>
+    typeof value === 'string' ? parseInt(value, 10) : value,
+  )
   @IsInt()
   orgId?: number; // filter users that have membership in this org
 

@@ -33,6 +33,9 @@ import {
   bulkUpsertResponses,
   listResponses,
   deleteResponse,
+  listUserSessions,
+  getUserPerspectives,
+  getUserSessionQuestions,
 } from "./sessions.api";
 
 export const templatesKeys = {
@@ -85,6 +88,32 @@ export const sessionsKeys = {
     [...sessionsKeys.byId(sessionId), "assignments"] as const,
   responses: (sessionId: number, extra?: string) =>
     [...sessionsKeys.byId(sessionId), "responses", extra || "base"] as const,
+  userLists: (userId: number, params?: Record<string, unknown>) =>
+    [
+      ...sessionsKeys.all,
+      "user",
+      userId,
+      params
+        ? JSON.stringify(
+            Object.keys(params)
+              .sort()
+              .reduce((a: any, k) => {
+                a[k] = (params as any)[k];
+                return a;
+              }, {})
+          )
+        : "all",
+    ] as const,
+  userPerspectives: (sessionId: number, userId: number) =>
+    [...sessionsKeys.byId(sessionId), "user", userId, "perspectives"] as const,
+  userQuestions: (sessionId: number, userId: number, perspective: string) =>
+    [
+      ...sessionsKeys.byId(sessionId),
+      "user",
+      userId,
+      "questions",
+      perspective,
+    ] as const,
 };
 
 // Templates
@@ -383,5 +412,55 @@ export function useDeleteResponse() {
   return useMutation({
     mutationFn: deleteResponse,
     onSuccess: () => qc.invalidateQueries({ queryKey: sessionsKeys.all }),
+  });
+}
+
+// --- User-centric hooks ---
+export function useUserSessions(userId: number | null, params?: any) {
+  return useQuery({
+    queryKey: userId
+      ? sessionsKeys.userLists(userId, params)
+      : ["sessions", "user", "disabled"],
+    queryFn: () => {
+      if (!userId) throw new Error("no userId");
+      return listUserSessions(userId, params);
+    },
+    enabled: !!userId,
+  });
+}
+
+export function useUserPerspectives(
+  sessionId: number | null,
+  userId: number | null
+) {
+  return useQuery({
+    queryKey:
+      sessionId && userId
+        ? sessionsKeys.userPerspectives(sessionId, userId)
+        : ["sessions", "user", "perspectives", "disabled"],
+    queryFn: () => {
+      if (!sessionId || !userId) throw new Error("no ids");
+      return getUserPerspectives(sessionId, userId);
+    },
+    enabled: !!sessionId && !!userId,
+  });
+}
+
+export function useUserSessionQuestions(
+  sessionId: number | null,
+  userId: number | null,
+  perspective: string | null
+) {
+  return useQuery({
+    queryKey:
+      sessionId && userId && perspective
+        ? sessionsKeys.userQuestions(sessionId, userId, perspective)
+        : ["sessions", "user", "questions", "disabled"],
+    queryFn: () => {
+      if (!sessionId || !userId || !perspective)
+        throw new Error("missing inputs");
+      return getUserSessionQuestions(sessionId, userId, perspective as any);
+    },
+    enabled: !!sessionId && !!userId && !!perspective,
   });
 }

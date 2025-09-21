@@ -130,7 +130,11 @@ export function Combobox<T>(props: ComboboxProps<T>) {
             {LeadingIcon ? (
               <LeadingIcon className="w-4 h-4 text-muted-foreground" />
             ) : null}
-            {selectedItem ? labelOf(selectedItem) : placeholder}
+            {selectedItem ? (
+              <span suppressHydrationWarning>{labelOf(selectedItem)}</span>
+            ) : (
+              <span suppressHydrationWarning>{placeholder}</span>
+            )}
           </span>
           {TrailingIcon ? (
             <TrailingIcon className="ms-2 h-4 w-4 shrink-0 opacity-50" />

@@ -10,6 +10,8 @@ import {
   MaxLength,
   IsObject,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
+import { ResponsePerspective } from '@prisma/client';
 
 export enum SessionStateDto {
   SCHEDULED = 'SCHEDULED',
@@ -63,4 +65,41 @@ export class AddAssignmentDto {
 
 export class UpdateAssignmentDto {
   @IsString() @IsOptional() perspective?: string;
+}
+
+// --- User-centric DTOs ---
+export class ListUserSessionsQueryDto {
+  @IsOptional()
+  @IsEnum(SessionStateDto)
+  state?: SessionStateDto;
+
+  @IsOptional()
+  @Transform(({ value }) =>
+    typeof value === 'string' ? parseInt(value, 10) : value,
+  )
+  @IsInt()
+  organizationId?: number;
+
+  @IsOptional()
+  @IsString()
+  search?: string;
+
+  @IsOptional()
+  @Transform(({ value }) =>
+    typeof value === 'string' ? parseInt(value, 10) : value,
+  )
+  @IsInt()
+  page?: number = 1;
+
+  @IsOptional()
+  @Transform(({ value }) =>
+    typeof value === 'string' ? parseInt(value, 10) : value,
+  )
+  @IsInt()
+  pageSize?: number = 20;
+}
+
+export class UserQuestionsQueryDto {
+  @IsEnum(ResponsePerspective)
+  perspective!: ResponsePerspective;
 }

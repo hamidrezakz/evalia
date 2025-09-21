@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ResponsePerspective } from '@prisma/client';
 import { PrismaService } from '../../prisma.service';
 
 const SESSION_STATE_FLOW: Record<string, string[]> = {
@@ -164,5 +165,137 @@ export class SessionService {
       where: { id },
       data: { deletedAt: new Date(), state: 'CANCELLED' },
     });
+  }
+
+  // --- User-centric helpers ---
+  // List sessions assigned to a specific user (with optional filters and pagination)
+  async listForUser(
+    userId: number,
+    query: { state?: string; organizationId?: number; page?: number; pageSize?: number; search?: string },
+  ) {
+    const page = Number(query.page) > 0 ? Number(query.page) : 1;
+    const pageSize = Math.min(Number(query.pageSize) || 20, 100);
+    const whereSession: any = { deletedAt: null };
+    if (query.organizationId) whereSession.organizationId = Number(query.organizationId);
+    if (query.state) whereSession.state = query.state;
+    if (query.search) whereSession.name = { contains: query.search, mode: 'insensitive' };
+
+    // Join via assignments for the given user
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.assessmentSession.findMany({
+        where: {
+          ...whereSession,
+          assignments: { some: { userId } },
+        },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        orderBy: { startAt: 'desc' },
+        include: {
+          assignments: {
+            where: { userId },
+            select: { perspective: true },
+          },
+        },
+      }),
+      this.prisma.assessmentSession.count({
+        where: { ...whereSession, assignments: { some: { userId } } },
+      }),
+    ]);
+
+    // Map to minimal payload including available perspectives for user in that session
+    const data = items.map((s) => ({
+      id: s.id,
+      name: s.name,
+      state: s.state,
+      organizationId: s.organizationId,
+      templateId: s.templateId,
+      startAt: s.startAt,
+      endAt: s.endAt,
+      perspectives: Array.from(new Set((s as any).assignments.map((a: any) => a.perspective))),
+    }));
+
+    return { data, meta: { page, pageSize, total } };
+  }
+
+  // Return all perspectives available to a user for a session (based on assignments)
+  async getUserPerspectives(sessionId: number, userId: number) {
+    // Ensure session exists
+    await this.getById(sessionId);
+    const assigns = await this.prisma.assessmentAssignment.findMany({
+      where: { sessionId, userId },
+      select: { perspective: true },
+    });
+    const perspectives = Array.from(new Set(assigns.map((a) => a.perspective)));
+    return { sessionId, userId, perspectives };
+  }
+
+  // Fetch questions for a user in a session for the chosen perspective, ordered by section and question order
+  async getQuestionsForUserPerspective(
+    sessionId: number,
+    userId: number,
+    perspective: ResponsePerspective,
+  ) {
+    // Verify there's an assignment for this user/perspective
+    const assignment = await this.prisma.assessmentAssignment.findFirst({
+      where: { sessionId, userId, perspective },
+    });
+    if (!assignment)
+      throw new NotFoundException('No assignment for this user/perspective');
+
+    const full = await this.prisma.assessmentSession.findUnique({
+      where: { id: sessionId },
+      include: {
+        template: {
+          include: {
+            sections: {
+              orderBy: { order: 'asc' },
+              include: {
+                questions: {
+                  orderBy: { order: 'asc' },
+                  include: {
+                    question: {
+                      include: {
+                        options: true,
+                        optionSet: { include: { options: true } },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!full) throw new NotFoundException('Session not found');
+
+    // Filter sections/questions by template question perspectives if defined
+    const sections = (full.template.sections || []).map((sec) => {
+      const qs = sec.questions
+        .filter((link) =>
+          !link.perspectives || link.perspectives.length === 0
+            ? true
+            : link.perspectives.includes(perspective as any),
+        )
+        .map((link) => ({
+          templateQuestionId: link.id,
+          questionId: link.questionId,
+          required: link.required,
+          order: link.order,
+          question: link.question,
+        }));
+      return {
+        id: sec.id,
+        title: sec.title,
+        order: sec.order,
+        questions: qs,
+      };
+    });
+
+    return {
+      session: { id: full.id, name: full.name, state: full.state },
+      assignment: { id: assignment.id, perspective: assignment.perspective },
+      sections,
+    };
   }
 }

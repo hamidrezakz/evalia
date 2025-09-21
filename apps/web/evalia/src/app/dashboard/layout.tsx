@@ -10,6 +10,7 @@ import { UserDataProvider } from "@/users/context";
 import { NavigationProvider } from "@/navigation/context";
 
 import { ReactNode, Suspense } from "react";
+import { AssessmentUserSessionsProvider } from "@/assessment/context/assessment-user-sessions";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
@@ -17,34 +18,36 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       <OrgProvider>
         <UserDataProvider>
           <NavigationProvider>
-            <div className="[--header-height:calc(--spacing(14))]">
-              <SidebarProvider className="flex flex-col">
-                {/* بستن خودکار سایدبار در موبایل */}
-                <Suspense fallback={null}>
-                  <MobileSidebarAutoClose />
-                </Suspense>
-                {/* هدر (نیاز به ساسپنسی برای هوک‌های مسیریابی) */}
-                <Suspense
-                  fallback={
-                    <header className="bg-background border-b h-(--header-height) flex items-center px-4 text-xs text-muted-foreground">
-                      ...
-                    </header>
-                  }>
-                  <SiteHeader />
-                </Suspense>
-                <div className="flex flex-1">
+            <AssessmentUserSessionsProvider>
+              <div className="[--header-height:calc(--spacing(14))]">
+                <SidebarProvider className="flex flex-col">
+                  {/* بستن خودکار سایدبار در موبایل */}
+                  <Suspense fallback={null}>
+                    <MobileSidebarAutoClose />
+                  </Suspense>
+                  {/* هدر (نیاز به ساسپنسی برای هوک‌های مسیریابی) */}
                   <Suspense
                     fallback={
-                      <aside className="hidden md:block w-56 border-l border-border/40 bg-muted/20 animate-pulse" />
+                      <header className="bg-background border-b h-(--header-height) flex items-center px-4 text-xs text-muted-foreground">
+                        ...
+                      </header>
                     }>
-                    <AppSidebar />
+                    <SiteHeader />
                   </Suspense>
-                  <SidebarInset className="p-4 sm:p-5 md:p-6">
-                    <Suspense fallback={null}>{children}</Suspense>
-                  </SidebarInset>
-                </div>
-              </SidebarProvider>
-            </div>
+                  <div className="flex flex-1">
+                    <Suspense
+                      fallback={
+                        <aside className="hidden md:block w-56 border-l border-border/40 bg-muted/20 animate-pulse" />
+                      }>
+                      <AppSidebar />
+                    </Suspense>
+                    <SidebarInset className="p-4 sm:p-5 md:p-6">
+                      <Suspense fallback={null}>{children}</Suspense>
+                    </SidebarInset>
+                  </div>
+                </SidebarProvider>
+              </div>
+            </AssessmentUserSessionsProvider>
           </NavigationProvider>
         </UserDataProvider>
       </OrgProvider>

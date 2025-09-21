@@ -56,7 +56,11 @@ export default function SessionAssignmentsPanel({
   // Top-level selections: organization and session
   const [orgSearch, setOrgSearch] = React.useState("");
   const orgQ = useOrganizations({ q: orgSearch, page: 1, pageSize: 50 });
-  const orgs = orgQ.data || [];
+  const orgs = Array.isArray(orgQ.data)
+    ? (orgQ.data as any)
+    : Array.isArray((orgQ.data as any)?.data)
+    ? ((orgQ.data as any).data as any[])
+    : [];
 
   const [sessionSearch, setSessionSearch] = React.useState("");
   // Sessions list is fetched only when org is selected by mounting a child component
@@ -147,24 +151,22 @@ export default function SessionAssignmentsPanel({
           </div>
           <div className="space-y-2">
             <Label>جلسه</Label>
-            {!selectedOrgId ? (
-              <Combobox<any>
-                items={[]}
-                value={null}
-                onChange={() => {}}
-                placeholder="ابتدا سازمان را انتخاب کنید"
-                leadingIcon={FileText}
-                disabled
-              />
-            ) : (
-              <SessionsSelect
-                orgId={selectedOrgId}
-                value={selectedSessionId}
-                onChange={setSelectedSessionId}
-                search={sessionSearch}
-                onSearch={setSessionSearch}
-              />
-            )}
+            {(() => {
+              const sessionPlaceholder = selectedOrgId
+                ? "انتخاب/جستجوی جلسه"
+                : "ابتدا سازمان را انتخاب کنید";
+              return (
+                <SessionsSelect
+                  orgId={selectedOrgId ?? 0}
+                  value={selectedSessionId}
+                  onChange={setSelectedSessionId}
+                  search={sessionSearch}
+                  onSearch={setSessionSearch}
+                  placeholder={sessionPlaceholder}
+                  disabled={!selectedOrgId}
+                />
+              );
+            })()}
           </div>
         </div>
 
@@ -201,6 +203,10 @@ export default function SessionAssignmentsPanel({
               }>
               اختصاص گروهی از تیم
             </Button>
+            {/* Show selected team members */}
+            {selectedOrgId && state.teamId ? (
+              <TeamMembersList orgId={selectedOrgId} teamId={state.teamId} />
+            ) : null}
           </div>
           <div className="space-y-2">
             <Label>پرسپکتیو</Label>
@@ -264,20 +270,78 @@ export default function SessionAssignmentsPanel({
   );
 }
 
+function TeamMembersList({ orgId, teamId }: { orgId: number; teamId: number }) {
+  const [loading, setLoading] = React.useState(true);
+  const [members, setMembers] = React.useState<any[]>([]);
+  const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    let alive = true;
+    async function run() {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await listTeamMembers(orgId, teamId, { pageSize: 200 });
+        if (alive) setMembers(res || []);
+      } catch (e) {
+        if (alive)
+          setError(e instanceof Error ? e.message : "خطا در دریافت اعضای تیم");
+      } finally {
+        if (alive) setLoading(false);
+      }
+    }
+    run();
+    return () => {
+      alive = false;
+    };
+  }, [orgId, teamId]);
+
+  return (
+    <div className="mt-2 space-y-1">
+      <Label className="text-xs text-muted-foreground">اعضای تیم</Label>
+      {loading ? (
+        <div className="text-xs text-muted-foreground">در حال دریافت…</div>
+      ) : error ? (
+        <div className="text-xs text-rose-600">{error}</div>
+      ) : members.length === 0 ? (
+        <div className="text-xs text-muted-foreground">عضوی یافت نشد</div>
+      ) : (
+        <div className="max-h-40 overflow-auto rounded-md border p-2 space-y-1">
+          {members.map((m) => (
+            <div key={m.id} className="text-xs">
+              • کاربر #{m.userId}
+              {m.user?.fullName ? ` — ${m.user.fullName}` : ""}
+              {m.user?.email ? ` (${m.user.email})` : ""}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+type SessionsSelectProps = {
+  orgId: number;
+  value: number | null;
+  onChange: (v: number | null) => void;
+  search: string;
+  onSearch: (v: string) => void;
+  placeholder?: string;
+  disabled?: boolean;
+};
+
 function SessionsSelect({
   orgId,
   value,
   onChange,
   search,
   onSearch,
-}: {
-  orgId: number;
-  value: number | null;
-  onChange: (v: number | null) => void;
-  search: string;
-  onSearch: (v: string) => void;
-}) {
-  const sessionsQ = useSessions({ organizationId: orgId, search });
+  placeholder = "انتخاب/جستجوی جلسه",
+  disabled = false,
+}: SessionsSelectProps) {
+  const sessionsQ = useSessions(
+    orgId ? { organizationId: orgId, search } : undefined
+  );
   const sessions = sessionsQ.data?.data || [];
   return (
     <Combobox<any>
@@ -291,7 +355,8 @@ function SessionsSelect({
       getLabel={(s) => s.name}
       leadingIcon={FileText}
       loading={sessionsQ.isLoading}
-      placeholder={"انتخاب/جستجوی جلسه"}
+      placeholder={placeholder}
+      disabled={disabled}
     />
   );
 }
@@ -306,6 +371,10 @@ function UsersSelect({
   onChange: (v: number | null) => void;
 }) {
   const [search, setSearch] = React.useState("");
+  React.useEffect(() => {
+    // Reset user search when organization changes
+    setSearch("");
+  }, [orgId]);
   if (!orgId) {
     return (
       <Combobox<any>
@@ -354,6 +423,11 @@ function TeamsSelect({
   value: number | null;
   onChange: (v: number | null) => void;
 }) {
+  const [search, setSearch] = React.useState("");
+  React.useEffect(() => {
+    // Reset team search when organization changes
+    setSearch("");
+  }, [orgId]);
   if (!orgId) {
     return (
       <Combobox<any>
@@ -366,7 +440,10 @@ function TeamsSelect({
       />
     );
   }
-  const { data } = useTeams(orgId, { pageSize: 100 } as any);
+  const { data, isLoading } = useTeams(orgId, {
+    pageSize: 100,
+    q: search,
+  } as any);
   const teams = Array.isArray(data)
     ? (data as any[])
     : Array.isArray((data as any)?.data)
@@ -378,9 +455,12 @@ function TeamsSelect({
       value={value}
       onChange={(v) => onChange((v as number) ?? null)}
       searchable
+      searchValue={search}
+      onSearchChange={setSearch}
       getKey={(t) => t.id}
       getLabel={(t) => t.name}
       leadingIcon={Users}
+      loading={isLoading}
       placeholder="انتخاب تیم"
     />
   );

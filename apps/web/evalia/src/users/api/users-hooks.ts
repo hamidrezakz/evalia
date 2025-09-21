@@ -50,8 +50,20 @@ export function useUsers(params?: Partial<ListUsersQuery>) {
   if (isNaN(safeParams.pageSize) || safeParams.pageSize < 1)
     safeParams.pageSize = 20;
   if (safeParams.id !== undefined) safeParams.id = Number(safeParams.id);
-  if (safeParams.orgId !== undefined)
-    safeParams.orgId = Number(safeParams.orgId);
+  // orgId باید فقط وقتی ارسال شود که یک عدد صحیح مثبت باشد
+  if (safeParams.orgId == null) {
+    delete (safeParams as any).orgId;
+  } else {
+    const n =
+      typeof safeParams.orgId === "string"
+        ? parseInt(safeParams.orgId as unknown as string, 10)
+        : Number(safeParams.orgId);
+    if (!Number.isFinite(n) || !Number.isInteger(n) || n < 1) {
+      delete (safeParams as any).orgId;
+    } else {
+      (safeParams as any).orgId = n;
+    }
+  }
   return useQuery({
     queryKey: usersKeys.list(safeParams),
     queryFn: async () => listUsers(safeParams),

@@ -1,4 +1,4 @@
-import { apiRequest, unwrap } from "@/lib/api.client";
+import { apiRequest } from "@/lib/api.client";
 import {
   TeamMembershipArraySchema,
   TeamMembershipSchema,
@@ -20,14 +20,26 @@ export async function listTeamMembers(
   orgId: number,
   teamId: number,
   params: { page?: number; pageSize?: number } = {}
-) {
+): Promise<TeamMembershipArray> {
   const qs = buildQuery(params);
-  const res = await apiRequest<TeamMembershipArray>(
+  // Do not provide responseSchema so we can accept either { data: T[] } or T[]
+  const res = await apiRequest(
     `/organizations/${orgId}/teams/${teamId}/members${qs ? `?${qs}` : ""}`,
     null,
-    TeamMembershipArraySchema
+    null
   );
-  return unwrap(res);
+  const payload = Array.isArray(res)
+    ? res
+    : Array.isArray((res as any)?.data)
+    ? ((res as any).data as unknown)
+    : [];
+  const validated = TeamMembershipArraySchema.safeParse(payload);
+  if (!validated.success) {
+    throw new Error(
+      "Team members response validation failed: " + validated.error.message
+    );
+  }
+  return validated.data;
 }
 
 export async function addTeamMember(
