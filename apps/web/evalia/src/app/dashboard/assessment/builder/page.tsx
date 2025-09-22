@@ -1,5 +1,4 @@
 import React from "react";
-import { QuestionCreateWithPreview } from "@/assessment/components";
 
 export const metadata = { title: "Builder سوالات" };
 
@@ -14,7 +13,6 @@ export default function QuestionBuilderPage() {
           جزئیات کامل هر سوال از جمله ست گزینه و مقادیر آن را مشاهده کنید.
         </p>
       </div>
-      <QuestionCreateWithPreview />
     </div>
   );
 }

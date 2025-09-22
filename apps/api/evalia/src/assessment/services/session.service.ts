@@ -171,14 +171,22 @@ export class SessionService {
   // List sessions assigned to a specific user (with optional filters and pagination)
   async listForUser(
     userId: number,
-    query: { state?: string; organizationId?: number; page?: number; pageSize?: number; search?: string },
+    query: {
+      state?: string;
+      organizationId?: number;
+      page?: number;
+      pageSize?: number;
+      search?: string;
+    },
   ) {
     const page = Number(query.page) > 0 ? Number(query.page) : 1;
     const pageSize = Math.min(Number(query.pageSize) || 20, 100);
     const whereSession: any = { deletedAt: null };
-    if (query.organizationId) whereSession.organizationId = Number(query.organizationId);
+    if (query.organizationId)
+      whereSession.organizationId = Number(query.organizationId);
     if (query.state) whereSession.state = query.state;
-    if (query.search) whereSession.name = { contains: query.search, mode: 'insensitive' };
+    if (query.search)
+      whereSession.name = { contains: query.search, mode: 'insensitive' };
 
     // Join via assignments for the given user
     const [items, total] = await this.prisma.$transaction([
@@ -211,7 +219,9 @@ export class SessionService {
       templateId: s.templateId,
       startAt: s.startAt,
       endAt: s.endAt,
-      perspectives: Array.from(new Set((s as any).assignments.map((a: any) => a.perspective))),
+      perspectives: Array.from(
+        new Set((s as any).assignments.map((a: any) => a.perspective)),
+      ),
     }));
 
     return { data, meta: { page, pageSize, total } };
@@ -292,10 +302,24 @@ export class SessionService {
       };
     });
 
+    // Fetch existing responses for this assignment limited to these templateQuestionIds
+    const templateQuestionIds = sections.flatMap((s) =>
+      s.questions.map((q) => q.templateQuestionId),
+    );
+    const responses = await this.prisma.assessmentResponse.findMany({
+      where: {
+        sessionId,
+        assignmentId: assignment.id,
+        templateQuestionId: { in: templateQuestionIds },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
     return {
       session: { id: full.id, name: full.name, state: full.state },
       assignment: { id: assignment.id, perspective: assignment.perspective },
       sections,
+      responses,
     };
   }
 }

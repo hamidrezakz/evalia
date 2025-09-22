@@ -315,6 +315,22 @@ const userSessionQuestionsSchema = z.object({
     perspective: responsePerspectiveEnum,
   }),
   sections: z.array(userQuestionsSectionSchema),
+  responses: z
+    .array(
+      z.object({
+        id: z.number().int().positive(),
+        assignmentId: z.number().int().positive(),
+        sessionId: z.number().int().positive(),
+        templateQuestionId: z.number().int().positive(),
+        scaleValue: z.number().nullable().optional(),
+        optionValue: z.string().nullable().optional(),
+        optionValues: z.array(z.string()).optional(),
+        textValue: z.string().nullable().optional(),
+        createdAt: z.string(),
+        updatedAt: z.string().optional(),
+      })
+    )
+    .optional(),
 });
 export type UserSessionQuestions = z.infer<typeof userSessionQuestionsSchema>;
 export async function getUserSessionQuestions(

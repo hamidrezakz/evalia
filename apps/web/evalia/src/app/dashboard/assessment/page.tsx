@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import { AssessmentForm } from "@/assessment/components/assessment";
 import type { Question } from "@/assessment/types/question-banks.types";
 
 // Temporary mock question list (replace with server fetch / query hook)
@@ -110,17 +109,6 @@ export default function AssessmentDemoPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-bold">آزمون نمونه</h1>
-      <AssessmentForm
-        questions={mockQuestions}
-        loadAnswer={loadAnswer}
-        submitAnswer={submitAnswer}
-        loadOptionSet={loadOptionSet}
-        generatedOptions={{ defaultScaleMin: 1, defaultScaleMax: 5 }}
-        onQuestionStatusChange={(rec) => {
-          // eslint-disable-next-line no-console
-          console.log("STATUS", rec.questionId, rec.status, rec.value);
-        }}
-      />
     </div>
   );
 }
