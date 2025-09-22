@@ -12,6 +12,7 @@ import {
   type Assignment,
   type AssessmentResponse,
   responsePerspectiveEnum,
+  sessionStateEnum,
 } from "../types/templates.types";
 
 function buildSessionListPath(raw?: Partial<ListSessionsQuery>) {
@@ -51,9 +52,7 @@ export async function createSession(body: CreateSessionBody) {
   return res as unknown as Session;
 }
 export const updateSessionBody = createSessionBody.partial().extend({
-  state: z
-    .enum(["SCHEDULED", "IN_PROGRESS", "ANALYZING", "COMPLETED", "CANCELLED"])
-    .optional(),
+  state: sessionStateEnum.optional(),
 });
 export type UpdateSessionBody = z.infer<typeof updateSessionBody>;
 export async function updateSession(id: number, body: UpdateSessionBody) {
@@ -205,9 +204,7 @@ export async function deleteResponse(id: number) {
 // --- User-centric session APIs ---
 // List sessions for a user (for sidebar) with available perspectives per session
 export const listUserSessionsQuerySchema = z.object({
-  state: z
-    .enum(["SCHEDULED", "IN_PROGRESS", "ANALYZING", "COMPLETED", "CANCELLED"])
-    .optional(),
+  state: sessionStateEnum.optional(),
   organizationId: z.coerce.number().int().positive().optional(),
   search: z.string().optional(),
   page: z.coerce.number().int().positive().default(1).optional(),
@@ -229,13 +226,7 @@ function buildListUserSessionsQuery(params: Partial<ListUserSessionsQuery>) {
 const userSessionListItemSchema = z.object({
   id: z.number().int().positive(),
   name: z.string(),
-  state: z.enum([
-    "SCHEDULED",
-    "IN_PROGRESS",
-    "ANALYZING",
-    "COMPLETED",
-    "CANCELLED",
-  ]),
+  state: sessionStateEnum,
   organizationId: z.number().int().positive(),
   templateId: z.number().int().positive(),
   startAt: z.string(),
@@ -257,7 +248,7 @@ export async function listUserSessions(
     z.array(userSessionListItemSchema)
   );
   return {
-    data: res as unknown as UserSessionListItem[],
+    data: (res as any)?.data as UserSessionListItem[],
     meta: (res as any)?.meta,
   };
 }
@@ -275,7 +266,7 @@ export async function getUserPerspectives(sessionId: number, userId: number) {
     null,
     userPerspectivesSchema
   );
-  return res as unknown as UserPerspectives;
+  return (res as any)?.data as UserPerspectives;
 }
 
 // Get ordered questions for a user in a session for a chosen perspective
@@ -317,7 +308,7 @@ const userSessionQuestionsSchema = z.object({
   session: z.object({
     id: z.number().int().positive(),
     name: z.string(),
-    state: z.string(),
+    state: sessionStateEnum,
   }),
   assignment: z.object({
     id: z.number().int().positive(),
@@ -338,5 +329,5 @@ export async function getUserSessionQuestions(
     null,
     userSessionQuestionsSchema
   );
-  return res as unknown as UserSessionQuestions;
+  return (res as any)?.data as UserSessionQuestions;
 }

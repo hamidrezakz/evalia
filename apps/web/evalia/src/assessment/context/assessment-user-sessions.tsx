@@ -79,7 +79,14 @@ export function AssessmentUserSessionsProvider({
   const { userId } = useUserDataContext();
   const [refreshTick, setRefreshTick] = useState(0);
   const { data, isLoading, error, refetch } = useUserSessions(userId, query);
-  const sessions = (data?.data as UserSessionListItem[]) || [];
+  const sessions: UserSessionListItem[] = useMemo(() => {
+    const anyData: any = data as any;
+    // Accept either { data: UserSessionListItem[] } or raw array
+    if (Array.isArray(anyData)) return anyData as UserSessionListItem[];
+    if (Array.isArray(anyData?.data))
+      return anyData.data as UserSessionListItem[];
+    return [];
+  }, [data]);
 
   const [activeSessionId, setActiveSessionId] = useState<number | null>(null);
   const [activePerspective, setActivePerspective] =

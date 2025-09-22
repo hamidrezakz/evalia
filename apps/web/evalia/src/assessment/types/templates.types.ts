@@ -1,5 +1,6 @@
 // Types & schemas for templates, sessions, assignments, responses
 import { z } from "zod";
+import { SessionStateEnum, ResponsePerspectiveEnum } from "@/lib/enums";
 import { paginationMetaSchema } from "./common";
 import {
   questionSchema,
@@ -103,13 +104,9 @@ export const templatesListEnvelope = z.object({
 });
 
 // Sessions & assignments & responses
-export const sessionStateEnum = z.enum([
-  "SCHEDULED",
-  "IN_PROGRESS",
-  "ANALYZING",
-  "COMPLETED",
-  "CANCELLED",
-]);
+export const sessionStateEnum = z.enum(
+  SessionStateEnum.values as [string, ...string[]]
+);
 export type SessionState = z.infer<typeof sessionStateEnum>;
 export const sessionSchema = z.object({
   id: z.number().int().positive(),
@@ -148,13 +145,9 @@ export function buildSessionsQuery(params: Partial<ListSessionsQuery>) {
   return qs ? `?${qs}` : "";
 }
 
-export const responsePerspectiveEnum = z.enum([
-  "SELF",
-  "FACILITATOR",
-  "PEER",
-  "MANAGER",
-  "SYSTEM",
-]);
+export const responsePerspectiveEnum = z.enum(
+  ResponsePerspectiveEnum.values as [string, ...string[]]
+);
 export type ResponsePerspective = z.infer<typeof responsePerspectiveEnum>;
 export const assignmentSchema = z.object({
   id: z.number().int().positive(),
