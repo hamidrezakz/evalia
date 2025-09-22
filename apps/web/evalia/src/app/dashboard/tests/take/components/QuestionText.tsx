@@ -1,8 +1,7 @@
 "use client";
 import React from "react";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import type { AnswerValue } from "../types";
 
 export function QuestionText({
@@ -20,18 +19,23 @@ export function QuestionText({
   return (
     <div className="space-y-2">
       <Label htmlFor={`q-${id}`}>پاسخ شما</Label>
-      <Input
+      <Textarea
         id={`q-${id}`}
-        className="max-w-xl"
+        className="max-w-2xl"
         value={text}
         onChange={(e) => onChange({ kind: "TEXT", text: e.target.value })}
         placeholder="بنویسید..."
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            onSubmitNext();
+          }
+        }}
+        onBlur={() => {
+          onSubmitNext();
+        }}
       />
-      <div className="flex justify-start">
-        <Button size="sm" variant="secondary" onClick={() => onSubmitNext()}>
-          ثبت و رفتن به بعدی
-        </Button>
-      </div>
+      {/* Removed explicit next button to reduce visual clutter */}
     </div>
   );
 }

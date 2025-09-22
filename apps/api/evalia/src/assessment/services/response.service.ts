@@ -187,6 +187,19 @@ export class ResponseService {
     const pageSize = Math.min(Number(query.pageSize) || 50, 200);
     const where: any = { sessionId: Number(query.sessionId) };
     if (query.assignmentId) where.assignmentId = Number(query.assignmentId);
+    // If userId provided, restrict to assignments of that user in this session
+    if (query.userId) {
+      const aIds = await this.prisma.assessmentAssignment.findMany({
+        where: {
+          sessionId: Number(query.sessionId),
+          userId: Number(query.userId),
+        },
+        select: { id: true },
+      });
+      where.assignmentId = {
+        in: aIds.map((a) => a.id),
+      };
+    }
     if (query.templateQuestionId)
       where.templateQuestionId = Number(query.templateQuestionId);
     if (query.questionId) {
@@ -204,15 +217,20 @@ export class ResponseService {
         )
       )
         throw new BadRequestException('Invalid perspective');
-      // filter via assignment relation later using in query (need assignment ids)
+      // filter via assignment relation (intersect with userId filter if present)
+      const assignmentWhere: any = {
+        sessionId: Number(query.sessionId),
+        perspective: query.perspective as ResponsePerspective,
+      };
+      if (query.userId) assignmentWhere.userId = Number(query.userId);
       const assignmentIds = await this.prisma.assessmentAssignment.findMany({
-        where: {
-          sessionId: Number(query.sessionId),
-          perspective: query.perspective as ResponsePerspective,
-        },
+        where: assignmentWhere,
         select: { id: true },
       });
-      where.assignmentId = { in: assignmentIds.map((a) => a.id) };
+      const ids = assignmentIds.map((a) => a.id);
+      if (ids.length === 0)
+        return { data: [], meta: { page, pageSize, total: 0 } };
+      where.assignmentId = { in: ids };
     }
     const [items, total] = await this.prisma.$transaction([
       this.prisma.assessmentResponse.findMany({

@@ -29,6 +29,7 @@ export class BulkUpsertResponsesDto {
 export class ListResponsesQueryDto {
   @IsInt() sessionId!: number; // required to scope
   @IsOptional() assignmentId?: number;
+  @IsOptional() userId?: number;
   @IsOptional() templateQuestionId?: number;
   @IsOptional() questionId?: number; // convenience filter
   @IsOptional() perspective?: string; // validated in service

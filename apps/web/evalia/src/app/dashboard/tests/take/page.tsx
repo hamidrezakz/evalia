@@ -1,15 +1,33 @@
 "use client";
 import React from "react";
 import { useAssessmentUserSessions } from "@/assessment/context/assessment-user-sessions";
-import {
-  getUserSessionQuestions,
-  bulkUpsertResponses,
-  type UserSessionQuestions,
-  type UpsertResponseBody,
-  listResponses,
+import type {
+  UserSessionQuestions,
+  UpsertResponseBody,
 } from "@/assessment/api/sessions.api";
+import {
+  useUserSessionQuestions,
+  useResponses,
+  useBulkUpsertResponses,
+} from "@/assessment/api/templates-hooks";
 import { ResponsePerspectiveEnum, SessionStateEnum } from "@/lib/enums";
 import { Button } from "@/components/ui/button";
+import {
+  Panel,
+  PanelHeader,
+  PanelTitle,
+  PanelAction,
+  PanelDescription,
+  PanelContent,
+} from "@/components/ui/panel";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useUserDataContext } from "@/users/context";
 // no separators for ultra-simple look
 import type { AnswerMap, FlatQuestion, AnswerValue } from "./types";
 import { QuestionText } from "./components/QuestionText";
@@ -20,9 +38,15 @@ import { QuestionScale } from "./components/QuestionScale";
 import { ProgressCircle } from "./components/ProgressCircle";
 
 export default function TakeAssessmentPage() {
-  const { userId, activeSessionId, activePerspective } =
-    useAssessmentUserSessions();
-  const [loading, setLoading] = React.useState(false);
+  const { user } = useUserDataContext();
+  const {
+    userId,
+    activeSessionId,
+    activePerspective,
+    availablePerspectives,
+    setActivePerspective,
+    activeSession,
+  } = useAssessmentUserSessions();
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [data, setData] = React.useState<UserSessionQuestions | null>(null);
@@ -34,82 +58,107 @@ export default function TakeAssessmentPage() {
   const canLoad =
     userId != null && activeSessionId != null && !!activePerspective;
 
-  React.useEffect(() => {
-    if (!canLoad) return;
-    setLoading(true);
-    setError(null);
-    getUserSessionQuestions(activeSessionId!, userId!, activePerspective as any)
-      .then((res) => {
-        setData(res);
-        // Prefer embedded responses if provided by API
-        const embedded = (res as any).responses as any[] | undefined;
-        const typeMap: Record<number, string> = {};
-        for (const sec of res.sections) {
-          for (const q of sec.questions) {
-            const qt = (q.question as any)?.type as string;
-            typeMap[q.templateQuestionId] = qt;
-          }
-        }
-        const parseSrv = (items: any[]) => {
-          const srv: AnswerMap = {};
-          for (const r of items) {
-            const linkId = r.templateQuestionId as number;
-            const qType = typeMap[linkId];
-            if (!qType) continue;
-            if (r.textValue != null && qType === "TEXT") {
-              srv[linkId] = { kind: "TEXT", text: r.textValue ?? "" } as any;
-            } else if (r.scaleValue != null && qType === "SCALE") {
-              srv[linkId] = {
-                kind: "SCALE",
-                value: Number(r.scaleValue),
-              } as any;
-            } else if (
-              Array.isArray(r.optionValues) &&
-              r.optionValues.length &&
-              qType === "MULTI_CHOICE"
-            ) {
-              srv[linkId] = {
-                kind: "MULTI_CHOICE",
-                values: r.optionValues as string[],
-              } as any;
-            } else if (r.optionValue != null) {
-              if (qType === "BOOLEAN") {
-                srv[linkId] = {
-                  kind: "BOOLEAN",
-                  value: r.optionValue === "true",
-                } as any;
-              } else if (qType === "SINGLE_CHOICE") {
-                srv[linkId] = {
-                  kind: "SINGLE_CHOICE",
-                  value: r.optionValue as string,
-                } as any;
-              }
-            }
-          }
-          return srv;
-        };
-        if (embedded && embedded.length) {
-          const srv = parseSrv(embedded);
-          setServerAnswers(srv);
-          setAnswers(srv);
-          return;
-        }
-        // Fallback fetch if backend didn't include responses
-        return listResponses({
-          sessionId: res.session.id,
-          assignmentId: res.assignment.id,
+  // Data via React Query hooks
+  const uq = useUserSessionQuestions(
+    canLoad ? (activeSessionId as number) : null,
+    canLoad ? (userId as number) : null,
+    canLoad ? (activePerspective as string) : null
+  );
+  const hasEmbedded = !!(uq.data as any)?.responses?.length;
+  const respQ = useResponses(
+    uq.data && !hasEmbedded
+      ? {
+          sessionId: uq.data.session.id,
+          assignmentId: uq.data.assignment.id,
+          userId: userId!,
+          perspective: uq.data.assignment.perspective,
           pageSize: 500,
-        })
-          .then((lr) => {
-            const srv = parseSrv(lr.data);
-            setServerAnswers(srv);
-            setAnswers(srv);
-          })
-          .catch(() => setServerAnswers({}));
-      })
-      .catch((e) => setError((e as any)?.message || String(e)))
-      .finally(() => setLoading(false));
-  }, [canLoad, userId, activeSessionId, activePerspective]);
+        }
+      : { sessionId: undefined }
+  );
+  const bulk = useBulkUpsertResponses();
+
+  // helpers to build map and parse responses
+  const buildTypeMap = React.useCallback((res: UserSessionQuestions | null) => {
+    const map: Record<number, string> = {};
+    if (!res) return map;
+    for (const sec of res.sections) {
+      for (const q of sec.questions) {
+        const qt = (q.question as any)?.type as string;
+        map[q.templateQuestionId] = qt;
+      }
+    }
+    return map;
+  }, []);
+  const parseSrv = React.useCallback(
+    (items: any[], typeMap: Record<number, string>) => {
+      const srv: AnswerMap = {};
+      for (const r of items || []) {
+        const linkId = r.templateQuestionId as number;
+        const qType = typeMap[linkId];
+        if (!qType) continue;
+        if (r.textValue != null && qType === "TEXT") {
+          srv[linkId] = { kind: "TEXT", text: r.textValue ?? "" } as any;
+        } else if (r.scaleValue != null && qType === "SCALE") {
+          srv[linkId] = { kind: "SCALE", value: Number(r.scaleValue) } as any;
+        } else if (
+          Array.isArray(r.optionValues) &&
+          r.optionValues.length &&
+          qType === "MULTI_CHOICE"
+        ) {
+          srv[linkId] = {
+            kind: "MULTI_CHOICE",
+            values: r.optionValues as string[],
+          } as any;
+        } else if (r.optionValue != null) {
+          if (qType === "BOOLEAN") {
+            srv[linkId] = {
+              kind: "BOOLEAN",
+              value: r.optionValue === "true",
+            } as any;
+          } else if (qType === "SINGLE_CHOICE") {
+            srv[linkId] = {
+              kind: "SINGLE_CHOICE",
+              value: r.optionValue as string,
+            } as any;
+          }
+        }
+      }
+      return srv;
+    },
+    []
+  );
+
+  // On questions/session change: clear previous answers and prefill from embedded if exists
+  React.useEffect(() => {
+    if (!uq.data) return;
+    const res = uq.data as UserSessionQuestions;
+    setData(res);
+    // clear stale values from other sessions
+    setServerAnswers({});
+    setAnswers({});
+    const embedded = (res as any).responses as any[] | undefined;
+    if (embedded && embedded.length) {
+      const typeMap = buildTypeMap(res);
+      const srv = parseSrv(embedded, typeMap);
+      setServerAnswers(srv);
+      setAnswers(srv);
+    }
+  }, [uq.data, buildTypeMap, parseSrv]);
+
+  // When fallback responses arrive (no embedded): prefill
+  React.useEffect(() => {
+    const res = (uq.data as UserSessionQuestions) || null;
+    if (!res) return;
+    const embedded = (res as any).responses as any[] | undefined;
+    if (embedded && embedded.length) return; // already handled
+    if (respQ.data?.data?.length) {
+      const typeMap = buildTypeMap(res);
+      const srv = parseSrv(respQ.data.data as any[], typeMap);
+      setServerAnswers(srv);
+      setAnswers(srv);
+    }
+  }, [respQ.data, uq.data, buildTypeMap, parseSrv]);
 
   const flatQuestions = React.useMemo(() => {
     const items: FlatQuestion[] = [];
@@ -240,7 +289,7 @@ export default function TakeAssessmentPage() {
     setSaving(true);
     setError(null);
     try {
-      const result = await bulkUpsertResponses({ items });
+      const result = await bulk.mutateAsync({ items } as any);
       // Merge saved items into serverAnswers to clear pending state
       setServerAnswers((prev: AnswerMap) => {
         const next = { ...prev } as AnswerMap;
@@ -295,34 +344,102 @@ export default function TakeAssessmentPage() {
   }
 
   return (
-    <div className="p-6 space-y-6 text-right" dir="rtl">
+    <div className="space-y-6 text-right" dir="rtl">
       {/* Floating progress only (top-left, unobtrusive, no container) */}
-      <div className="fixed left-3 top-16 z-40 pointer-events-none">
+      <div className="fixed left-2 sm:left-2 bottom-0 z-40 pointer-events-none">
         <ProgressCircle value={answeredCount} total={flatQuestions.length} />
       </div>
 
-      {/* Small non-sticky context (omit session name per request) */}
-      <div>
-        <p className="text-sm text-muted-foreground">
-          پرسپکتیو: {ResponsePerspectiveEnum.t(activePerspective as any)}
-        </p>
-      </div>
+      {/* Session info panel with perspective selector */}
+      <Panel className="shadow-sm">
+        <PanelHeader className="[.border-b]:border-border/70">
+          <PanelTitle className="flex items-center gap-2 text-base sm:text-lg">
+            {uq.data?.session.name ?? activeSession?.name ?? "آزمون"}
+            {uq.data?.session?.state && (
+              <span
+                className={
+                  "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] border " +
+                  (uq.data.session.state === "IN_PROGRESS"
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                    : uq.data.session.state === "SCHEDULED"
+                    ? "border-sky-200 bg-sky-50 text-sky-700"
+                    : uq.data.session.state === "COMPLETED"
+                    ? "border-gray-200 bg-gray-50 text-gray-700"
+                    : "border-amber-200 bg-amber-50 text-amber-700")
+                }>
+                {SessionStateEnum.t(uq.data.session.state as any)}
+              </span>
+            )}
+          </PanelTitle>
+
+          <PanelAction>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground hidden sm:inline">
+                پرسپکتیو:
+              </span>
+              <Select
+                value={activePerspective ?? undefined}
+                onValueChange={(v) => setActivePerspective(v as any)}>
+                <SelectTrigger size="sm">
+                  <SelectValue placeholder="انتخاب پرسپکتیو" />
+                </SelectTrigger>
+                <SelectContent align="end">
+                  {availablePerspectives?.length ? (
+                    availablePerspectives.map((p) => (
+                      <SelectItem key={p as any} value={p as any}>
+                        {ResponsePerspectiveEnum.t(p as any)}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <div className="px-2 py-1 text-xs text-muted-foreground">
+                      پرسپکتیوی موجود نیست
+                    </div>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          </PanelAction>
+
+          <PanelDescription className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1">
+            {user?.name && (
+              <span className="font-medium text-foreground/80">
+                شرکت‌کننده: {user.name}
+              </span>
+            )}
+            {activeSession?.startAt && (
+              <span>
+                شروع:{" "}
+                {new Date(activeSession.startAt as any).toLocaleString("fa-IR")}
+              </span>
+            )}
+            {activeSession?.endAt && (
+              <span>
+                پایان:{" "}
+                {new Date(activeSession.endAt as any).toLocaleString("fa-IR")}
+              </span>
+            )}
+          </PanelDescription>
+        </PanelHeader>
+        {/* Optional extra content row for future details */}
+      </Panel>
       {data && data.session.state !== "IN_PROGRESS" && (
         <div className="text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 text-sm">
           این جلسه در وضعیت «{SessionStateEnum.t(data.session.state as any)}»
           است و فعلاً امکان ثبت پاسخ ندارد.
         </div>
       )}
-      {loading ? (
+      {uq.isLoading ? (
         <div className="text-sm text-muted-foreground">
           در حال بارگذاری سوالات…
         </div>
-      ) : error ? (
-        <div className="text-sm text-rose-600">{error}</div>
+      ) : uq.error ? (
+        <div className="text-sm text-rose-600">
+          {String((uq.error as any)?.message || uq.error)}
+        </div>
       ) : !data ? (
         <div className="text-sm text-muted-foreground">داده‌ای یافت نشد.</div>
       ) : (
-        <>
+        <div className="max-w-2xl">
           {data.sections.map((sec: any) => (
             <section key={sec.id} className="space-y-4">
               <h2 className="text-lg font-semibold">{sec.title}</h2>
@@ -356,7 +473,7 @@ export default function TakeAssessmentPage() {
                       ref={(el) => {
                         questionRefs.current[linkId] = el;
                       }}
-                      className="">
+                      className="scroll-mt-[100px]">
                       <div className="mb-2">
                         <span className="font-medium">
                           {qIndexMap[linkId]}. {text}
@@ -458,7 +575,7 @@ export default function TakeAssessmentPage() {
               {saving ? "در حال ذخیره…" : "ذخیره پاسخ‌ها"}
             </Button>
           </div>
-        </>
+        </div>
       )}
     </div>
   );
