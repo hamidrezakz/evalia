@@ -118,7 +118,12 @@ export class SessionService {
             },
           },
         },
-        assignments: true,
+        assignments: {
+          include: {
+            respondent: { select: { id: true, fullName: true } },
+            subject: { select: { id: true, fullName: true } },
+          },
+        },
       },
     });
   }
@@ -134,10 +139,12 @@ export class SessionService {
     }
     if (dto.state && dto.state !== existing.state) {
       const allowed = SESSION_STATE_FLOW[existing.state] || [];
-      if (!allowed.includes(dto.state))
+      const force = Boolean(dto.force);
+      if (!force && !allowed.includes(dto.state)) {
         throw new BadRequestException(
           `Illegal state transition ${existing.state} -> ${dto.state}`,
         );
+      }
     }
     return this.prisma.assessmentSession.update({
       where: { id },
@@ -193,20 +200,23 @@ export class SessionService {
       this.prisma.assessmentSession.findMany({
         where: {
           ...whereSession,
-          assignments: { some: { userId } },
+          assignments: { some: { respondentUserId: userId } },
         },
         skip: (page - 1) * pageSize,
         take: pageSize,
         orderBy: { startAt: 'desc' },
         include: {
           assignments: {
-            where: { userId },
+            where: { respondentUserId: userId },
             select: { perspective: true },
           },
         },
       }),
       this.prisma.assessmentSession.count({
-        where: { ...whereSession, assignments: { some: { userId } } },
+        where: {
+          ...whereSession,
+          assignments: { some: { respondentUserId: userId } },
+        },
       }),
     ]);
 
@@ -232,7 +242,7 @@ export class SessionService {
     // Ensure session exists
     await this.getById(sessionId);
     const assigns = await this.prisma.assessmentAssignment.findMany({
-      where: { sessionId, userId },
+      where: { sessionId, respondentUserId: userId },
       select: { perspective: true },
     });
     const perspectives = Array.from(new Set(assigns.map((a) => a.perspective)));
@@ -244,10 +254,25 @@ export class SessionService {
     sessionId: number,
     userId: number,
     perspective: ResponsePerspective,
+    subjectUserId?: number,
   ) {
     // Verify there's an assignment for this user/perspective
+    // For non-SELF perspectives, subjectUserId is required
+    if (perspective !== 'SELF' && !subjectUserId) {
+      throw new BadRequestException('subjectUserId required for non-SELF');
+    }
+    const whereAssignment: any = {
+      sessionId,
+      respondentUserId: userId,
+      perspective,
+    };
+    if (subjectUserId) whereAssignment.subjectUserId = subjectUserId;
+    // For SELF, support either explicit subject match or classic SELF rows (subject=null or = respondent depending on migration phase)
+    if (perspective === 'SELF' && !subjectUserId) {
+      whereAssignment.OR = [{ subjectUserId: null }, { subjectUserId: userId }];
+    }
     const assignment = await this.prisma.assessmentAssignment.findFirst({
-      where: { sessionId, userId, perspective },
+      where: whereAssignment,
     });
     if (!assignment)
       throw new NotFoundException('No assignment for this user/perspective');

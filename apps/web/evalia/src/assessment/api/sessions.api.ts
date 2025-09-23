@@ -72,7 +72,11 @@ export async function deleteSession(id: number) {
 // Assignments
 export const addAssignmentBody = z.object({
   sessionId: z.number().int().positive(),
-  userId: z.number().int().positive(),
+  // respondent is the answering user
+  userId: z.number().int().positive().optional(),
+  respondentUserId: z.number().int().positive().optional(),
+  // subject is the person being evaluated; defaults to respondent for SELF
+  subjectUserId: z.number().int().positive().optional(),
   perspective: z.string().optional(),
 });
 export type AddAssignmentBody = z.infer<typeof addAssignmentBody>;
@@ -87,7 +91,10 @@ export async function addAssignment(body: AddAssignmentBody) {
 }
 export const bulkAssignBody = z.object({
   sessionId: z.number().int().positive(),
-  userIds: z.array(z.number().int().positive()).min(1),
+  // for bulk, respondent user ids; subjectUserId can be shared for all
+  userIds: z.array(z.number().int().positive()).min(1).optional(),
+  respondentUserIds: z.array(z.number().int().positive()).min(1).optional(),
+  subjectUserId: z.number().int().positive().optional(),
   perspective: z.string().optional(),
 });
 export type BulkAssignBody = z.infer<typeof bulkAssignBody>;
@@ -338,12 +345,17 @@ export type UserSessionQuestions = z.infer<typeof userSessionQuestionsSchema>;
 export async function getUserSessionQuestions(
   sessionId: number,
   userId: number,
-  perspective: z.infer<typeof responsePerspectiveEnum>
+  perspective: z.infer<typeof responsePerspectiveEnum>,
+  subjectUserId?: number
 ) {
   const res = await apiRequest(
     `/sessions/${sessionId}/user/${userId}/questions?perspective=${encodeURIComponent(
       perspective
-    )}`,
+    )}${
+      subjectUserId
+        ? `&subjectUserId=${encodeURIComponent(String(subjectUserId))}`
+        : ""
+    }`,
     null,
     userSessionQuestionsSchema
   );

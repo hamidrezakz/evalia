@@ -105,6 +105,7 @@ export default function SessionManager({
 
   const delMut = useDeleteSession();
   const updateMut = useUpdateSession();
+  const [updateError, setUpdateError] = React.useState<string | null>(null);
 
   const handleAdd = () => {
     setEditingId(null);
@@ -149,7 +150,7 @@ export default function SessionManager({
         <PanelContent className="flex-col gap-3">
           {/* Toolbar row under header */}
           <div className="w-full flex flex-wrap items-center gap-2">
-            <DropdownMenu>
+            <DropdownMenu dir="rtl">
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="outline"
@@ -204,6 +205,9 @@ export default function SessionManager({
               />
             </div>
           </div>
+          {updateError ? (
+            <div className="text-sm text-rose-600">{updateError}</div>
+          ) : null}
           <div className="grid grid-cols-1 gap-2">
             {sessionsQ.isLoading ? (
               <div className="text-sm text-muted-foreground">
@@ -220,9 +224,20 @@ export default function SessionManager({
                   s={s}
                   onEdit={() => handleEdit(s)}
                   onAskDelete={askDelete}
-                  onChangeState={(state) =>
-                    updateMut.mutate({ id: s.id, body: { state } })
-                  }
+                  onChangeState={async (state) => {
+                    setUpdateError(null);
+                    try {
+                      await updateMut.mutateAsync({
+                        id: s.id,
+                        body: { state, force: true },
+                      });
+                      await sessionsQ.refetch();
+                    } catch (e) {
+                      setUpdateError(
+                        (e as any)?.message || "خطا در تغییر وضعیت"
+                      );
+                    }
+                  }}
                 />
               ))
             )}
@@ -288,7 +303,7 @@ function SessionCard({
           <Clock className="h-4 w-4 text-muted-foreground" /> {s.name}
         </PanelTitle>
         <PanelAction className="flex items-center gap-1">
-          <DropdownMenu>
+          <DropdownMenu dir="rtl">
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon">
                 <MoreVertical className="h-4 w-4" />
@@ -297,29 +312,36 @@ function SessionCard({
             <DropdownMenuContent align="end" className="min-w-56">
               <DropdownMenuLabel>تغییر وضعیت</DropdownMenuLabel>
               <DropdownMenuItem onClick={() => onChangeState("SCHEDULED")}>
-                <CalendarCheck className="h-4 w-4" /> زمان‌بندی شده
+                <CalendarCheck className="h-4 w-4" />
+                <span className="ms-2">زمان‌بندی شده</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onChangeState("IN_PROGRESS")}>
-                <PlayCircle className="h-4 w-4" /> در حال انجام
+                <PlayCircle className="h-4 w-4" />
+                <span className="ms-2">در حال انجام</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onChangeState("ANALYZING")}>
-                <BarChart2 className="h-4 w-4" /> در حال تحلیل
+                <BarChart2 className="h-4 w-4" />
+                <span className="ms-2">در حال تحلیل</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onChangeState("COMPLETED")}>
-                <CheckCircle2 className="h-4 w-4" /> تکمیل شده
+                <CheckCircle2 className="h-4 w-4" />
+                <span className="ms-2">تکمیل شده</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onChangeState("CANCELLED")}>
-                <XCircle className="h-4 w-4" /> لغو شده
+                <XCircle className="h-4 w-4" />
+                <span className="ms-2">لغو شده</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuLabel>اقدامات</DropdownMenuLabel>
               <DropdownMenuItem onClick={onEdit}>
-                <Pencil className="h-4 w-4" /> ویرایش
+                <Pencil className="h-4 w-4" />
+                <span className="ms-2">ویرایش</span>
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="text-destructive"
                 onClick={() => onAskDelete(s.id)}>
-                <Trash2 className="h-4 w-4" /> حذف
+                <Trash2 className="h-4 w-4" />
+                <span className="ms-2">حذف</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

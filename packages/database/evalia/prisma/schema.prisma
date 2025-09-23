@@ -225,8 +225,10 @@ model User {
   invites       Invitation[]        @relation("InvitationSender")
   /// AI jobs requested by user | درخواست‌های پردازش AI
   aiJobs        AIAnalysisJob[]     @relation("AIJobRequester")
-  /// Assessment assignments (participant roles) | تخصیص‌های ارزیابی
+  /// Assessment assignments where user is respondent | تخصیص‌های ارزیابی به عنوان پاسخ‌دهنده
   assignments   AssessmentAssignment[] @relation("UserAssessmentAssignments")
+  /// Assessment assignments where user is subject | تخصیص‌های ارزیابی به عنوان سوژه ارزیابی
+  subjectAssignments AssessmentAssignment[] @relation("UserAssessmentSubjectAssignments")
   /// Organizations where user is primary owner | سازمان‌هایی که مالک اصلی است
   ownedOrganizations Organization[] @relation("OrgPrimaryOwner")
   /// Notifications received | اعلان‌ها
@@ -573,17 +575,22 @@ model AssessmentSession {
 model AssessmentAssignment {
   id          Int                @id @default(autoincrement())
   sessionId   Int
-  userId      Int
+  /// The answering user (respondent) - mapped to legacy userId column for smooth migration
+  respondentUserId Int               @map("userId")
+  /// The person being evaluated (subject) - initially optional, will be backfilled then made required
+  subjectUserId    Int?
   perspective ResponsePerspective @default(SELF)
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
 
   session     AssessmentSession  @relation("SessionAssignments", fields: [sessionId], references: [id], onDelete: Cascade)
-  user        User               @relation("UserAssessmentAssignments", fields: [userId], references: [id])
+  respondent  User               @relation("UserAssessmentAssignments", fields: [respondentUserId], references: [id])
+  subject     User?              @relation("UserAssessmentSubjectAssignments", fields: [subjectUserId], references: [id])
   responses   AssessmentResponse[] @relation("AssignmentResponses")
 
-  @@unique([sessionId, userId, perspective])
-  @@index([userId])
+  /// Ensure no duplicate assignment for the same tuple (final form to be applied after backfill)
+  @@index([respondentUserId])
+  @@index([subjectUserId])
 }
 
 /// Individual response to a template question by an assignment (پاسخ)

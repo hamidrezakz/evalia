@@ -152,7 +152,10 @@ export type ResponsePerspective = z.infer<typeof responsePerspectiveEnum>;
 export const assignmentSchema = z.object({
   id: z.number().int().positive(),
   sessionId: z.number().int().positive(),
-  userId: z.number().int().positive(),
+  // Backward compatibility: userId used to represent respondent
+  userId: z.number().int().positive().optional(),
+  respondentUserId: z.number().int().positive().optional(),
+  subjectUserId: z.number().int().positive().optional(),
   perspective: responsePerspectiveEnum,
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),

@@ -9,6 +9,7 @@ import {
   useUserSessionQuestions,
   useResponses,
   useBulkUpsertResponses,
+  useAssignmentsDetailed,
 } from "@/assessment/api/templates-hooks";
 import { ResponsePerspectiveEnum, SessionStateEnum } from "@/lib/enums";
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +40,8 @@ import { QuestionMultiChoice } from "./components/QuestionMultiChoice";
 import { QuestionScale } from "./components/QuestionScale";
 import { ProgressCircle } from "./components/ProgressCircle";
 import { AlertTriangle } from "lucide-react";
+import { Combobox } from "@/components/ui/combobox";
+import { useUsers } from "@/users/api/users-hooks";
 
 export default function TakeAssessmentPage() {
   const { user } = useUserDataContext();
@@ -57,15 +60,65 @@ export default function TakeAssessmentPage() {
   const [serverAnswers, setServerAnswers] = React.useState<AnswerMap>({});
 
   const questionRefs = React.useRef<Record<number, HTMLDivElement | null>>({});
+  const [subjectUserId, setSubjectUserId] = React.useState<number | null>(null);
 
+  const needsSubject = activePerspective && activePerspective !== "SELF";
   const canLoad =
-    userId != null && activeSessionId != null && !!activePerspective;
+    userId != null &&
+    activeSessionId != null &&
+    !!activePerspective &&
+    (!needsSubject || !!subjectUserId);
+
+  // Auto-pick a default perspective if not selected yet
+  React.useEffect(() => {
+    if (!activePerspective && (availablePerspectives?.length || 0) > 0) {
+      setActivePerspective(availablePerspectives![0] as any);
+    }
+  }, [activePerspective, availablePerspectives, setActivePerspective]);
+
+  // Load assignments to help auto-pick a subject when a unique one exists
+  const assignmentsDetailed = useAssignmentsDetailed(activeSessionId ?? null);
+  React.useEffect(() => {
+    if (
+      !activeSessionId ||
+      !activePerspective ||
+      activePerspective === "SELF" ||
+      subjectUserId != null
+    )
+      return;
+    const list = (assignmentsDetailed.data || []) as any[];
+    const mine = list.filter(
+      (a) =>
+        (a.respondentUserId ?? a.userId) === userId &&
+        a.perspective === activePerspective
+    );
+    const uniqueSubjects = Array.from(
+      new Set(mine.map((a) => a.subjectUserId).filter(Boolean))
+    ) as number[];
+    if (uniqueSubjects.length === 1) {
+      setSubjectUserId(uniqueSubjects[0]!);
+    }
+  }, [
+    activeSessionId,
+    activePerspective,
+    subjectUserId,
+    assignmentsDetailed.data,
+    userId,
+  ]);
+
+  // Clear subject when perspective becomes SELF
+  React.useEffect(() => {
+    if (activePerspective === "SELF") setSubjectUserId(null);
+  }, [activePerspective]);
 
   // Data via React Query hooks
   const uq = useUserSessionQuestions(
     canLoad ? (activeSessionId as number) : null,
     canLoad ? (userId as number) : null,
-    canLoad ? (activePerspective as string) : null
+    canLoad ? (activePerspective as string) : null,
+    activePerspective && activePerspective !== "SELF"
+      ? subjectUserId ?? undefined
+      : undefined
   );
   const hasEmbedded = !!(uq.data as any)?.responses?.length;
   const respQ = useResponses(
@@ -336,12 +389,26 @@ export default function TakeAssessmentPage() {
   }
 
   if (!canLoad) {
+    const reason = !activeSessionId
+      ? "ابتدا از سایدبار یک آزمون را انتخاب کنید."
+      : !activePerspective
+      ? "در حال انتخاب خودکار پرسپکتیو…"
+      : needsSubject && !subjectUserId
+      ? "برای این پرسپکتیو، لطفاً شخصِ موضوع ارزیابی را انتخاب کنید."
+      : "لطفاً انتخاب‌ها را کامل کنید.";
     return (
       <div className="p-6">
         <h1 className="text-xl font-semibold mb-3">ورود به آزمون</h1>
-        <p className="text-muted-foreground">
-          لطفاً ابتدا از سایدبار یک آزمون و پرسپکتیو را انتخاب کنید.
-        </p>
+        <p className="text-muted-foreground">{reason}</p>
+        {activePerspective && activePerspective !== "SELF" ? (
+          <div className="mt-3">
+            <SubjectSelector
+              organizationId={activeSession?.organizationId}
+              value={subjectUserId}
+              onChange={setSubjectUserId}
+            />
+          </div>
+        ) : null}
       </div>
     );
   }
@@ -403,6 +470,13 @@ export default function TakeAssessmentPage() {
                   )}
                 </SelectContent>
               </Select>
+              {activePerspective && activePerspective !== "SELF" ? (
+                <SubjectSelector
+                  organizationId={activeSession?.organizationId}
+                  value={subjectUserId}
+                  onChange={setSubjectUserId}
+                />
+              ) : null}
             </div>
           </PanelAction>
 
@@ -586,6 +660,42 @@ export default function TakeAssessmentPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function SubjectSelector({
+  organizationId,
+  value,
+  onChange,
+}: {
+  organizationId?: number | null;
+  value: number | null;
+  onChange: (v: number | null) => void;
+}) {
+  const [search, setSearch] = React.useState("");
+  const hasOrg = !!organizationId;
+  const { data, isLoading } = useUsers(
+    hasOrg
+      ? ({ orgId: organizationId, q: search, page: 1, pageSize: 50 } as any)
+      : ({} as any)
+  );
+  const list = (data?.data as any[]) || [];
+  return (
+    <div className="min-w-[180px]">
+      <Combobox<any>
+        items={list}
+        value={value}
+        onChange={(v) => onChange(v == null ? null : Number(v))}
+        searchable
+        searchValue={search}
+        onSearchChange={setSearch}
+        getKey={(u) => u.id}
+        getLabel={(u) => u.fullName || u.name || u.email || String(u.id)}
+        loading={isLoading}
+        placeholder={hasOrg ? "انتخاب شخص" : "سازمان نامشخص"}
+        disabled={!hasOrg}
+      />
     </div>
   );
 }

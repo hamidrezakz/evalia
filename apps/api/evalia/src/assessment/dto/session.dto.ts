@@ -9,6 +9,7 @@ import {
   Length,
   MaxLength,
   IsObject,
+  IsBoolean,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { ResponsePerspective } from '@prisma/client';
@@ -40,6 +41,7 @@ export class UpdateSessionDto {
   @IsDateString() @IsOptional() endAt?: string;
   @IsInt() @IsOptional() teamScopeId?: number | null;
   @IsObject() @IsOptional() meta?: Record<string, any>;
+  @IsBoolean() @IsOptional() force?: boolean;
 }
 
 export class ListSessionQueryDto {
@@ -53,18 +55,27 @@ export class ListSessionQueryDto {
 
 export class BulkAssignDto {
   @IsInt() sessionId!: number;
-  @IsArray() userIds!: number[];
-  @IsString() @IsOptional() perspective?: string; // validated service-level
+  // Legacy: bulk SELF by multiple respondents (kept for backward-compat)
+  @IsOptional() @IsArray() userIds?: number[];
+  // New: assign one respondent to many subjects
+  @IsOptional() @IsInt() respondentUserId?: number;
+  @IsOptional() @IsArray() subjectUserIds?: number[];
+  @IsString() @IsOptional() perspective?: string; // validated in service; default SELF
 }
 
 export class AddAssignmentDto {
   @IsInt() sessionId!: number;
-  @IsInt() userId!: number;
+  // Legacy field for respondent (kept for compat)
+  @IsOptional() @IsInt() userId?: number;
+  // New explicit fields
+  @IsOptional() @IsInt() respondentUserId?: number;
+  @IsOptional() @IsInt() subjectUserId?: number;
   @IsString() @IsOptional() perspective?: string; // SELF default
 }
 
 export class UpdateAssignmentDto {
   @IsString() @IsOptional() perspective?: string;
+  @IsOptional() @IsInt() subjectUserId?: number;
 }
 
 // --- User-centric DTOs ---
@@ -102,4 +113,10 @@ export class ListUserSessionsQueryDto {
 export class UserQuestionsQueryDto {
   @IsEnum(ResponsePerspective)
   perspective!: ResponsePerspective;
+  @IsOptional()
+  @Transform(({ value }) =>
+    typeof value === 'string' ? parseInt(value, 10) : value,
+  )
+  @IsInt()
+  subjectUserId?: number;
 }

@@ -43,12 +43,24 @@ export class AssignmentService {
 
   async add(dto: any) {
     await this.ensureSession(dto.sessionId);
-    await this.ensureUser(dto.userId);
+    const respondentUserId = dto.respondentUserId ?? dto.userId;
+    if (!respondentUserId)
+      throw new BadRequestException('respondentUserId required');
+    await this.ensureUser(respondentUserId);
+    const perspective = this.validatePerspective(dto.perspective);
+    // Default subject = respondent for SELF if not provided
+    const subjectUserId =
+      dto.subjectUserId ??
+      (perspective === 'SELF' ? respondentUserId : undefined);
+    if (perspective !== 'SELF' && !subjectUserId)
+      throw new BadRequestException('subjectUserId required for non-SELF');
+    if (subjectUserId) await this.ensureUser(subjectUserId);
     return this.prisma.assessmentAssignment.create({
       data: {
         sessionId: dto.sessionId,
-        userId: dto.userId,
-        perspective: this.validatePerspective(dto.perspective),
+        respondentUserId,
+        subjectUserId: subjectUserId ?? null,
+        perspective,
       },
     });
   }
@@ -56,20 +68,83 @@ export class AssignmentService {
   async bulkAssign(dto: any) {
     await this.ensureSession(dto.sessionId);
     const perspective = this.validatePerspective(dto.perspective);
+
+    // Mode A (new): one respondent -> many subjects
+    if (dto.respondentUserId && Array.isArray(dto.subjectUserIds)) {
+      const respondentUserId = Number(dto.respondentUserId);
+      await this.ensureUser(respondentUserId);
+      if (perspective === 'SELF')
+        throw new BadRequestException('Use userIds for SELF bulk');
+      const subjectIds: number[] = Array.from(
+        new Set(
+          (dto.subjectUserIds as any[])
+            .map((n: any) => Number(n))
+            .filter((v: any) => Number.isFinite(v)),
+        ),
+      ) as number[];
+      if (!subjectIds.length)
+        throw new BadRequestException('subjectUserIds required');
+      await Promise.all(subjectIds.map((id: number) => this.ensureUser(id)));
+      const existing = await this.prisma.assessmentAssignment.findMany({
+        where: { sessionId: dto.sessionId, respondentUserId, perspective },
+        select: { subjectUserId: true },
+      });
+      const existingSet = new Set<number>(
+        existing.map((e) => (e.subjectUserId as number) || 0),
+      );
+      const toCreate: number[] = subjectIds.filter(
+        (sid: number) => !existingSet.has(sid),
+      );
+      if (!toCreate.length) return { created: 0 };
+      await this.prisma.$transaction(
+        toCreate.map((subjectUserId: number) =>
+          this.prisma.assessmentAssignment.create({
+            data: {
+              sessionId: dto.sessionId,
+              respondentUserId,
+              subjectUserId,
+              perspective,
+            },
+          }),
+        ),
+      );
+      return { created: toCreate.length };
+    }
+
+    // Mode B (legacy / SELF bulk): many respondents -> perspective
+    if (!Array.isArray(dto.userIds))
+      throw new BadRequestException('userIds required');
+    const userIds: number[] = Array.from(
+      new Set(
+        (dto.userIds as any[])
+          .map((n: any) => Number(n))
+          .filter((v: any) => Number.isFinite(v)),
+      ),
+    ) as number[];
+    await Promise.all(userIds.map((id: number) => this.ensureUser(id)));
     const existing = await this.prisma.assessmentAssignment.findMany({
-      where: { sessionId: dto.sessionId },
+      where: { sessionId: dto.sessionId, perspective },
+      select: { respondentUserId: true, subjectUserId: true },
     });
     const existingKey = new Set(
-      existing.map((e) => e.userId + ':' + e.perspective),
+      existing.map(
+        (e) =>
+          `${e.respondentUserId}:${e.subjectUserId ?? e.respondentUserId}:${perspective}`,
+      ),
     );
-    const toCreate = dto.userIds.filter(
-      (uid: number) => !existingKey.has(uid + ':' + perspective),
+    const toCreate = userIds.filter(
+      (rid) => !existingKey.has(`${rid}:${rid}:${perspective}`),
     );
     if (!toCreate.length) return { created: 0 };
     await this.prisma.$transaction(
-      toCreate.map((userId: number) =>
+      toCreate.map((respondentUserId: number) =>
         this.prisma.assessmentAssignment.create({
-          data: { sessionId: dto.sessionId, userId, perspective },
+          data: {
+            sessionId: dto.sessionId,
+            respondentUserId,
+            subjectUserId: perspective === 'SELF' ? respondentUserId : null,
+            perspective,
+          },
         }),
       ),
     );
@@ -80,7 +155,24 @@ export class AssignmentService {
     await this.ensureSession(sessionId);
     return this.prisma.assessmentAssignment.findMany({
       where: { sessionId },
-      include: { user: { select: { id: true, fullName: true, email: true } } },
+      include: {
+        respondent: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+            phoneNormalized: true,
+          },
+        },
+        subject: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+            phoneNormalized: true,
+          },
+        },
+      },
     });
   }
 
@@ -95,6 +187,10 @@ export class AssignmentService {
       data: {
         perspective:
           (dto.perspective as ResponsePerspective) ?? existing.perspective,
+        subjectUserId:
+          dto.subjectUserId !== undefined
+            ? dto.subjectUserId
+            : existing.subjectUserId,
       },
     });
   }

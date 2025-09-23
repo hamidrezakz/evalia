@@ -17,7 +17,7 @@ export class ResponseService {
   private async loadAssignment(assignmentId: number) {
     const a = await this.prisma.assessmentAssignment.findUnique({
       where: { id: assignmentId },
-      include: { session: true, user: true },
+      include: { session: true, respondent: true, subject: true },
     });
     if (!a) throw new BadRequestException('Invalid assignmentId');
     return a;
@@ -192,7 +192,7 @@ export class ResponseService {
       const aIds = await this.prisma.assessmentAssignment.findMany({
         where: {
           sessionId: Number(query.sessionId),
-          userId: Number(query.userId),
+          respondentUserId: Number(query.userId),
         },
         select: { id: true },
       });
@@ -222,7 +222,7 @@ export class ResponseService {
         sessionId: Number(query.sessionId),
         perspective: query.perspective as ResponsePerspective,
       };
-      if (query.userId) assignmentWhere.userId = Number(query.userId);
+      if (query.userId) assignmentWhere.respondentUserId = Number(query.userId);
       const assignmentIds = await this.prisma.assessmentAssignment.findMany({
         where: assignmentWhere,
         select: { id: true },

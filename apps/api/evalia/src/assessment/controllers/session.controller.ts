@@ -63,7 +63,10 @@ export class SessionController {
 
   // List available perspectives for a user in a specific session
   @Get(':id/user/:userId/perspectives')
-  listUserPerspectives(@Param('id') id: string, @Param('userId') userId: string) {
+  listUserPerspectives(
+    @Param('id') id: string,
+    @Param('userId') userId: string,
+  ) {
     return this.service.getUserPerspectives(Number(id), Number(userId));
   }
 
@@ -78,6 +81,7 @@ export class SessionController {
       Number(id),
       Number(userId),
       q.perspective,
+      q.subjectUserId,
     );
   }
 }

@@ -30,12 +30,15 @@ import {
   useBulkAssign,
   useDeleteAssignment,
 } from "@/assessment/api/templates-hooks";
+import { sessionsKeys } from "@/assessment/api/templates-hooks";
+import { useQueryClient } from "@tanstack/react-query";
 import { useUsers } from "@/users/api/users-hooks";
 import { useTeams } from "@/organizations/team/api/team-hooks";
 import { useOrganizations } from "@/organizations/organization/api/organization-hooks";
 import { useSessions } from "@/assessment/api/templates-hooks";
 import { listTeamMembers } from "@/organizations/member/api/team-membership.api";
 import { ResponsePerspectiveEnum, type ResponsePerspective } from "@/lib/enums";
+import { getUser } from "@/users/api/users.api";
 
 export default function SessionAssignmentsPanel({
   organizationId,
@@ -63,6 +66,7 @@ export default function SessionAssignmentsPanel({
   const addMut = useAddAssignment();
   const bulkMut = useBulkAssign();
   const delMut = useDeleteAssignment();
+  const qc = useQueryClient();
 
   // Top-level selections: organization and session
   const [orgSearch, setOrgSearch] = React.useState("");
@@ -85,14 +89,106 @@ export default function SessionAssignmentsPanel({
     userId: number | null;
     teamId: number | null;
     perspective: ResponsePerspective | null;
-  }>({ userId: null, teamId: null, perspective: "SELF" });
+    subjectUserId: number | null;
+  }>({ userId: null, teamId: null, perspective: "SELF", subjectUserId: null });
+
+  // Helpers
+  const safeName = (obj: any) =>
+    (obj?.fullName || obj?.name || obj?.email || "نامشخص") as string;
+  const initialsOf = (name: string) =>
+    (name || "?")
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((s: string) => s[0])
+      .join("")
+      .toUpperCase();
+
+  // Cache for subject user details (when API doesn't populate a.subject)
+  const [subjectDetails, setSubjectDetails] = React.useState<Map<number, any>>(
+    () => new Map()
+  );
+
+  // Normalize and split assignments by perspective
+  const normalizedAssignments = React.useMemo(() => {
+    return Array.isArray(assignments) ? (assignments as any[]) : [];
+  }, [assignments]);
+  const selfAssignments = React.useMemo(() => {
+    return normalizedAssignments.filter(
+      (a) => (a.perspective as any) === "SELF"
+    );
+  }, [normalizedAssignments]);
+  const facilitatorGroups = React.useMemo(() => {
+    const fac = normalizedAssignments.filter(
+      (a) => (a.perspective as any) === "FACILITATOR"
+    );
+    const map = new Map<number, { respondentName: string; items: any[] }>();
+    for (const a of fac) {
+      const rid = (a.respondentUserId ?? a.userId ?? 0) as number;
+      const rname = safeName(a.respondent || a.user);
+      if (!map.has(rid)) map.set(rid, { respondentName: rname, items: [] });
+      map.get(rid)!.items.push(a);
+    }
+    return Array.from(map.entries()).map(([respondentUserId, v]) => ({
+      respondentUserId,
+      respondentName: v.respondentName,
+      items: v.items,
+    }));
+  }, [normalizedAssignments]);
+
+  // Fill missing subject details by fetching user info once per subject ID
+  React.useEffect(() => {
+    const ids = new Set<number>();
+    for (const g of facilitatorGroups) {
+      for (const it of g.items) {
+        const sid = Number(it.subjectUserId ?? 0);
+        if (!sid) continue;
+        if (it.subject && it.subject.id === sid) continue;
+        if (!subjectDetails.has(sid)) ids.add(sid);
+      }
+    }
+    if (ids.size === 0) return;
+    let alive = true;
+    (async () => {
+      const fetched = await Promise.all(
+        Array.from(ids).map((id) =>
+          getUser(id)
+            .then((u) => ({ id, user: u }))
+            .catch(() => ({ id, user: null }))
+        )
+      );
+      if (!alive) return;
+      setSubjectDetails((prev) => {
+        const next = new Map(prev);
+        for (const { id, user } of fetched) next.set(id, user);
+        return next;
+      });
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [facilitatorGroups, subjectDetails]);
 
   const addOne = async () => {
     if (!selectedSessionId || !state.userId) return;
+    const isSelf = (state.perspective || "SELF") === "SELF";
+    const respondentUserId = state.userId;
+    const subjectUserId = isSelf
+      ? respondentUserId
+      : state.subjectUserId ?? respondentUserId;
     await addMut.mutateAsync({
       sessionId: selectedSessionId,
-      userId: state.userId,
+      // legacy for backward compatibility
+      userId: respondentUserId,
+      respondentUserId,
+      subjectUserId,
       perspective: state.perspective || undefined,
+    } as any);
+    // Ensure UI refreshes immediately
+    await qc.invalidateQueries({
+      queryKey: sessionsKeys.assignmentsDetailed(selectedSessionId),
+    });
+    await qc.refetchQueries({
+      queryKey: sessionsKeys.assignmentsDetailed(selectedSessionId),
     });
     setState((s) => ({ ...s, userId: null }));
   };
@@ -110,9 +206,20 @@ export default function SessionAssignmentsPanel({
     if (userIds.length === 0) return;
     await bulkMut.mutateAsync({
       sessionId: selectedSessionId,
-      userIds,
+      respondentUserIds: userIds,
+      subjectUserId:
+        (state.perspective || "SELF") !== "SELF"
+          ? state.subjectUserId || undefined
+          : undefined,
       perspective: state.perspective || undefined,
     } as any);
+    // Immediate refresh for better UX
+    await qc.invalidateQueries({
+      queryKey: sessionsKeys.assignmentsDetailed(selectedSessionId),
+    });
+    await qc.refetchQueries({
+      queryKey: sessionsKeys.assignmentsDetailed(selectedSessionId),
+    });
   };
 
   return (
@@ -145,6 +252,7 @@ export default function SessionAssignmentsPanel({
                   userId: null,
                   teamId: null,
                   perspective: state.perspective,
+                  subjectUserId: null,
                 });
               }}
               searchable
@@ -232,96 +340,224 @@ export default function SessionAssignmentsPanel({
                   <Checkbox
                     checked={state.perspective === p}
                     onCheckedChange={() =>
-                      setState((s) => ({ ...s, perspective: p }))
+                      setState((s) => ({
+                        ...s,
+                        perspective: p,
+                        subjectUserId: p === "SELF" ? null : s.subjectUserId,
+                      }))
                     }
                   />
                   <span>{ResponsePerspectiveEnum.t(p)}</span>
                 </label>
               ))}
             </div>
+            {(state.perspective || "SELF") !== "SELF" ? (
+              <div className="mt-2 space-y-2">
+                <Label>سوژه (کاربر هدف)</Label>
+                <UsersSelect
+                  orgId={selectedOrgId}
+                  value={state.subjectUserId}
+                  onChange={(id) =>
+                    setState((s) => ({ ...s, subjectUserId: id }))
+                  }
+                />
+              </div>
+            ) : null}
           </div>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-4">
           <Label>اختصاص‌های فعلی</Label>
-          <div className="flex flex-col gap-2">
-            {isLoading && (
-              <div className="text-sm text-muted-foreground">
-                در حال بارگذاری...
-              </div>
-            )}
-            {/* Error state */}
-            {!isLoading && (assignments as any)?.error && (
-              <div className="text-sm text-rose-600">
-                {(assignments as any).error?.message || "خطا در دریافت داده‌ها"}
-              </div>
-            )}
-            {!isLoading &&
-              Array.isArray(assignments) &&
-              assignments.length === 0 && (
-                <div className="text-sm text-muted-foreground">
-                  موردی ثبت نشده
+          {isLoading ? (
+            <div className="text-sm text-muted-foreground">
+              در حال بارگذاری...
+            </div>
+          ) : (assignments as any)?.error ? (
+            <div className="text-sm text-rose-600">
+              {(assignments as any).error?.message || "خطا در دریافت داده‌ها"}
+            </div>
+          ) : normalizedAssignments.length === 0 ? (
+            <div className="text-sm text-muted-foreground">موردی ثبت نشده</div>
+          ) : (
+            <>
+              {/* SELF assignments (افراد عادی) */}
+              <div className="space-y-2">
+                <div className="text-sm font-medium">
+                  افراد عادی (خودارزیابی)
                 </div>
-              )}
-            {Array.isArray(assignments) && assignments.length > 0 && (
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                {assignments.map((a: any) => {
-                  const name = a.user?.fullName || `کاربر #${a.userId}`;
-                  const email = a.user?.email || null;
-                  const phone = a.user?.phone || null;
-                  const initials = (name || "?")
-                    .split(/\s+/)
-                    .slice(0, 2)
-                    .map((s: string) => s[0])
-                    .join("")
-                    .toUpperCase();
-                  const perspectiveLabel = ResponsePerspectiveEnum.t(
-                    (a.perspective as any) || "SELF"
-                  );
-                  return (
-                    <div
-                      key={a.id}
-                      className="flex items-center justify-between rounded-md border p-3">
-                      <div className="flex min-w-0 items-center gap-3">
-                        <Avatar className="size-8">
-                          <AvatarFallback>{initials}</AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium truncate">
-                              {name}
-                            </span>
-                            <Badge variant="secondary" className="shrink-0">
-                              {perspectiveLabel}
-                            </Badge>
+                {selfAssignments.length === 0 ? (
+                  <div className="text-xs text-muted-foreground">
+                    هیچ موردی نیست
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                    {selfAssignments.map((a: any) => {
+                      const respondentName = safeName(a.respondent || a.user);
+                      const email =
+                        a.respondent?.email || a.user?.email || null;
+                      const phone =
+                        a.respondent?.phone || a.user?.phone || null;
+                      const initials = (respondentName || "?")
+                        .split(/\s+/)
+                        .slice(0, 2)
+                        .map((s: string) => s[0])
+                        .join("")
+                        .toUpperCase();
+                      return (
+                        <div
+                          key={a.id}
+                          className="flex items-center justify-between rounded-md border p-3">
+                          <div className="flex min-w-0 items-center gap-3">
+                            <Avatar className="size-8">
+                              <AvatarFallback>{initials}</AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-medium truncate">
+                                  {respondentName}
+                                </span>
+                                <Badge variant="secondary" className="shrink-0">
+                                  خودارزیابی
+                                </Badge>
+                              </div>
+                              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                                {phone ? (
+                                  <span className="inline-flex items-center gap-1">
+                                    <Phone className="h-3 w-3" /> {phone}
+                                  </span>
+                                ) : null}
+                                {email ? (
+                                  <span className="inline-flex items-center gap-1">
+                                    <Mail className="h-3 w-3" /> {email}
+                                  </span>
+                                ) : null}
+                              </div>
+                            </div>
                           </div>
-                          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                            {phone ? (
-                              <span className="inline-flex items-center gap-1">
-                                <Phone className="h-3 w-3" /> {phone}
-                              </span>
-                            ) : null}
-                            {email ? (
-                              <span className="inline-flex items-center gap-1">
-                                <Mail className="h-3 w-3" /> {email}
-                              </span>
-                            ) : null}
-                          </div>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => delMut.mutateAsync(a.id)}
+                            className="shrink-0">
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
                         </div>
-                      </div>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => delMut.mutateAsync(a.id)}
-                        className="shrink-0">
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  );
-                })}
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+
+              {/* Facilitators (grouped by تسهیلگر) */}
+              <div className="space-y-2">
+                <div className="text-sm font-medium">تسهیلگران</div>
+                {facilitatorGroups.length === 0 ? (
+                  <div className="text-xs text-muted-foreground">
+                    هیچ موردی نیست
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                    {facilitatorGroups.map((g) => {
+                      // Build subjects list (unique by subjectUserId), keep list of assignment ids for delete-all
+                      const subjectMap = new Map<
+                        number,
+                        { name: string; ids: number[] }
+                      >();
+                      for (const it of g.items) {
+                        const sid = Number(it.subjectUserId ?? 0);
+                        const subjObj = it.subject ?? subjectDetails.get(sid);
+                        const sname = safeName(subjObj);
+                        if (!subjectMap.has(sid))
+                          subjectMap.set(sid, { name: sname, ids: [] });
+                        subjectMap.get(sid)!.ids.push(it.id as number);
+                      }
+                      const subjects = Array.from(subjectMap.entries()).map(
+                        ([subjectUserId, v]) => ({
+                          subjectUserId,
+                          name: v.name,
+                          ids: v.ids,
+                        })
+                      );
+                      const initials = (g.respondentName || "?")
+                        .split(/\s+/)
+                        .slice(0, 2)
+                        .map((s: string) => s[0])
+                        .join("")
+                        .toUpperCase();
+                      return (
+                        <div
+                          key={g.respondentUserId}
+                          className="rounded-md border p-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <Avatar className="size-8">
+                                <AvatarFallback>{initials}</AvatarFallback>
+                              </Avatar>
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-medium truncate">
+                                    {g.respondentName}
+                                  </span>
+                                  <Badge
+                                    variant="secondary"
+                                    className="shrink-0">
+                                    تسهیلگر
+                                  </Badge>
+                                  <Badge
+                                    variant="outline"
+                                    className="text-[10px] shrink-0">
+                                    {subjects.length} سوژه
+                                  </Badge>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          {subjects.length === 0 ? (
+                            <div className="text-xs text-muted-foreground">
+                              سوژه‌ای یافت نشد
+                            </div>
+                          ) : (
+                            <div className="flex flex-wrap gap-2">
+                              {subjects.map((s) => (
+                                <span
+                                  key={`resp-${g.respondentUserId}-sub-${s.subjectUserId}`}
+                                  className="inline-flex items-center gap-2 rounded-full border px-2 py-1 text-xs">
+                                  <span className="inline-flex items-center justify-center size-5 rounded-full bg-muted text-foreground/80">
+                                    {initialsOf(s.name)}
+                                  </span>
+                                  <span>{s.name}</span>
+                                  {s.ids.length > 1 ? (
+                                    <Badge
+                                      variant="outline"
+                                      className="text-[10px]">
+                                      x{s.ids.length}
+                                    </Badge>
+                                  ) : null}
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-6 w-6"
+                                    onClick={async () => {
+                                      // delete all assignments for this subject under this facilitator
+                                      for (const id of s.ids) {
+                                        await delMut.mutateAsync(id);
+                                      }
+                                    }}
+                                    title="حذف">
+                                    <Trash2 className="h-3 w-3 text-destructive" />
+                                  </Button>
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </div>
       </PanelContent>
     </Panel>

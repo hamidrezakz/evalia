@@ -350,11 +350,18 @@ export function useAssignments(sessionId: number | null) {
 export type EnrichedAssignment = {
   id: number;
   sessionId: number;
-  userId: number;
+  // legacy
+  userId?: number;
+  // new fields
+  respondentUserId?: number;
+  subjectUserId?: number;
   perspective: string;
   createdAt?: string;
   updatedAt?: string;
+  // legacy respondent mapping
   user: Pick<UserDetail, "id" | "fullName" | "phone" | "email"> | null;
+  respondent?: Pick<UserDetail, "id" | "fullName" | "phone" | "email"> | null;
+  subject?: Pick<UserDetail, "id" | "fullName" | "phone" | "email"> | null;
 };
 
 export function useAssignmentsDetailed(sessionId: number | null) {
@@ -368,11 +375,17 @@ export function useAssignmentsDetailed(sessionId: number | null) {
       // raw is already the inner array (fixed listAssignments); each item may already include user
       const assignments: any[] = Array.isArray(raw) ? raw : [];
       // Detect if API already provides user object to avoid N+1 calls
-      const needsFetch = assignments.some((a) => !a.user || !a.user.id);
+      const needsFetch = assignments.some(
+        (a) => !(a.user && a.user.id) && !(a.respondent && a.respondent.id)
+      );
       let map = new Map<number, UserDetail | null>();
       if (needsFetch) {
         const userIds = Array.from(
-          new Set(assignments.map((a: any) => a.userId).filter(Boolean))
+          new Set(
+            assignments
+              .map((a: any) => a.respondentUserId ?? a.userId)
+              .filter(Boolean)
+          )
         ) as number[];
         const users = await Promise.all(
           userIds.map((id) =>
@@ -385,25 +398,39 @@ export function useAssignmentsDetailed(sessionId: number | null) {
         userIds.forEach((id, idx) => map.set(id, users[idx]));
       }
       return assignments.map((a: any) => {
-        const existing = a.user || null;
-        const fetched = map.get(a.userId) || null;
-        const u = existing || fetched || null;
-        const pick = u
+        const respondentId = a.respondentUserId ?? a.userId;
+        const subjectId = a.subjectUserId ?? respondentId;
+        const existingRespondent = a.user || a.respondent || null;
+        const fetchedRespondent = respondentId ? map.get(respondentId) : null;
+        const ru = existingRespondent || fetchedRespondent || null;
+        const rpick = ru
           ? {
-              id: u.id,
-              fullName: (u as any).fullName,
-              phone: (u as any).phone,
-              email: (u as any).email,
+              id: ru.id,
+              fullName: (ru as any).fullName,
+              phone: (ru as any).phone,
+              email: (ru as any).email,
+            }
+          : null;
+        const spick = a.subject
+          ? {
+              id: a.subject.id,
+              fullName: (a.subject as any).fullName,
+              phone: (a.subject as any).phone,
+              email: (a.subject as any).email,
             }
           : null;
         return {
           id: a.id,
           sessionId: a.sessionId,
           userId: a.userId,
+          respondentUserId: a.respondentUserId,
+          subjectUserId: a.subjectUserId,
           perspective: a.perspective,
           createdAt: a.createdAt,
           updatedAt: a.updatedAt,
-          user: pick,
+          user: rpick, // legacy
+          respondent: rpick,
+          subject: spick,
         } as EnrichedAssignment;
       });
     },
@@ -536,17 +563,26 @@ export function useUserPerspectives(
 export function useUserSessionQuestions(
   sessionId: number | null,
   userId: number | null,
-  perspective: string | null
+  perspective: string | null,
+  subjectUserId?: number | null
 ) {
   return useQuery({
     queryKey:
       sessionId && userId && perspective
-        ? sessionsKeys.userQuestions(sessionId, userId, perspective)
+        ? [
+            ...sessionsKeys.userQuestions(sessionId, userId, perspective),
+            subjectUserId ?? "no-subject",
+          ]
         : ["sessions", "user", "questions", "disabled"],
     queryFn: () => {
       if (!sessionId || !userId || !perspective)
         throw new Error("missing inputs");
-      return getUserSessionQuestions(sessionId, userId, perspective as any);
+      return getUserSessionQuestions(
+        sessionId,
+        userId,
+        perspective as any,
+        subjectUserId ?? undefined
+      );
     },
     enabled: !!sessionId && !!userId && !!perspective,
   });
