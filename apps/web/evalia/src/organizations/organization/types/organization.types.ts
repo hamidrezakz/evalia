@@ -1,13 +1,20 @@
 import { z } from "zod";
+import {
+  OrgPlanEnum as OrgPlanEnumCentral,
+  OrganizationStatusEnum as OrganizationStatusEnumCentral,
+  LocaleEnum as LocaleEnumCentral,
+} from "@/lib/enums";
 
-// Enums - mirror backend Prisma enums (keep synced manually with backend). If backend adds values update here.
-export const OrgPlanEnum = z.enum(["FREE", "PRO", "ENTERPRISE"]);
-export const OrganizationStatusEnum = z.enum([
-  "ACTIVE",
-  "SUSPENDED",
-  "INACTIVE",
-]);
-export const LocaleEnum = z.enum(["FA", "EN"]);
+// Enums - use centralized app-wide enums to avoid drift
+export const OrgPlanEnum = z.enum(
+  OrgPlanEnumCentral.values as [string, ...string[]]
+);
+export const OrganizationStatusEnum = z.enum(
+  OrganizationStatusEnumCentral.values as [string, ...string[]]
+);
+export const LocaleEnum = z.enum(
+  LocaleEnumCentral.values as [string, ...string[]]
+);
 
 // Base organization schema (full)
 export const OrganizationMembershipSchema = z.object({

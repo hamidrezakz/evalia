@@ -11,6 +11,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAuthSession } from "../../../app/auth/event-context";
 import { useOrganizations } from "./queries";
 import type { Organization } from "@/organizations/organization/types/organization.types";
+import { PlatformRoleEnum, OrgRoleEnum } from "@/lib/enums";
+import type { PlatformRole, OrgRole } from "@/lib/enums";
 import type { OrgStateValue } from "./types";
 
 const OrgContext = createContext<OrgStateValue | undefined>(undefined);
@@ -20,7 +22,7 @@ const ACTIVE_KEY = (userId: number | null) =>
 
 interface PersistedActive {
   organizationId: number | null;
-  activeRole: string | null; // unified role value
+  activeRole: PlatformRole | OrgRole | null; // unified role value
   activeRoleSource: "platform" | "organization" | null;
 }
 
@@ -28,12 +30,14 @@ export const OrgProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const { userId, decoded, loading: sessionLoading } = useAuthSession();
-  const platformRoles: string[] = useMemo(
-    () => decoded?.roles?.global || [],
-    [decoded]
-  );
-  const organizationRolesMap: Record<number, string[]> = useMemo(() => {
-    const out: Record<number, string[]> = {};
+  const platformRoles = useMemo<PlatformRole[]>(() => {
+    const raw = decoded?.roles?.global || [];
+    return (raw as unknown[])
+      .map((r) => PlatformRoleEnum.coerce(r))
+      .filter(Boolean) as PlatformRole[] as PlatformRole[];
+  }, [decoded]);
+  const organizationRolesMap = useMemo<Record<number, OrgRole[]>>(() => {
+    const out: Record<number, OrgRole[]> = {};
     (decoded?.roles?.org || []).forEach((orgRole) => {
       if (
         typeof orgRole === "object" &&
@@ -42,7 +46,10 @@ export const OrgProvider: React.FC<{ children: React.ReactNode }> = ({
         "roles" in orgRole
       ) {
         const { orgId, roles } = orgRole as { orgId: number; roles: string[] };
-        out[orgId] = Array.isArray(roles) ? roles : roles ? [roles] : [];
+        const norm = (Array.isArray(roles) ? roles : roles ? [roles] : [])
+          .map((r) => OrgRoleEnum.coerce(r))
+          .filter(Boolean) as OrgRole[] as OrgRole[];
+        out[orgId] = norm;
       }
     });
     return out;
@@ -58,7 +65,24 @@ export const OrgProvider: React.FC<{ children: React.ReactNode }> = ({
     }
     try {
       const raw = localStorage.getItem(ACTIVE_KEY(userId));
-      if (raw) return JSON.parse(raw) as PersistedActive;
+      if (raw) {
+        const parsed = JSON.parse(raw) as {
+          organizationId: number | null;
+          activeRole: string | null;
+          activeRoleSource: "platform" | "organization" | null;
+        };
+        let coerced: PlatformRole | OrgRole | null = null;
+        if (parsed.activeRoleSource === "platform") {
+          coerced = PlatformRoleEnum.coerce(parsed.activeRole);
+        } else if (parsed.activeRoleSource === "organization") {
+          coerced = OrgRoleEnum.coerce(parsed.activeRole);
+        }
+        return {
+          organizationId: parsed.organizationId,
+          activeRole: coerced,
+          activeRoleSource: parsed.activeRoleSource,
+        };
+      }
     } catch {}
     return {
       organizationId: null,
@@ -92,7 +116,8 @@ export const OrgProvider: React.FC<{ children: React.ReactNode }> = ({
         // If previous role was organization role, check if it exists in new org
         if (prev.activeRoleSource === "organization" && orgId) {
           const orgRoles = organizationRolesMap[orgId] || [];
-          if (!orgRoles.includes(prev.activeRole || "")) {
+          const prevOrgRole = (prev.activeRole as OrgRole) || null;
+          if (!prevOrgRole || !orgRoles.includes(prevOrgRole)) {
             newActiveRole = orgRoles[0] || null;
             newActiveRoleSource = newActiveRole ? "organization" : null;
           }
@@ -110,7 +135,7 @@ export const OrgProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   const setPlatformActiveRole = useCallback(
-    (role: string | null) => {
+    (role: PlatformRole | null) => {
       setActive((prev) => ({
         ...prev,
         activeRole: role,
@@ -122,7 +147,7 @@ export const OrgProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   const setOrganizationActiveRole = useCallback(
-    (role: string | null, orgId?: number | null) => {
+    (role: OrgRole | null, orgId?: number | null) => {
       setActive((prev) => ({
         ...prev,
         activeRole: role,

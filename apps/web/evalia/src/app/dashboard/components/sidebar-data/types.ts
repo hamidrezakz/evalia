@@ -4,7 +4,9 @@ import type { LucideIcon } from "lucide-react";
 // Allow only LucideIcon or a lazy/forward ref React component returning an SVG
 // Icon component type: either a LucideIcon (already a React component) or any functional component returning a React element
 // Using unknown for props keeps flexibility while avoiding 'any'
-export type SidebarIconComponent = LucideIcon | ((props: unknown) => React.ReactElement);
+export type SidebarIconComponent =
+  | LucideIcon
+  | ((props: unknown) => React.ReactElement);
 
 export interface SidebarNavItemChild {
   title: string;
@@ -29,10 +31,12 @@ export interface OrgAccount {
   id: string;
   name: string;
   slug: string;
-  plan?: string;
+  plan?: import("@/lib/enums").OrgPlan;
+  planLabel?: string; // localized label from enums
   logo?: string;
   isPrimary?: boolean;
-  roles?: string[];
+  roles?: import("@/lib/enums").OrgRole[];
+  roleLabels?: string[]; // localized labels
   membershipId?: number;
 }
 

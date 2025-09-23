@@ -12,6 +12,7 @@ import type {
   SidebarProjectItem,
 } from "./sidebar-data/types";
 import { buildNavMain, buildProjects } from "./sidebar-data/builders";
+import { OrgPlanEnum, OrgRoleEnum } from "@/lib/enums";
 
 export function useAppSidebarData(): AppSidebarData {
   // Organizations
@@ -24,16 +25,25 @@ export function useAppSidebarData(): AppSidebarData {
     // Defensive mapping: org may be unknown, so cast and check
     const o = org as Record<string, unknown>;
     const membership = o.membership as Record<string, unknown> | undefined;
+    const plan = OrgPlanEnum.coerce(o.plan);
+    const rawRoles = Array.isArray(membership?.roles)
+      ? (membership?.roles as unknown[])
+      : [];
+    const roles = rawRoles
+      .map((r) => OrgRoleEnum.coerce(r))
+      .filter(Boolean) as ReturnType<
+      typeof OrgRoleEnum.coerce
+    >[] as import("@/lib/enums").OrgRole[];
     return {
       id: o.id ? String(o.id) : "",
       name: o.name ? String(o.name) : "",
       slug: o.slug ? String(o.slug) : "",
-      plan: typeof o.plan === "string" ? (o.plan as string) : undefined,
+      plan: plan || undefined,
+      planLabel: plan ? OrgPlanEnum.t(plan) : undefined,
       logo: typeof o.logo === "string" ? (o.logo as string) : undefined,
       isPrimary: Boolean(o.isPrimary),
-      roles: Array.isArray(membership?.roles)
-        ? (membership.roles as string[])
-        : [],
+      roles,
+      roleLabels: roles.map((r) => OrgRoleEnum.t(r)),
       membershipId:
         typeof membership?.membershipId === "number"
           ? (membership.membershipId as number)

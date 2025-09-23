@@ -3,6 +3,7 @@
 import { memo, useCallback, useMemo } from "react";
 import { useOrgState } from "@/organizations/organization/context/org-context";
 import type { OrgAccount as SidebarOrgAccount } from "./sidebar-data/types";
+import { PlatformRoleEnum, OrgRoleEnum } from "@/lib/enums";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -35,14 +36,15 @@ export interface OrgSwitcherProps {
   className?: string;
 }
 
-const planColor = (plan?: string | null) => {
-  switch (plan?.toLowerCase()) {
-    case "enterprise":
+const planColor = (plan?: import("@/lib/enums").OrgPlan | null) => {
+  switch (plan) {
+    case "ENTERPRISE":
       return "bg-amber-100 text-amber-800 dark:bg-amber-400/10 dark:text-amber-300";
-    case "pro":
+    case "PRO":
       return "bg-sky-100 text-sky-700 dark:bg-sky-400/10 dark:text-sky-300";
-    case "standard":
+    case "BUSINESS":
       return "bg-emerald-100 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300";
+    case "FREE":
     default:
       return "bg-muted text-muted-foreground";
   }
@@ -65,7 +67,7 @@ export const OrgSwitcher = memo(function OrgSwitcher({
     activeOrganizationId,
   } = useOrgState();
 
-  const orgRoles: string[] = useMemo(
+  const orgRoles = useMemo(
     () =>
       activeOrganizationId ? organizationRoles[activeOrganizationId] || [] : [],
     [organizationRoles, activeOrganizationId]
@@ -115,7 +117,7 @@ export const OrgSwitcher = memo(function OrgSwitcher({
                   {activeOrg.isPrimary && (
                     <Star className="size-3 mb-0.5 fill-current" />
                   )}
-                  {activeOrg.plan}
+                  {activeOrg.planLabel || activeOrg.plan}
                 </span>
               ) : accounts.length === 0 ? (
                 <span className="text-[0.55rem] text-muted-foreground">
@@ -171,7 +173,7 @@ export const OrgSwitcher = memo(function OrgSwitcher({
                       )}
                     </span>
                     <span className="text-[10px] text-muted-foreground">
-                      {acc.plan || "Standard"}
+                      {acc.planLabel || acc.plan || "Free"}
                     </span>
                   </div>
                 </div>
@@ -199,7 +201,7 @@ export const OrgSwitcher = memo(function OrgSwitcher({
                         className={`cursor-pointer text-[0.64rem]`}
                         onClick={() => setPlatformActiveRole(r)}
                         aria-pressed={active}>
-                        {r}
+                        {PlatformRoleEnum.t(r)}
                       </Badge>
                     );
                   })}
@@ -224,7 +226,7 @@ export const OrgSwitcher = memo(function OrgSwitcher({
                           setOrganizationActiveRole(r, activeOrganizationId)
                         }
                         aria-pressed={active}>
-                        {r}
+                        {OrgRoleEnum.t(r)}
                       </Badge>
                     );
                   })}
