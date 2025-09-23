@@ -9,6 +9,11 @@ import {
   ArrowDown,
   CheckCircle2,
   X,
+  LayoutList,
+  PlayCircle,
+  Pencil,
+  Lock,
+  Archive,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +26,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -35,11 +49,20 @@ import {
   useUpdateTemplateSection,
   useReorderTemplateSections,
   useDeleteTemplateSection,
+  useUpdateTemplate,
 } from "@/assessment/api/templates-hooks";
 import type {
   Template,
   TemplateSection,
+  TemplateState,
 } from "@/assessment/types/templates.types";
+
+const stateLabels: Record<TemplateState, string> = {
+  DRAFT: "پیش‌نویس",
+  ACTIVE: "فعال",
+  CLOSED: "بسته‌شده",
+  ARCHIVED: "آرشیو",
+};
 
 export type TemplateSectionsPanelProps = {
   template: Template | null;
@@ -55,6 +78,7 @@ export default function TemplateSectionsPanel({
   const updateMut = useUpdateTemplateSection();
   const reorderMut = useReorderTemplateSections();
   const deleteMut = useDeleteTemplateSection();
+  const updateTemplateMut = useUpdateTemplate();
 
   const [dialogOpen, setDialogOpen] = useState<
     null | { mode: "create" } | { mode: "edit"; id: number; title: string }
@@ -116,8 +140,65 @@ export default function TemplateSectionsPanel({
   return (
     <Panel>
       <PanelHeader className="flex-row items-center justify-between">
-        <PanelTitle className="text-base">سکشن‌های تمپلیت</PanelTitle>
+        <PanelTitle className="text-base flex items-center gap-2">
+          <LayoutList className="h-4 w-4 text-muted-foreground" />
+          بخش‌های قالب (سکشن‌ها)
+        </PanelTitle>
         <PanelAction>
+          {templateId && (
+            <DropdownMenu  dir="rtl">
+              <DropdownMenuTrigger asChild>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="min-w-48">
+                <DropdownMenuLabel>وضعیت قالب</DropdownMenuLabel>
+                <DropdownMenuItem
+                  onClick={() =>
+                    template &&
+                    updateTemplateMut.mutate({
+                      id: template.id,
+                      body: { state: "ACTIVE" },
+                    })
+                  }>
+                  <PlayCircle className="h-4 w-4" /> فعال
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() =>
+                    template &&
+                    updateTemplateMut.mutate({
+                      id: template.id,
+                      body: { state: "DRAFT" },
+                    })
+                  }>
+                  <Pencil className="h-4 w-4" /> پیش‌نویس
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() =>
+                    template &&
+                    updateTemplateMut.mutate({
+                      id: template.id,
+                      body: { state: "CLOSED" },
+                    })
+                  }>
+                  <Lock className="h-4 w-4" /> بسته‌شده
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() =>
+                    template &&
+                    updateTemplateMut.mutate({
+                      id: template.id,
+                      body: { state: "ARCHIVED" },
+                    })
+                  }>
+                  <Archive className="h-4 w-4" /> آرشیو
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>اقدامات</DropdownMenuLabel>
+                <DropdownMenuItem onClick={openCreate}>
+                  <Plus className="h-4 w-4" /> افزودن سکشن جدید
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
           <Button
             size="sm"
             onClick={openCreate}

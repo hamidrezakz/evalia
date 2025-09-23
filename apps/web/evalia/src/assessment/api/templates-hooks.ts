@@ -37,6 +37,8 @@ import {
   getUserPerspectives,
   getUserSessionQuestions,
 } from "./sessions.api";
+import { getUser } from "@/users/api/users.api";
+import type { UserDetail } from "@/users/types/users.types";
 
 export const templatesKeys = {
   all: ["templates"] as const,
@@ -86,6 +88,8 @@ export const sessionsKeys = {
   full: (id: number) => [...sessionsKeys.byId(id), "full"] as const,
   assignments: (sessionId: number) =>
     [...sessionsKeys.byId(sessionId), "assignments"] as const,
+  assignmentsDetailed: (sessionId: number) =>
+    [...sessionsKeys.byId(sessionId), "assignments", "detailed"] as const,
   responses: (sessionId: number, extra?: string) =>
     [...sessionsKeys.byId(sessionId), "responses", extra || "base"] as const,
   userLists: (userId: number, params?: Record<string, unknown>) =>
@@ -341,22 +345,98 @@ export function useAssignments(sessionId: number | null) {
     enabled: !!sessionId,
   });
 }
+
+// Enriched assignments with user basic details (fullName, phone, email)
+export type EnrichedAssignment = {
+  id: number;
+  sessionId: number;
+  userId: number;
+  perspective: string;
+  createdAt?: string;
+  updatedAt?: string;
+  user: Pick<UserDetail, "id" | "fullName" | "phone" | "email"> | null;
+};
+
+export function useAssignmentsDetailed(sessionId: number | null) {
+  return useQuery({
+    queryKey: sessionId
+      ? sessionsKeys.assignmentsDetailed(sessionId)
+      : ["sessions", "assignments", "detailed", "disabled"],
+    queryFn: async (): Promise<EnrichedAssignment[]> => {
+      if (!sessionId) throw new Error("no sessionId");
+      const raw = await listAssignments(sessionId);
+      // raw is already the inner array (fixed listAssignments); each item may already include user
+      const assignments: any[] = Array.isArray(raw) ? raw : [];
+      // Detect if API already provides user object to avoid N+1 calls
+      const needsFetch = assignments.some((a) => !a.user || !a.user.id);
+      let map = new Map<number, UserDetail | null>();
+      if (needsFetch) {
+        const userIds = Array.from(
+          new Set(assignments.map((a: any) => a.userId).filter(Boolean))
+        ) as number[];
+        const users = await Promise.all(
+          userIds.map((id) =>
+            getUser(id)
+              .then((u) => u as UserDetail)
+              .catch(() => null)
+          )
+        );
+        map = new Map<number, UserDetail | null>();
+        userIds.forEach((id, idx) => map.set(id, users[idx]));
+      }
+      return assignments.map((a: any) => {
+        const existing = a.user || null;
+        const fetched = map.get(a.userId) || null;
+        const u = existing || fetched || null;
+        const pick = u
+          ? {
+              id: u.id,
+              fullName: (u as any).fullName,
+              phone: (u as any).phone,
+              email: (u as any).email,
+            }
+          : null;
+        return {
+          id: a.id,
+          sessionId: a.sessionId,
+          userId: a.userId,
+          perspective: a.perspective,
+          createdAt: a.createdAt,
+          updatedAt: a.updatedAt,
+          user: pick,
+        } as EnrichedAssignment;
+      });
+    },
+    enabled: !!sessionId && Number.isFinite(sessionId),
+    staleTime: 1000 * 60 * 5,
+    retry: 1,
+    refetchOnWindowFocus: false,
+  });
+}
 export function useAddAssignment() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: addAssignment,
-    onSuccess: (a: any) =>
-      qc.invalidateQueries({ queryKey: sessionsKeys.assignments(a.sessionId) }),
+    onSuccess: (a: any) => {
+      qc.invalidateQueries({ queryKey: sessionsKeys.assignments(a.sessionId) });
+      qc.invalidateQueries({
+        queryKey: sessionsKeys.assignmentsDetailed(a.sessionId),
+      });
+    },
   });
 }
 export function useBulkAssign() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: bulkAssign,
-    onSuccess: (_r, vars: any) =>
+    onSuccess: (_r, vars: any) => {
       qc.invalidateQueries({
         queryKey: sessionsKeys.assignments(vars.sessionId),
-      }),
+      });
+      qc.invalidateQueries({
+        queryKey: sessionsKeys.assignmentsDetailed(vars.sessionId),
+      });
+    },
   });
 }
 export function useUpdateAssignment() {
@@ -364,15 +444,22 @@ export function useUpdateAssignment() {
   return useMutation({
     mutationFn: ({ id, body }: { id: number; body: any }) =>
       updateAssignment(id, body),
-    onSuccess: (a: any) =>
-      qc.invalidateQueries({ queryKey: sessionsKeys.assignments(a.sessionId) }),
+    onSuccess: (a: any) => {
+      qc.invalidateQueries({ queryKey: sessionsKeys.assignments(a.sessionId) });
+      qc.invalidateQueries({
+        queryKey: sessionsKeys.assignmentsDetailed(a.sessionId),
+      });
+    },
   });
 }
 export function useDeleteAssignment() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: deleteAssignment,
-    onSuccess: () => qc.invalidateQueries({ queryKey: sessionsKeys.all }),
+    onSuccess: (_res, _vars, _ctx) => {
+      // We don't have sessionId here; conservatively invalidate all assignments caches
+      qc.invalidateQueries({ queryKey: sessionsKeys.all });
+    },
   });
 }
 

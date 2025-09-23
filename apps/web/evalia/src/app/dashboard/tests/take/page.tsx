@@ -11,6 +11,8 @@ import {
   useBulkUpsertResponses,
 } from "@/assessment/api/templates-hooks";
 import { ResponsePerspectiveEnum, SessionStateEnum } from "@/lib/enums";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Panel,
@@ -36,6 +38,7 @@ import { QuestionSingleChoice } from "./components/QuestionSingleChoice";
 import { QuestionMultiChoice } from "./components/QuestionMultiChoice";
 import { QuestionScale } from "./components/QuestionScale";
 import { ProgressCircle } from "./components/ProgressCircle";
+import { AlertTriangle } from "lucide-react";
 
 export default function TakeAssessmentPage() {
   const { user } = useUserDataContext();
@@ -353,22 +356,25 @@ export default function TakeAssessmentPage() {
       {/* Session info panel with perspective selector */}
       <Panel className="shadow-sm">
         <PanelHeader className="[.border-b]:border-border/70">
-          <PanelTitle className="flex items-center gap-2 text-base sm:text-lg">
-            {uq.data?.session.name ?? activeSession?.name ?? "آزمون"}
+          <PanelTitle className="flex flex-wrap items-center gap-2 text-base sm:text-lg">
+            <span className="break-words whitespace-normal">
+              {uq.data?.session.name ?? activeSession?.name ?? "آزمون"}
+            </span>
             {uq.data?.session?.state && (
-              <span
-                className={
-                  "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] border " +
-                  (uq.data.session.state === "IN_PROGRESS"
-                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+              <Badge
+                variant="outline"
+                className={cn(
+                  "text-[10px] sm:text-[11px] font-medium",
+                  uq.data.session.state === "IN_PROGRESS"
+                    ? "border-emerald-500 text-emerald-700 bg-emerald-50 dark:border-emerald-600/60 dark:text-emerald-300 dark:bg-emerald-950/30"
                     : uq.data.session.state === "SCHEDULED"
-                    ? "border-sky-200 bg-sky-50 text-sky-700"
+                    ? "border-sky-500 text-sky-700 bg-sky-50 dark:border-sky-600/60 dark:text-sky-300 dark:bg-sky-950/30"
                     : uq.data.session.state === "COMPLETED"
-                    ? "border-gray-200 bg-gray-50 text-gray-700"
-                    : "border-amber-200 bg-amber-50 text-amber-700")
-                }>
+                    ? "border-gray-300 text-gray-700 bg-gray-50 dark:border-gray-600/60 dark:text-gray-300 dark:bg-gray-900"
+                    : "border-amber-500 text-amber-700 bg-amber-50 dark:border-amber-600/60 dark:text-amber-300 dark:bg-amber-950/30"
+                )}>
                 {SessionStateEnum.t(uq.data.session.state as any)}
-              </span>
+              </Badge>
             )}
           </PanelTitle>
 
@@ -423,9 +429,12 @@ export default function TakeAssessmentPage() {
         {/* Optional extra content row for future details */}
       </Panel>
       {data && data.session.state !== "IN_PROGRESS" && (
-        <div className="text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 text-sm">
-          این جلسه در وضعیت «{SessionStateEnum.t(data.session.state as any)}»
-          است و فعلاً امکان ثبت پاسخ ندارد.
+        <div className="flex items-center gap-2 text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 text-sm dark:text-amber-300 dark:bg-amber-950/30 dark:border-amber-600/60">
+          <AlertTriangle className="h-4 w-4" />
+          <span>
+            این جلسه در وضعیت «{SessionStateEnum.t(data.session.state as any)}»
+            است و فعلاً امکان ثبت پاسخ ندارد.
+          </span>
         </div>
       )}
       {uq.isLoading ? (
@@ -473,7 +482,7 @@ export default function TakeAssessmentPage() {
                       ref={(el) => {
                         questionRefs.current[linkId] = el;
                       }}
-                      className="scroll-mt-[100px]">
+                      className="scroll-mt-[75px]">
                       <div className="mb-2">
                         <span className="font-medium">
                           {qIndexMap[linkId]}. {text}
@@ -485,15 +494,15 @@ export default function TakeAssessmentPage() {
                         ) : null}
                         <span className="mx-2 text-xs">
                           {pending ? (
-                            <span className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-sky-700">
+                            <span className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-sky-700 dark:border-sky-600/60 dark:bg-sky-950/30 dark:text-sky-300">
                               منتظر ذخیره
                             </span>
                           ) : hasSaved ? (
-                            <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-emerald-700">
+                            <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-emerald-700 dark:border-emerald-600/60 dark:bg-emerald-950/30 dark:text-emerald-300">
                               پاسخ داده شده
                             </span>
                           ) : notAnswered ? (
-                            <span className="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-muted-foreground">
+                            <span className="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-muted-foreground dark:border-gray-600/60 dark:bg-gray-900 dark:text-gray-400">
                               پاسخ داده نشده
                             </span>
                           ) : null}

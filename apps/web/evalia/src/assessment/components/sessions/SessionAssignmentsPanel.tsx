@@ -13,9 +13,19 @@ import {
   PanelContent,
 } from "@/components/ui/panel";
 import { Combobox } from "@/components/ui/combobox";
-import { User, Users, CheckCircle2, Trash2, FileText } from "lucide-react";
 import {
-  useAssignments,
+  User,
+  Users,
+  CheckCircle2,
+  Trash2,
+  FileText,
+  Phone,
+  Mail,
+} from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import {
+  useAssignmentsDetailed,
   useAddAssignment,
   useBulkAssign,
   useDeleteAssignment,
@@ -25,7 +35,7 @@ import { useTeams } from "@/organizations/team/api/team-hooks";
 import { useOrganizations } from "@/organizations/organization/api/organization-hooks";
 import { useSessions } from "@/assessment/api/templates-hooks";
 import { listTeamMembers } from "@/organizations/member/api/team-membership.api";
-import { responsePerspectiveEnum } from "@/assessment/types/templates.types";
+import { ResponsePerspectiveEnum, type ResponsePerspective } from "@/lib/enums";
 
 export default function SessionAssignmentsPanel({
   organizationId,
@@ -48,7 +58,8 @@ export default function SessionAssignmentsPanel({
     setSelectedSessionId(sessionId || null);
   }, [sessionId]);
 
-  const { data: assignments, isLoading } = useAssignments(selectedSessionId);
+  const { data: assignments, isLoading } =
+    useAssignmentsDetailed(selectedSessionId);
   const addMut = useAddAssignment();
   const bulkMut = useBulkAssign();
   const delMut = useDeleteAssignment();
@@ -65,18 +76,15 @@ export default function SessionAssignmentsPanel({
   const [sessionSearch, setSessionSearch] = React.useState("");
   // Sessions list is fetched only when org is selected by mounting a child component
 
-  const perspectives: string[] = React.useMemo(() => {
-    const anyEnum: any = responsePerspectiveEnum as any;
-    if (Array.isArray(anyEnum?.options)) return anyEnum.options as string[];
-    if (anyEnum?.enum)
-      return Object.values(anyEnum.enum as Record<string, string>);
-    return ["SELF", "PEER", "MANAGER", "FACILITATOR", "SYSTEM"]; // fallback
-  }, []);
+  const perspectives: ResponsePerspective[] = React.useMemo(
+    () => ResponsePerspectiveEnum.values as ResponsePerspective[],
+    []
+  );
 
   const [state, setState] = React.useState<{
     userId: number | null;
     teamId: number | null;
-    perspective: string | null;
+    perspective: ResponsePerspective | null;
   }>({ userId: null, teamId: null, perspective: "SELF" });
 
   const addOne = async () => {
@@ -130,7 +138,7 @@ export default function SessionAssignmentsPanel({
               items={orgs}
               value={selectedOrgId}
               onChange={(v) => {
-                const orgId = (v as number) ?? null;
+                const orgId = v == null ? null : Number(v as any);
                 setSelectedOrgId(orgId);
                 setSelectedSessionId(null);
                 setState({
@@ -159,7 +167,9 @@ export default function SessionAssignmentsPanel({
                 <SessionsSelect
                   orgId={selectedOrgId ?? 0}
                   value={selectedSessionId}
-                  onChange={setSelectedSessionId}
+                  onChange={(val) =>
+                    setSelectedSessionId(val == null ? null : Number(val))
+                  }
                   search={sessionSearch}
                   onSearch={setSessionSearch}
                   placeholder={sessionPlaceholder}
@@ -225,7 +235,7 @@ export default function SessionAssignmentsPanel({
                       setState((s) => ({ ...s, perspective: p }))
                     }
                   />
-                  <span>{p}</span>
+                  <span>{ResponsePerspectiveEnum.t(p)}</span>
                 </label>
               ))}
             </div>
@@ -240,6 +250,12 @@ export default function SessionAssignmentsPanel({
                 در حال بارگذاری...
               </div>
             )}
+            {/* Error state */}
+            {!isLoading && (assignments as any)?.error && (
+              <div className="text-sm text-rose-600">
+                {(assignments as any).error?.message || "خطا در دریافت داده‌ها"}
+              </div>
+            )}
             {!isLoading &&
               Array.isArray(assignments) &&
               assignments.length === 0 && (
@@ -247,22 +263,64 @@ export default function SessionAssignmentsPanel({
                   موردی ثبت نشده
                 </div>
               )}
-            {Array.isArray(assignments) &&
-              assignments.map((a: any) => (
-                <div
-                  key={a.id}
-                  className="flex items-center justify-between rounded-md border p-2">
-                  <div className="text-xs">
-                    کاربر #{a.userId} — {a.perspective || "SELF"}
-                  </div>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => delMut.mutateAsync(a.id)}>
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
-              ))}
+            {Array.isArray(assignments) && assignments.length > 0 && (
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                {assignments.map((a: any) => {
+                  const name = a.user?.fullName || `کاربر #${a.userId}`;
+                  const email = a.user?.email || null;
+                  const phone = a.user?.phone || null;
+                  const initials = (name || "?")
+                    .split(/\s+/)
+                    .slice(0, 2)
+                    .map((s: string) => s[0])
+                    .join("")
+                    .toUpperCase();
+                  const perspectiveLabel = ResponsePerspectiveEnum.t(
+                    (a.perspective as any) || "SELF"
+                  );
+                  return (
+                    <div
+                      key={a.id}
+                      className="flex items-center justify-between rounded-md border p-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <Avatar className="size-8">
+                          <AvatarFallback>{initials}</AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium truncate">
+                              {name}
+                            </span>
+                            <Badge variant="secondary" className="shrink-0">
+                              {perspectiveLabel}
+                            </Badge>
+                          </div>
+                          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                            {phone ? (
+                              <span className="inline-flex items-center gap-1">
+                                <Phone className="h-3 w-3" /> {phone}
+                              </span>
+                            ) : null}
+                            {email ? (
+                              <span className="inline-flex items-center gap-1">
+                                <Mail className="h-3 w-3" /> {email}
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+                      </div>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => delMut.mutateAsync(a.id)}
+                        className="shrink-0">
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       </PanelContent>

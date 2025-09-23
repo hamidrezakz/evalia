@@ -35,7 +35,14 @@ export function QuestionMultiChoice({
               onCheckedChange={(val) => toggle(o.value, Boolean(val))}
               id={`mc-${o.value}`}
             />
-            <span>{o.label}</span>
+            <span className="inline-flex items-center gap-1">
+              <span className="text-sm">{o.value}</span>
+              {o.label && o.label !== o.value ? (
+                <span className="text-xs text-muted-foreground">
+                  ({o.label})
+                </span>
+              ) : null}
+            </span>
           </label>
         );
       })}

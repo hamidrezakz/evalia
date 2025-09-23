@@ -22,11 +22,14 @@ import {
 } from "@/components/ui/sidebar";
 import { useAssessmentUserSessions } from "@/assessment/context/assessment-user-sessions";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { SessionStateEnum, ResponsePerspectiveEnum } from "@/lib/enums";
+import { useRouter } from "next/navigation";
 
 export function NavProjects(props: { projects?: SidebarProjectItem[] }) {
   const { projects = [] } = props;
   const { isMobile } = useSidebar();
+  const router = useRouter();
   const {
     sessions,
     loading,
@@ -89,14 +92,20 @@ export function NavProjects(props: { projects?: SidebarProjectItem[] }) {
             <SidebarMenuItem key={s.id}>
               <SidebarMenuButton
                 isActive={activeSessionId === s.id}
-                onClick={() => setActiveSessionId(s.id)}>
+                onClick={() => {
+                  setActiveSessionId(s.id);
+                  router.push("/dashboard/tests/take");
+                }}>
                 <Folder />
-                <span className="truncate">{s.name}</span>
-                <span className="ms-auto flex items-center gap-2">
+                <span className="truncate text-[12px] font-semibold">
+                  {s.name}
+                </span>
+                <span className="ms-auto flex items-center gap-2 w-fit min-w-fit">
                   {/* Status badge */}
                   <Badge
                     variant="outline"
-                    className={
+                    className={cn(
+                      "text-[10px] font-medium",
                       s.state === "IN_PROGRESS"
                         ? "border-amber-500 text-amber-700"
                         : s.state === "COMPLETED"
@@ -106,7 +115,7 @@ export function NavProjects(props: { projects?: SidebarProjectItem[] }) {
                         : s.state === "ANALYZING"
                         ? "border-sky-500 text-sky-700"
                         : "border-muted-foreground/40 text-muted-foreground"
-                    }>
+                    )}>
                     {SessionStateEnum.t(
                       s.state as any as (typeof SessionStateEnum.values)[number]
                     )}

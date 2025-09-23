@@ -116,7 +116,9 @@ export async function listAssignments(sessionId: number) {
     null,
     z.array(assignmentSchema)
   );
-  return res as unknown as Assignment[];
+  // apiRequest returns the standard envelope; when a responseSchema is provided
+  // it replaces envelope.data with the validated inner data array
+  return (res as any)?.data as Assignment[];
 }
 export const updateAssignmentBody = z.object({
   perspective: z.string().optional(),

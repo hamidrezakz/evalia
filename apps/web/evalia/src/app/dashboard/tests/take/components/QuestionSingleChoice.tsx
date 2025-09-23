@@ -32,7 +32,9 @@ export function QuestionSingleChoice({
               selected ? "text-primary" : ""
             }`}>
             <RadioGroupItem value={o.value} id={`${name}-${o.value}`} />
-            <span>{o.label}</span>
+            <span className="inline-flex items-center gap-1">
+              <span className="text-sm">{o.value}</span>
+            </span>
           </label>
         );
       })}

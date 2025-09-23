@@ -1,7 +1,21 @@
 "use client";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { Plus, Search, Edit2, Trash2, CheckCircle2, X } from "lucide-react";
+import {
+  Plus,
+  Search,
+  Edit2,
+  Trash2,
+  CheckCircle2,
+  X,
+  MoreVertical,
+  FileText,
+  Copy,
+  Lock,
+  Archive,
+  Pencil,
+  PlayCircle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Panel,
@@ -14,6 +28,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 // import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -100,7 +122,10 @@ export default function TemplateManager({ onSelect }: TemplateManagerProps) {
     <>
       <Panel>
         <PanelHeader className="flex-row items-center justify-between gap-2">
-          <PanelTitle className="text-base">تمپلیت‌ها</PanelTitle>
+          <PanelTitle className="text-base flex items-center gap-2">
+            <FileText className="h-4 w-4 text-muted-foreground" />
+            قالب‌های آزمون
+          </PanelTitle>
           <PanelAction>
             <Button
               size="sm"
@@ -166,19 +191,73 @@ export default function TemplateManager({ onSelect }: TemplateManagerProps) {
                     </div>
                   </button>
                   <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => openEdit(tpl)}>
-                      <Edit2 className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => onDelete(tpl)}
-                      disabled={deleteMut.isPending}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
+                    <DropdownMenu dir="rtl">
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="min-w-48">
+                        <DropdownMenuLabel>اقدامات</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => openEdit(tpl)}>
+                          <Edit2 className="h-4 w-4" /> ویرایش
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuLabel>تغییر وضعیت</DropdownMenuLabel>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            updateMut.mutate({
+                              id: tpl.id,
+                              body: { state: "ACTIVE" },
+                            })
+                          }>
+                          <PlayCircle className="h-4 w-4" /> فعال
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            updateMut.mutate({
+                              id: tpl.id,
+                              body: { state: "DRAFT" },
+                            })
+                          }>
+                          <Pencil className="h-4 w-4" /> پیش‌نویس
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            updateMut.mutate({
+                              id: tpl.id,
+                              body: { state: "CLOSED" },
+                            })
+                          }>
+                          <Lock className="h-4 w-4" /> بسته‌شده
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            updateMut.mutate({
+                              id: tpl.id,
+                              body: { state: "ARCHIVED" },
+                            })
+                          }>
+                          <Archive className="h-4 w-4" /> آرشیو
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() =>
+                            createMut.mutate({
+                              name: `${tpl.name} - کپی`,
+                              description: tpl.description ?? undefined,
+                            })
+                          }>
+                          <Copy className="h-4 w-4" /> کپی از قالب
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          variant="destructive"
+                          onClick={() => onDelete(tpl)}
+                          disabled={deleteMut.isPending}>
+                          <Trash2 className="h-4 w-4" /> حذف
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               );

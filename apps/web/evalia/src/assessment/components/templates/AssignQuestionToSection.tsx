@@ -1,7 +1,16 @@
 "use client";
 import * as React from "react";
 import { useForm } from "react-hook-form";
-import { Plus, Layers } from "lucide-react";
+import {
+  Plus,
+  FileText,
+  LayoutList,
+  Users,
+  ListChecks,
+  Hash,
+  Asterisk,
+  Info,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,12 +37,12 @@ import type {
   TemplateSection,
 } from "@/assessment/types/templates.types";
 import type { Question } from "@/assessment/types/question-banks.types";
-import { responsePerspectiveEnum } from "@/assessment/types/templates.types";
+import { ResponsePerspectiveEnum, type ResponsePerspective } from "@/lib/enums";
 
 type FormVals = {
   sectionId: number | null;
   questionId: number | null;
-  perspectives: string[];
+  perspectives: ResponsePerspective[];
   required: boolean;
   order: number | null;
 };
@@ -72,7 +81,7 @@ export default function AssignQuestionToSection({
   // Question search is now handled inside QuestionSearchCombobox
 
   const perspectiveOptions = React.useMemo(
-    () => getZodEnumOptions(responsePerspectiveEnum),
+    () => ResponsePerspectiveEnum.values as ResponsePerspective[],
     []
   );
 
@@ -134,10 +143,13 @@ export default function AssignQuestionToSection({
     <Panel>
       <PanelHeader className="flex-row items-center justify-between gap-2">
         <div>
-          <PanelTitle className="text-base">اختصاص سوال به سکشن</PanelTitle>
+          <PanelTitle className="text-base flex items-center gap-2">
+            <ListChecks className="h-4 w-4 text-muted-foreground" />
+            اختصاص سوال به بخش قالب
+          </PanelTitle>
           <PanelDescription>
-            سوال را انتخاب کنید، پرسپکتیوها و الزامی‌بودن را مشخص کنید، سپس ثبت
-            کنید.
+            سوال را انتخاب کنید، پرسپکتیوهای پاسخ‌دهی و الزامی بودن را مشخص
+            کنید، سپس افزودن را بزنید.
           </PanelDescription>
         </div>
         <PanelAction>
@@ -150,14 +162,16 @@ export default function AssignQuestionToSection({
               !questionId ||
               perspectives.length === 0
             }>
-            <Plus className="h-4 w-4 ms-1" /> افزودن
+            <Plus className="h-4 w-4 ms-1" /> افزودن سوال
           </Button>
         </PanelAction>
       </PanelHeader>
       <PanelContent className="flex-col gap-4">
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <div className="lg:col-span-1 space-y-2">
-            <Label>سکشن تمپلیت</Label>
+            <Label className="flex items-center gap-2">
+              <LayoutList className="h-4 w-4" /> بخش قالب (سکشن)
+            </Label>
             <SectionCombobox
               items={sectionList}
               value={sectionId}
@@ -167,9 +181,9 @@ export default function AssignQuestionToSection({
             />
           </div>
           <div className="lg:col-span-2 space-y-2">
-            <div className="flex items-center justify-between">
-              <Label>سوال</Label>
-            </div>
+            <Label className="flex items-center gap-2">
+              <FileText className="h-4 w-4" /> سوال
+            </Label>
             <QuestionSearchCombobox
               value={questionId}
               onChange={(id) => setValue("questionId", id)}
@@ -178,9 +192,30 @@ export default function AssignQuestionToSection({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <div className="lg:col-span-2">
-            <Label className="mb-2 block">پرسپکتیوها</Label>
+        <div className="grid grid-cols-1 gap-10">
+          <div className="md:col-span-2">
+            <div className="mb-2 flex items-center justify-between">
+              <Label className="flex items-center gap-2">
+                <Users className="h-4 w-4" /> پرسپکتیوها (نقش پاسخ‌دهی)
+              </Label>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => setValue("perspectives", perspectiveOptions)}
+                  disabled={perspectiveOptions.length === 0}>
+                  انتخاب همه
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => setValue("perspectives", [])}>
+                  پاک‌سازی
+                </Button>
+              </div>
+            </div>
             <div className="flex flex-wrap gap-2">
               {perspectiveOptions.map((p) => {
                 const checked = perspectives.includes(p);
@@ -201,7 +236,7 @@ export default function AssignQuestionToSection({
                         setValue("perspectives", next);
                       }}
                     />
-                    <span>{p}</span>
+                    <span>{ResponsePerspectiveEnum.t(p as any)}</span>
                   </label>
                 );
               })}
@@ -209,7 +244,7 @@ export default function AssignQuestionToSection({
           </div>
           <div className="lg:col-span-1 space-y-4">
             <Label className="flex items-center gap-2">
-              <Layers className="h-4 w-4" /> الزامی بودن
+              <Asterisk className="h-4 w-4" /> الزامی بودن
             </Label>
             <div className="flex items-center gap-2">
               <Switch
@@ -222,7 +257,9 @@ export default function AssignQuestionToSection({
             </div>
 
             <div className="space-y-2">
-              <Label>ترتیب سوال</Label>
+              <Label className="flex items-center gap-2">
+                <Hash className="h-4 w-4" /> ترتیب سوال
+              </Label>
               <Input
                 type="number"
                 inputMode="numeric"
