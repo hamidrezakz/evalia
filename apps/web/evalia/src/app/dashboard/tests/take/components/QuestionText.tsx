@@ -18,7 +18,9 @@ export function QuestionText({
   const text = value?.kind === "TEXT" ? value.text : "";
   return (
     <div className="space-y-2">
-      <Label htmlFor={`q-${id}`}>پاسخ شما</Label>
+      <Label htmlFor={`q-${id}`} className="text-[15px] font-custom">
+        پاسخ شما
+      </Label>
       <Textarea
         id={`q-${id}`}
         className="max-w-2xl"

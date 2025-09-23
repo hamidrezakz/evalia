@@ -49,7 +49,7 @@ export function QuestionScale({
 
   return (
     <div className="w-full max-w-xl">
-      <Label htmlFor={name} className="mb-2 inline-block">
+      <Label htmlFor={name} className="cursor-pointer text-[15px] font-custom inline-flex items-center gap-1">
         انتخاب مقدار
       </Label>
       <div className="py-2">

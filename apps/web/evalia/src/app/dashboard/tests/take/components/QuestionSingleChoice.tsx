@@ -2,6 +2,7 @@
 import React from "react";
 import type { AnswerValue } from "../types";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 
 export function QuestionSingleChoice({
   name,
@@ -26,16 +27,18 @@ export function QuestionSingleChoice({
       {options.map((o) => {
         const selected = current === o.value;
         return (
-          <label
+          <div
             key={o.value}
             className={`inline-flex items-center gap-2 cursor-pointer ${
               selected ? "text-primary" : ""
             }`}>
             <RadioGroupItem value={o.value} id={`${name}-${o.value}`} />
-            <span className="inline-flex items-center gap-1">
-              <span className="text-sm">{o.value}</span>
-            </span>
-          </label>
+            <Label
+              htmlFor={`${name}-${o.value}`}
+              className="cursor-pointer text-[15px] font-custom inline-flex items-center gap-1">
+              <span className="text-[15px] leading-5">{o.value}</span>
+            </Label>
+          </div>
         );
       })}
     </RadioGroup>

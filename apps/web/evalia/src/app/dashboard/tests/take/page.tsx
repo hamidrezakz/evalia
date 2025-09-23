@@ -292,7 +292,23 @@ export default function TakeAssessmentPage() {
     if (!next) return;
     const el = questionRefs.current[next.linkId];
     if (el && typeof el.scrollIntoView === "function") {
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      // Center the upcoming question in the viewport for better focus
+      el.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+        inline: "nearest",
+      });
+    }
+  }
+
+  function scrollQuestionIntoCenter(linkId: number) {
+    const el = questionRefs.current[linkId];
+    if (el && typeof el.scrollIntoView === "function") {
+      el.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+        inline: "nearest",
+      });
     }
   }
 
@@ -303,6 +319,7 @@ export default function TakeAssessmentPage() {
   ) {
     setAnswers((prev) => ({ ...prev, [linkId]: v }));
     if (opts?.autoScroll) autoScrollToNext(linkId);
+    else scrollQuestionIntoCenter(linkId);
   }
 
   async function handleSaveAll() {
@@ -556,7 +573,7 @@ export default function TakeAssessmentPage() {
                       ref={(el) => {
                         questionRefs.current[linkId] = el;
                       }}
-                      className="scroll-mt-[75px]">
+                      className="scroll-mt-[-170px]">
                       <div className="mb-2">
                         <span className="font-medium">
                           {qIndexMap[linkId]}. {text}

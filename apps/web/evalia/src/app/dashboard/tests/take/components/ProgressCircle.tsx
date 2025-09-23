@@ -20,9 +20,9 @@ export function ProgressCircle({
     { name: "remaining", value: remaining },
   ];
   // Use Tailwind palette hex colors for clear contrast
-  const COLORS = ["#3b82f6" /* blue-500 */, "#e5e7eb" /* gray-200 */];
+  const COLORS = ["#0f880f" /* green-600 */, "#e5e7eb" /* gray-200 */];
   const config: ChartConfig = {
-    completed: { label: "تکمیل", color: "#3b82f6" },
+    completed: { label: "تکمیل", color: "#0f880f" },
     remaining: {
       label: "باقی‌مانده",
       color: "#e5e7eb",

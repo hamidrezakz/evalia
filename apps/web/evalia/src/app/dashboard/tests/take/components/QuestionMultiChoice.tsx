@@ -2,6 +2,7 @@
 import React from "react";
 import type { AnswerValue } from "../types";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 
 export function QuestionMultiChoice({
   options,
@@ -25,7 +26,7 @@ export function QuestionMultiChoice({
       {options.map((o) => {
         const checked = values.includes(o.value);
         return (
-          <label
+          <div
             key={o.value}
             className={`inline-flex items-center gap-2 cursor-pointer ${
               checked ? "text-primary" : ""
@@ -35,15 +36,17 @@ export function QuestionMultiChoice({
               onCheckedChange={(val) => toggle(o.value, Boolean(val))}
               id={`mc-${o.value}`}
             />
-            <span className="inline-flex items-center gap-1">
-              <span className="text-sm">{o.value}</span>
+            <Label
+              htmlFor={`mc-${o.value}`}
+              className="cursor-pointer text-[15px] font-custom inline-flex items-center gap-1">
+              <span className="text-[15px] leading-5">{o.value}</span>
               {o.label && o.label !== o.value ? (
                 <span className="text-xs text-muted-foreground">
                   ({o.label})
                 </span>
               ) : null}
-            </span>
-          </label>
+            </Label>
+          </div>
         );
       })}
     </div>

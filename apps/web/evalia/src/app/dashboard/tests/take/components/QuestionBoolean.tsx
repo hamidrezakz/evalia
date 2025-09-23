@@ -2,6 +2,7 @@
 import React from "react";
 import type { AnswerValue } from "../types";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 
 export function QuestionBoolean({
   name,
@@ -24,20 +25,28 @@ export function QuestionBoolean({
       }}
       className="items-start gap-2"
       name={name}>
-      <label
+      <div
         className={`inline-flex items-center gap-2 cursor-pointer ${
           checkedTrue ? "text-primary" : ""
         }`}>
         <RadioGroupItem value="true" id={`${name}-true`} />
-        <span>بله</span>
-      </label>
-      <label
+        <Label
+          htmlFor={`${name}-true`}
+          className="cursor-pointer text-[15px] font-custom">
+          بله
+        </Label>
+      </div>
+      <div
         className={`inline-flex items-center gap-2 cursor-pointer ${
           checkedFalse ? "text-primary" : ""
         }`}>
         <RadioGroupItem value="false" id={`${name}-false`} />
-        <span>خیر</span>
-      </label>
+        <Label
+          htmlFor={`${name}-false`}
+          className="cursor-pointer text-[15px] font-custom">
+          خیر
+        </Label>
+      </div>
     </RadioGroup>
   );
 }
