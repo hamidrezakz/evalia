@@ -1,18 +1,10 @@
 "use client";
 import * as React from "react";
 import { useForm } from "react-hook-form";
-import {
-  Plus,
-  FileText,
-  LayoutList,
-  Users,
-  ListChecks,
-  Hash,
-  Asterisk,
-  Info,
-} from "lucide-react";
+import { Plus, Edit2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
   Panel,
@@ -58,6 +50,10 @@ function getZodEnumOptions(z: unknown): string[] {
 
 import SectionCombobox from "../combobox/SectionCombobox";
 import QuestionSearchCombobox from "../combobox/QuestionSearchCombobox";
+import { QuestionBankCombobox } from "@/assessment/components/questions/create/question-bank-combobox";
+import { useQuestions, useUpdateQuestion } from "@/assessment/api/hooks";
+import BankQuestionsPreview from "@/assessment/components/questions/bank-questions-preview";
+// Edit2 imported above with Plus
 
 export default function AssignQuestionToSection({
   template,
@@ -65,6 +61,7 @@ export default function AssignQuestionToSection({
   template: Template | null;
 }) {
   const templateId = template?.id ?? null;
+  const [bankId, setBankId] = React.useState<number | null>(null);
   const { data: sections } = useTemplateSections(templateId);
   const sectionList: TemplateSection[] = React.useMemo(() => {
     const raw: any = sections as any;
@@ -86,6 +83,7 @@ export default function AssignQuestionToSection({
   );
 
   const addMut = useAddTemplateQuestion();
+  const updateQuestion = useUpdateQuestion();
   const { handleSubmit, setValue, watch, reset } = useForm<FormVals>({
     defaultValues: {
       sectionId: null,
@@ -139,12 +137,15 @@ export default function AssignQuestionToSection({
     });
   });
 
+  // Questions list moved to reusable BankQuestionsPreview component
+
   return (
     <Panel>
-      <PanelHeader className="flex-row items-center justify-between gap-2">
+      <PanelHeader
+        className="flex-row items-center justify-between gap-2"
+        dir="rtl">
         <div>
           <PanelTitle className="text-base flex items-center gap-2">
-            <ListChecks className="h-4 w-4 text-muted-foreground" />
             اختصاص سوال به بخش قالب
           </PanelTitle>
           <PanelDescription>
@@ -166,12 +167,10 @@ export default function AssignQuestionToSection({
           </Button>
         </PanelAction>
       </PanelHeader>
-      <PanelContent className="flex-col gap-4">
+      <PanelContent className="flex-col gap-4 text-right" dir="rtl">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <div className="lg:col-span-1 space-y-2">
-            <Label className="flex items-center gap-2">
-              <LayoutList className="h-4 w-4" /> بخش قالب (سکشن)
-            </Label>
+            <Label className="flex items-center gap-2">بخش قالب (سکشن)</Label>
             <SectionCombobox
               items={sectionList}
               value={sectionId}
@@ -182,21 +181,28 @@ export default function AssignQuestionToSection({
           </div>
           <div className="lg:col-span-2 space-y-2">
             <Label className="flex items-center gap-2">
-              <FileText className="h-4 w-4" /> سوال
+              بانک سوال برای فیلتر
             </Label>
+            <QuestionBankCombobox
+              value={bankId}
+              onChange={(id) => setBankId(id)}
+              placeholder="انتخاب بانک سوال (اختیاری)"
+            />
+            <Label className="flex items-center gap-2">سوال</Label>
             <QuestionSearchCombobox
               value={questionId}
               onChange={(id) => setValue("questionId", id)}
               placeholder="انتخاب سوال"
+              bankId={bankId}
             />
           </div>
         </div>
 
         <div className="grid grid-cols-1 gap-10">
           <div className="md:col-span-2">
-            <div className="mb-2 flex items-center justify-between">
-              <Label className="flex items-center gap-2">
-                <Users className="h-4 w-4" /> پرسپکتیوها (نقش پاسخ‌دهی)
+            <div className="mb-2 flex flex-col md:flex-row md:items-center md:gap-4 gap-2">
+              <Label className="flex items-center gap-2 mb-1 md:mb-0">
+                پرسپکتیوها (نقش پاسخ‌دهی)
               </Label>
               <div className="flex items-center gap-2">
                 <Button
@@ -243,9 +249,7 @@ export default function AssignQuestionToSection({
             </div>
           </div>
           <div className="lg:col-span-1 space-y-4">
-            <Label className="flex items-center gap-2">
-              <Asterisk className="h-4 w-4" /> الزامی بودن
-            </Label>
+            <Label className="flex items-center gap-2">الزامی بودن</Label>
             <div className="flex items-center gap-2">
               <Switch
                 checked={required}
@@ -257,9 +261,7 @@ export default function AssignQuestionToSection({
             </div>
 
             <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <Hash className="h-4 w-4" /> ترتیب سوال
-              </Label>
+              <Label className="flex items-center gap-2">ترتیب سوال</Label>
               <Input
                 type="number"
                 inputMode="numeric"
@@ -276,7 +278,18 @@ export default function AssignQuestionToSection({
             </div>
           </div>
         </div>
+        {bankId ? (
+          <div className="mt-6">
+            <BankQuestionsPreview
+              bankId={bankId}
+              editable
+              onPick={(qid) => setValue("questionId", qid)}
+            />
+          </div>
+        ) : null}
       </PanelContent>
     </Panel>
   );
 }
+
+// moved BankQuestionRow into BankQuestionsPreview component

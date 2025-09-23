@@ -12,6 +12,7 @@ export interface QuestionSearchComboboxProps {
   disabled?: boolean;
   className?: string;
   pageSize?: number;
+  bankId?: number | null;
 }
 
 export const QuestionSearchCombobox: React.FC<QuestionSearchComboboxProps> = ({
@@ -21,6 +22,7 @@ export const QuestionSearchCombobox: React.FC<QuestionSearchComboboxProps> = ({
   disabled,
   className,
   pageSize = 50,
+  bankId,
 }) => {
   const [search, setSearch] = React.useState("");
   const [debounced, setDebounced] = React.useState(search);
@@ -30,7 +32,11 @@ export const QuestionSearchCombobox: React.FC<QuestionSearchComboboxProps> = ({
     return () => clearTimeout(t);
   }, [search]);
 
-  const { data, isLoading } = useQuestions({ search: debounced, pageSize });
+  const { data, isLoading } = useQuestions({
+    search: debounced,
+    pageSize,
+    bankId: bankId ?? undefined,
+  });
   const items: Question[] = (data?.data as Question[]) || [];
 
   return (
