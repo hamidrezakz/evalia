@@ -4,12 +4,19 @@ import { usePathname } from "next/navigation";
 import React from "react";
 
 const links: { href: string; label: string }[] = [
-  { href: "/dashboard/templates", label: "نمای کلی" },
-  { href: "/dashboard/sessions", label: "جلسات" },
-  { href: "/dashboard/sessions/assignments", label: "اختصاص به کاربر/تیم" },
+  { href: "/dashboard/testbuilder", label: "داشبورد آزمون‌ها" },
+  { href: "/dashboard/testbuilder/questionbank", label: "مدیریت بانک سوالات" },
+  { href: "/dashboard/testbuilder/option-sets", label: "دسته‌بندی گزینه‌ها" },
+  { href: "/dashboard/testbuilder/qubuilder", label: "ساخت و ویرایش سوال" },
+  { href: "/dashboard/testbuilder/templates", label: "قالب‌های آزمون" },
+  { href: "/dashboard/testbuilder/sessions", label: "جلسات آزمون" },
+  {
+    href: "/dashboard/testbuilder/sessions/assignments",
+    label: "اختصاص کاربر به جلسه",
+  },
 ];
 
-export function TemplateNav() {
+export function AssessmentNav() {
   const pathname = usePathname();
   return (
     <nav className="flex flex-wrap gap-2 mb-6">
