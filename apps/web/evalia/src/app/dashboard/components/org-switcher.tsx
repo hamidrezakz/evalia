@@ -117,7 +117,7 @@ export const OrgSwitcher = memo(function OrgSwitcher({
                   {activeOrg.isPrimary && (
                     <Star className="size-3 mb-0.5 fill-current" />
                   )}
-                  {activeOrg.planLabel || activeOrg.plan}
+                  پلن {activeOrg.planLabel || activeOrg.plan}
                 </span>
               ) : accounts.length === 0 ? (
                 <span className="text-[0.55rem] text-muted-foreground">
@@ -173,7 +173,7 @@ export const OrgSwitcher = memo(function OrgSwitcher({
                       )}
                     </span>
                     <span className="text-[10px] text-muted-foreground">
-                      {acc.planLabel || acc.plan || "Free"}
+                      پلن {acc.planLabel || acc.plan || "Free"}
                     </span>
                   </div>
                 </div>

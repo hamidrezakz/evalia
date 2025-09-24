@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import { cn } from "@/lib/utils";
+import { cn, formatIranPhone } from "@/lib/utils";
 import { useOrganization } from "../../api/organization-hooks";
 import {
   useUpdateOrganizationMemberRoles,
@@ -223,8 +223,8 @@ function MemberRow({ orgId, membership }: MemberRowProps) {
           {phone && (
             <span
               className="inline-flex items-center gap-1 text-[10px] text-muted-foreground"
-              title={phone}>
-              <span className="ltr:font-mono">({phone})</span>
+              title={formatIranPhone(phone)}>
+              <span className="ltr:font-mono">({formatIranPhone(phone)})</span>
             </span>
           )}
           {isLoading && !data && (

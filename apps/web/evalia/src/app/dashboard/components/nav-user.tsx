@@ -25,6 +25,9 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { useAuthSession } from "@/app/auth/event-context/session-context";
+import { formatIranPhone } from "@/lib/utils";
+import * as React from "react";
 
 export function NavUser({
   user,
@@ -37,6 +40,20 @@ export function NavUser({
   };
 }) {
   const { isMobile } = useSidebar();
+  const { signOut } = useAuthSession();
+  const [loggingOut, setLoggingOut] = React.useState(false);
+
+  async function handleLogout() {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      // signOut already clears tokens, cache & redirects
+      await Promise.resolve(signOut());
+    } finally {
+      // If redirect happens this won't matter; defensive reset
+      setLoggingOut(false);
+    }
+  }
 
   return (
     <SidebarMenu>
@@ -55,7 +72,7 @@ export function NavUser({
                 <span className="truncate text-xs">{user.email}</span>
                 {user.phoneNumber && (
                   <span className="truncate text-xs text-muted-foreground">
-                    {user.phoneNumber}
+                    {formatIranPhone(user.phoneNumber)}
                   </span>
                 )}
               </div>
@@ -75,7 +92,7 @@ export function NavUser({
                   <AvatarFallback className="rounded-lg">CN</AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-[12px] leading-tight">
-                  <span className="truncate font-medium">{user.name} (مدیر کل)</span>
+                  <span className="truncate font-medium">{user.name}</span>
                   <span className="truncate text-xs">{user.email}</span>
                 </div>
               </div>
@@ -100,9 +117,15 @@ export function NavUser({
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <LogOut />
-              خروج از حساب کاربری
+            <DropdownMenuItem
+              onSelect={(e) => {
+                e.preventDefault();
+                handleLogout();
+              }}
+              className="cursor-pointer text-red-600 focus:text-red-700"
+              disabled={loggingOut}>
+              <LogOut className={loggingOut ? "animate-pulse" : ""} />
+              {loggingOut ? "در حال خروج…" : "خروج از حساب کاربری"}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

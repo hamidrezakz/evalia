@@ -1,515 +1,317 @@
 "use client";
-import React from "react";
-import { Suspense, useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
+import * as React from "react";
+import { useAuthSession } from "@/app/auth/event-context/session-context";
+import { useUser } from "@/users/api/users-hooks";
+import { useUserOrganizations } from "@/organizations/organization/api/organization-hooks";
 import {
   Panel,
   PanelHeader,
   PanelTitle,
+  PanelDescription,
   PanelContent,
-  PanelFooter,
 } from "@/components/ui/panel";
-import { useAuthSession } from "@/app/auth/event-context";
-import { useOrgState } from "@/organizations/organization/context";
-import { useUserDataContext } from "@/users/context";
-import { useNavigationContext } from "@/navigation/context";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
+import { parseJalali, formatJalali } from "@/lib/jalali-date";
+import { cn } from "@/lib/utils";
+import {
+  Users2,
+  Building2,
+  Layers,
+  Crown,
+  RefreshCcw,
+  ListChecks,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
-// Helper
-const short = (t: string | null | undefined) =>
-  t ? t.substring(0, 28) + (t.length > 28 ? "…" : "") : "—";
-
-function PanelSkeleton({ title }: { title: string }) {
+// ----------------------------------
+// Utility components
+// ----------------------------------
+function UserStatusBadge({ status }: { status?: string }) {
+  if (!status) return null;
+  const norm = status.toUpperCase();
+  const map: Record<string, { label: string; cls: string }> = {
+    ACTIVE: {
+      label: "فعال",
+      cls: "bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700",
+    },
+    SUSPENDED: {
+      label: "معلق",
+      cls: "bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700",
+    },
+    DISABLED: {
+      label: "غیرفعال",
+      cls: "bg-rose-100 text-rose-700 border-rose-300 dark:bg-rose-900/30 dark:text-rose-300 dark:border-rose-700",
+    },
+  };
+  const meta = map[norm] || {
+    label: status,
+    cls: "bg-muted text-muted-foreground border-muted-foreground/30",
+  };
   return (
-    <Panel>
-      <PanelHeader>
-        <PanelTitle>{title}</PanelTitle>
-      </PanelHeader>
-      <PanelContent className="text-xs text-muted-foreground">
-        در حال بارگذاری…
-      </PanelContent>
-    </Panel>
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-full border px-2 py-[2px] text-[10px] font-medium",
+        meta.cls
+      )}>
+      <span className="relative flex h-1.5 w-1.5">
+        <span
+          className={cn(
+            "absolute inset-0 rounded-full",
+            norm === "ACTIVE"
+              ? "bg-emerald-500"
+              : norm === "SUSPENDED"
+              ? "bg-amber-500"
+              : norm === "DISABLED"
+              ? "bg-rose-500"
+              : "bg-muted-foreground"
+          )}
+        />
+      </span>
+      {meta.label}
+    </span>
   );
 }
 
-/* 1) پنل نشست / توکن */
-function SessionPanel() {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  const {
-    accessToken,
-    refreshToken,
-    decoded,
-    userId,
-    isTokenExpired,
-    attemptRefresh,
-    signOut,
-    loading,
-  } = useAuthSession();
-  if (!mounted) return <PanelSkeleton title="نشست احراز هویت" />;
+function StatItem({
+  icon: Icon,
+  label,
+  value,
+  loading,
+}: {
+  icon: React.ComponentType<any>;
+  label: string;
+  value: React.ReactNode;
+  loading?: boolean;
+}) {
   return (
-    <Panel>
-      <PanelHeader>
-        <PanelTitle>نشست احراز هویت</PanelTitle>
-      </PanelHeader>
-      <PanelContent className="flex flex-col gap-5 text-[11px] md:text-xs">
-        <section className="space-y-2">
-          <div className="flex flex-wrap gap-3 items-center">
-            <Badge variant={isTokenExpired() ? "destructive" : "secondary"}>
-              {isTokenExpired() ? "Token Expiring Soon" : "Token OK"}
-            </Badge>
-            {userId && <Badge variant="outline">User #{userId}</Badge>}
-            {typeof decoded?.iat === "string" ||
-            typeof decoded?.iat === "number" ? (
-              <Badge variant="outline">iat: {String(decoded.iat)}</Badge>
-            ) : null}
-            {typeof decoded?.exp === "string" ||
-            typeof decoded?.exp === "number" ? (
-              <Badge variant="outline">exp: {String(decoded.exp)}</Badge>
-            ) : null}
-          </div>
-          <div className="grid gap-1">
-            <div className="font-semibold text-[12px]">توکن‌ها</div>
-            <div className="grid gap-1 rounded-md border bg-background/40 p-2">
-              <div className="flex justify-between gap-2">
-                <span className="text-muted-foreground">Access</span>
-                <code dir="ltr" className="font-mono">
-                  {short(accessToken)}
-                </code>
-              </div>
-              <div className="flex justify-between gap-2">
-                <span className="text-muted-foreground">Refresh</span>
-                <code dir="ltr" className="font-mono">
-                  {short(refreshToken)}
-                </code>
-              </div>
-              <div className="flex justify-between gap-2">
-                <span className="text-muted-foreground">Expiring</span>
-                <span>{isTokenExpired() ? "Yes" : "No"}</span>
-              </div>
-            </div>
-          </div>
-          <Separator className="my-2" />
-          <div className="flex flex-col gap-2">
-            <div className="font-semibold text-[12px]">Payload</div>
-            <pre className="bg-muted/50 backdrop-blur-sm border rounded-md p-2 max-h-48 overflow-auto text-[10px] leading-relaxed whitespace-pre-wrap break-all">
-              {decoded ? JSON.stringify(decoded, null, 2) : "—"}
-            </pre>
-          </div>
-        </section>
-      </PanelContent>
-      <PanelFooter className="justify-between">
-        <div className="flex gap-2">
-          <Button size="sm" disabled={loading} onClick={() => attemptRefresh()}>
-            رفرش دستی
-          </Button>
-          <Button size="sm" variant="secondary" onClick={() => signOut()}>
-            خروج
-          </Button>
-        </div>
-        <span className="text-xs text-muted-foreground">
-          {loading ? "لودینگ" : "آماده"}
-        </span>
-      </PanelFooter>
-    </Panel>
-  );
-}
-
-/* 2) پنل سازمان و نقش فعال */
-function OrgPanel() {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  const {
-    organizations,
-    organizationRoles,
-    platformRoles,
-    activeOrganizationId,
-    activeRole,
-    activeRoleSource,
-    setActiveOrganization,
-    setPlatformActiveRole,
-    setOrganizationActiveRole,
-    refreshOrganizations,
-    loading,
-  } = useOrgState();
-  if (!mounted) return <PanelSkeleton title="سازمان و نقش" />;
-  return (
-    <Panel>
-      <PanelHeader>
-        <PanelTitle>سازمان و نقش فعال</PanelTitle>
-      </PanelHeader>
-      <PanelContent className="flex flex-col gap-6 text-[11px] md:text-xs">
-        <section className="grid gap-2">
-          <div className="flex flex-wrap gap-2">
-            {activeRole && (
-              <Badge variant="default">Active: {activeRole}</Badge>
-            )}
-            {activeRoleSource && (
-              <Badge variant="secondary">Source: {activeRoleSource}</Badge>
-            )}
-            {typeof activeOrganizationId === "number" && (
-              <Badge variant="outline">Org #{activeOrganizationId}</Badge>
-            )}
-          </div>
-          <div className="grid gap-1 rounded-md border bg-background/40 p-2">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Organization</span>
-              <span>{activeOrganizationId ?? "—"}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Role</span>
-              <span>{activeRole ?? "—"}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Source</span>
-              <span>{activeRoleSource ?? "—"}</span>
-            </div>
-          </div>
-        </section>
-        <Separator />
-        <section className="space-y-2">
-          <div className="flex items-center justify-between">
-            <h4 className="font-semibold">
-              Organizations ({organizations.length})
-            </h4>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => refreshOrganizations()}
-              disabled={loading}>
-              Refresh
-            </Button>
-          </div>
-          <ul className="flex flex-col gap-2">
-            {organizations.map((o) => (
-              <li
-                key={o.id}
-                className="rounded-md border bg-background/40 p-2 flex flex-col gap-2">
-                <div className="flex flex-wrap gap-2 items-center">
-                  <span className="font-medium">{o.name}</span>
-                  <Badge variant="outline">ID {o.id}</Badge>
-                  <Button
-                    size="sm"
-                    variant={
-                      activeOrganizationId === o.id ? "default" : "secondary"
-                    }
-                    onClick={() => setActiveOrganization(o.id)}>
-                    Select
-                  </Button>
-                </div>
-                <div className="flex flex-wrap gap-1">
-                  {(organizationRoles[o.id] || []).map((r) => (
-                    <Button
-                      key={r}
-                      size="sm"
-                      variant={
-                        activeRole === r && activeRoleSource === "organization"
-                          ? "default"
-                          : "outline"
-                      }
-                      onClick={() => setOrganizationActiveRole(r, o.id)}>
-                      {r}
-                    </Button>
-                  ))}
-                  {!(organizationRoles[o.id] || []).length && (
-                    <span className="text-muted-foreground">No roles</span>
-                  )}
-                </div>
-              </li>
-            ))}
-            {!organizations.length && (
-              <li className="text-muted-foreground text-center p-2 border rounded-md">
-                No organizations
-              </li>
-            )}
-          </ul>
-        </section>
-        <Separator />
-        <section className="space-y-2">
-          <h4 className="font-semibold">Platform Roles</h4>
-          <div className="flex flex-wrap gap-2">
-            {platformRoles.length ? (
-              platformRoles.map((r) => (
-                <Button
-                  key={r}
-                  size="sm"
-                  variant={
-                    activeRole === r && activeRoleSource === "platform"
-                      ? "default"
-                      : "outline"
-                  }
-                  onClick={() => setPlatformActiveRole(r)}>
-                  {r}
-                </Button>
-              ))
-            ) : (
-              <span className="text-muted-foreground">—</span>
-            )}
-          </div>
-        </section>
-      </PanelContent>
-      <PanelFooter className="justify-between">
-        <div className="flex gap-2 flex-wrap">
-          <Button
-            size="sm"
-            disabled={loading}
-            onClick={() => refreshOrganizations()}>
-            رفرش سازمان‌ها
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              setPlatformActiveRole(null);
-              setOrganizationActiveRole(null);
-            }}>
-            خالی کردن نقش
-          </Button>
-        </div>
-        <span className="text-xs text-muted-foreground">
-          {loading ? "لودینگ" : "آماده"}
-        </span>
-      </PanelFooter>
-    </Panel>
-  );
-}
-
-/* 3) پنل اطلاعات کاربر */
-function UserPanel() {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  const { user, userId, loading, error, refetch } = useUserDataContext();
-  if (!mounted) return <PanelSkeleton title="کاربر" />;
-  return (
-    <Panel>
-      <PanelHeader>
-        <PanelTitle>اطلاعات کاربر</PanelTitle>
-      </PanelHeader>
-      <PanelContent className="flex flex-col gap-5 text-[11px] md:text-xs">
-        <div className="flex flex-wrap gap-2">
-          {userId && <Badge variant="outline">User #{userId}</Badge>}
-          {user?.email && <Badge variant="secondary">{user.email}</Badge>}
-        </div>
-        <div className="grid gap-1 rounded-md border bg-background/40 p-2">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Full name</span>
-            <span>
-              {typeof user?.fullName === "string" && user.fullName
-                ? user.fullName
-                : (
-                    (typeof user?.firstName === "string"
-                      ? user.firstName
-                      : "") +
-                    " " +
-                    (typeof user?.lastName === "string" ? user.lastName : "")
-                  ).trim() || "—"}
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Created</span>
-            <span>
-              {typeof user?.createdAt === "string" ? user.createdAt : "—"}
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Updated</span>
-            <span>
-              {user && "updatedAt" in user
-                ? (user as { updatedAt?: string }).updatedAt ?? "—"
-                : "—"}
-            </span>
-          </div>
-        </div>
-        {error && (
-          <div className="text-red-600 dark:text-red-400 break-all">
-            Error: {error}
-          </div>
-        )}
-      </PanelContent>
-      <PanelFooter className="justify-between">
-        <Button size="sm" disabled={loading} onClick={() => refetch()}>
-          دریافت مجدد
-        </Button>
-        <span className="text-xs text-muted-foreground">
-          {loading ? "لودینگ" : "آماده"}
-        </span>
-      </PanelFooter>
-    </Panel>
-  );
-}
-
-// نمایش درخت کامل ناوبری به صورت بازگشتی
-const TreeList = ({ nodes }: { nodes: unknown[] }): React.ReactElement =>
-  !nodes?.length ? (
-    <div className="text-muted-foreground">No items</div>
-  ) : (
-    <ul className="flex flex-col gap-1">
-      {nodes.map((node) => {
-        const n = node as Record<string, unknown>;
-        return (
-          <li
-            key={String(n.id)}
-            className="rounded border bg-background/40 px-2 py-1">
-            <div className="flex justify-between gap-2">
-              <span className="truncate" title={String(n.label)}>
-                {String(n.label)}
-              </span>
-              {typeof n.path === "string" || typeof n.path === "number" ? (
-                <code dir="ltr" className="text-[10px] opacity-70">
-                  {String(n.path)}
-                </code>
-              ) : null}
-            </div>
-            {Array.isArray(n.children) && n.children.length > 0 && (
-              <div className="pl-4 border-l mt-2">
-                <TreeList nodes={n.children} />
-              </div>
-            )}
-          </li>
-        );
-      })}
-    </ul>
-  );
-
-/* 4) پنل ناوبری */
-function NavigationPanel() {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  const {
-    items,
-    flatten,
-    hasPath,
-    findByPath,
-    activeRole,
-    activeRoleSource,
-    loading,
-    error,
-    refetch,
-  } = useNavigationContext();
-  const flat = flatten();
-  if (!mounted) return <PanelSkeleton title="ناوبری" />;
-  return (
-    <Panel>
-      <PanelHeader>
-        <PanelTitle>ناوبری (درخت / فلت)</PanelTitle>
-      </PanelHeader>
-      <PanelContent className="flex flex-col gap-6 text-[11px] md:text-xs">
-        <section className="grid gap-2">
-          <div className="flex flex-wrap gap-2 items-center">
-            {activeRole && <Badge variant="default">Role: {activeRole}</Badge>}
-            {activeRoleSource && (
-              <Badge variant="secondary">Source: {activeRoleSource}</Badge>
-            )}
-            <Badge variant="outline">Tree {items.length}</Badge>
-            <Badge variant="outline">Flat {flat.length}</Badge>
-          </div>
-          <div className="grid gap-1 rounded-md border bg-background/40 p-2">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Active role</span>
-              <span>{activeRole ?? "—"}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Source</span>
-              <span>{activeRoleSource ?? "—"}</span>
-            </div>
-          </div>
-        </section>
-        <Separator />
-        <section className="space-y-2">
-          <h4 className="font-semibold">درخت کامل ناوبری</h4>
-          <TreeList nodes={items} />
-        </section>
-        <Separator />
-        <section className="space-y-2">
-          <h4 className="font-semibold">لیست فلت ناوبری</h4>
-          <ul className="flex flex-col gap-1">
-            {flat.map((it) => {
-              const f = it as Record<string, unknown>;
-              return (
-                <li
-                  key={String(f.id)}
-                  className="rounded border bg-background/40 px-2 py-1 flex justify-between gap-2">
-                  <span className="truncate" title={String(f.label)}>
-                    {String(f.label)}
-                  </span>
-                  {typeof f.path === "string" || typeof f.path === "number" ? (
-                    <code dir="ltr" className="text-[10px] opacity-70">
-                      {String(f.path)}
-                    </code>
-                  ) : null}
-                </li>
-              );
-            })}
-            {!flat.length && (
-              <li className="text-muted-foreground text-center p-2 border rounded-md">
-                No items
-              </li>
-            )}
-          </ul>
-        </section>
-        {/* ...existing code... */}
-        <Separator />
-        <section className="space-y-2">
-          <h4 className="font-semibold">Test helpers</h4>
-          <div className="flex gap-2 flex-wrap items-center">
-            <Button size="sm" onClick={() => refetch()}>
-              Refetch
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() =>
-                alert(
-                  hasPath("/dashboard")
-                    ? "dashboard exists"
-                    : "dashboard missing"
-                )
-              }>
-              {`hasPath('/dashboard')`}
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                const f = findByPath("/dashboard");
-                alert(f ? `found: ${f.label}` : "not found");
-              }}>
-              {`findByPath('/dashboard')`}
-            </Button>
-          </div>
-        </section>
-        {error && (
-          <div className="text-red-600 dark:text-red-400 break-all">
-            Error: {error}
-          </div>
-        )}
-      </PanelContent>
-      <PanelFooter className="justify-end">
-        <span className="text-xs text-muted-foreground">
-          {loading ? "لودینگ" : "آماده"}
-        </span>
-      </PanelFooter>
-    </Panel>
-  );
-}
-
-export default function DashboardPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="flex w-full items-centerp-4 text-sm text-muted-foreground">
-          در حال بارگذاری…
-        </div>
-      }>
-      <div className="flex w-full items-center justify-center space-y-6">
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-2">
-          <SessionPanel />
-          <OrgPanel />
-          <UserPanel />
-          <NavigationPanel />
-        </div>
+    <div className="flex items-center gap-3 rounded-lg border border-border/40 bg-muted/40 px-3 py-3">
+      <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary">
+        <Icon className="h-4 w-4" />
       </div>
-    </Suspense>
+      <div className="flex flex-col gap-1 text-right" dir="rtl">
+        <span className="text-[11px] text-muted-foreground">{label}</span>
+        {loading ? (
+          <Skeleton className="h-4 w-14" />
+        ) : (
+          <span className="text-sm font-semibold tabular-nums">{value}</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default function DashboardLandingPage() {
+  const { userId } = useAuthSession();
+  const userQuery = useUser(userId);
+  const orgsQuery = useUserOrganizations(!!userId);
+  const loading = userQuery.isLoading || orgsQuery.isLoading;
+  const user = userQuery.data as any;
+  const orgs = (orgsQuery.data as any[]) || [];
+
+  // Derive stats
+  const totalOrgs = orgs.length;
+  // Collect roles (flatten) for selector
+  const collectedRoles: string[] = [];
+  orgs.forEach((o) => {
+    if (Array.isArray(o.membership?.roles)) {
+      o.membership.roles.forEach((r: string) => {
+        if (!collectedRoles.includes(r)) collectedRoles.push(r);
+      });
+    }
+  });
+  collectedRoles.sort();
+  const [activeRoleFilter, setActiveRoleFilter] = React.useState<string | null>(
+    null
+  );
+
+  // Placeholder test stats (would come from API in future)
+  const totalTests = 12; // total created tests (placeholder)
+  const participatedTests = 7; // tests user participated in (placeholder)
+  const completionRate = totalTests
+    ? Math.round((participatedTests / totalTests) * 100)
+    : 0;
+
+  const createdAt = user?.createdAt;
+  let createdAtPretty: string | null = null;
+  if (createdAt) {
+    try {
+      createdAtPretty = formatJalali(parseJalali(createdAt));
+    } catch {
+      createdAtPretty = null;
+    }
+  }
+
+  const avatarUrl = user?.avatarUrl || user?.avatar;
+  const fullName =
+    user?.fullName || user?.name || user?.email || `کاربر #${userId}`;
+  const initials = fullName
+    ?.split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p: string) => p[0])
+    .join("")
+    .toUpperCase();
+
+  // Active organization (placeholder: pick first org) & updated time
+  const activeOrg = orgs[0];
+  const updatedAt = user?.updatedAt || user?.lastUpdatedAt;
+  let updatedAtPretty: string | null = null;
+  if (updatedAt) {
+    try {
+      updatedAtPretty = formatJalali(parseJalali(updatedAt), true);
+    } catch {
+      updatedAtPretty = null;
+    }
+  }
+
+  return (
+    <div className=" pb-10 flex flex-col gap-6" dir="rtl">
+      {/* Header */}
+      <Panel>
+        <PanelHeader className="flex flex-col md:flex-row md:items-center gap-6 md:gap-8">
+          <div className="flex items-center gap-4 md:gap-6">
+            <Avatar className="h-20 w-20 rounded-2xl border shadow-sm">
+              {avatarUrl && <AvatarImage src={avatarUrl} alt={fullName} />}
+              <AvatarFallback className="rounded-2xl text-xs font-medium">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col gap-2 text-right">
+              <PanelTitle className="flex items-center flex-wrap gap-3 text-lg font-semibold leading-6">
+                <span>{fullName}</span>
+                <UserStatusBadge status={user?.status} />
+                {activeOrg && (
+                  <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                    {activeOrg.name}
+                  </span>
+                )}
+              </PanelTitle>
+              <PanelDescription className="text-[11px] flex flex-wrap gap-4 items-center">
+                {createdAtPretty && (
+                  <span className="inline-flex items-center gap-1">
+                    <span className="opacity-60">ایجاد:</span>
+                    <span className="font-medium">{createdAtPretty}</span>
+                  </span>
+                )}
+                {updatedAtPretty && (
+                  <span className="inline-flex items-center gap-1">
+                    <RefreshCcw className="h-3 w-3 opacity-60" />
+                    <span className="opacity-60">آپدیت:</span>
+                    <span className="font-medium">{updatedAtPretty}</span>
+                  </span>
+                )}
+                {user?.email && (
+                  <span className="inline-flex items-center gap-1 ltr:font-mono">
+                    <span className="opacity-60">ایمیل:</span>
+                    <span>{user.email}</span>
+                  </span>
+                )}
+                {collectedRoles.length > 0 && (
+                  <span className="inline-flex items-center gap-1">
+                    <span className="opacity-60">نقش‌ها:</span>
+                    <div className="flex flex-wrap gap-1 max-w-[240px]">
+                      {collectedRoles.map((r) => {
+                        const active = r === activeRoleFilter;
+                        return (
+                          <button
+                            key={r}
+                            type="button"
+                            onClick={() =>
+                              setActiveRoleFilter(active ? null : r)
+                            }
+                            className={cn(
+                              "rounded-md border px-1.5 py-0.5 text-[10px] transition",
+                              active
+                                ? "bg-primary text-primary-foreground border-primary"
+                                : "bg-background/40 text-muted-foreground border-border/60 hover:bg-muted/50"
+                            )}>
+                            {r}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </span>
+                )}
+              </PanelDescription>
+            </div>
+          </div>
+        </PanelHeader>
+        <PanelContent className="flex flex-col gap-6">
+          <div className="grid gap-4 md:grid-cols-4 sm:grid-cols-2">
+            <StatItem
+              icon={Building2}
+              label="تعداد سازمان‌ها"
+              value={totalOrgs}
+              loading={orgsQuery.isLoading}
+            />
+            <StatItem
+              icon={Layers}
+              label="نقش‌های متمایز"
+              value={collectedRoles.length}
+              loading={orgsQuery.isLoading}
+            />
+            <StatItem
+              icon={Users2}
+              label="کل آزمون‌ها"
+              value={totalTests}
+              loading={false}
+            />
+            <StatItem
+              icon={Crown}
+              label="آزمون‌های مشارکت شده"
+              value={`${participatedTests} (${completionRate}%)`}
+              loading={false}
+            />
+          </div>
+        </PanelContent>
+      </Panel>
+      {/* Tests List Panel */}
+      <Panel>
+        <PanelHeader>
+          <PanelTitle className="text-sm">آزمون‌ها</PanelTitle>
+          <PanelDescription>
+            لیست آزمون‌های کاربر (نمونه داده موقت)
+          </PanelDescription>
+        </PanelHeader>
+        <PanelContent className="flex flex-col gap-4 text-[12px] leading-5">
+          {/* Placeholder test list */}
+          <div className="grid gap-2">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div
+                key={i}
+                className="flex flex-col gap-1 rounded-lg border border-border/50 bg-background/40 px-3 py-2 hover:bg-muted/40 transition">
+                <div className="flex items-center gap-2">
+                  <ListChecks className="h-3.5 w-3.5 text-primary" />
+                  <span className="font-medium text-[12px]">
+                    آزمون شماره {i}
+                  </span>
+                  <span className="ms-auto inline-flex items-center rounded bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">
+                    وضعیت: در حال توسعه
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-3 text-[11px] text-muted-foreground">
+                  <span>تعداد سوال: 20</span>
+                  <span>مدت: 30 دقیقه</span>
+                  <span>امتیاز من: —</span>
+                  <span className="ltr:font-mono opacity-70">
+                    ID: TST-{1000 + i}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <Button variant="outline" size="sm" className="h-8 text-[11px]">
+              نمایش بیشتر
+            </Button>
+            <Button size="sm" className="h-8 text-[11px]">
+              ایجاد آزمون جدید
+            </Button>
+          </div>
+        </PanelContent>
+      </Panel>
+    </div>
   );
 }
