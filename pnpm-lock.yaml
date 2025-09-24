@@ -281,6 +281,9 @@ importers:
       react-hook-form:
         specifier: ^7.62.0
         version: 7.62.0(react@19.1.1)
+      react-multi-date-picker:
+        specifier: ^4.5.2
+        version: 4.5.2(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
       react-resizable-panels:
         specifier: ^3.0.5
         version: 3.0.5(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
@@ -5251,6 +5254,9 @@ packages:
       react: '>=16.8.0'
       react-dom: '>=16.8.0'
 
+  react-date-object@2.1.9:
+    resolution: {integrity: sha512-BHxD/quWOTo9fLKV/cfL/M31ePoj4a1JaJ/CnOf8Ndg3mrkh4x9wEMMkCfTrzduxDOgU8ZgR8uarhqI5G71sTg==}
+
   react-device-mockups@0.1.12:
     resolution: {integrity: sha512-ne45CDegHdk0zfhSTetgNj5xgXUC3m3iEZiyhq8XekiyDwcBEfxf4PdCayeVr+GQc7Me9ah8jibRhBQNlBkbLg==}
     engines: {node: '>=8', npm: '>=5'}
@@ -5265,6 +5271,12 @@ packages:
     peerDependencies:
       react: ^19.1.1
 
+  react-element-popper@2.1.7:
+    resolution: {integrity: sha512-tuM2OxKlW32h+6uFSK6EENHPeZ2OGgOipHfOAl+VLWEv9/j3QkSGbD+ADX3A9uJlmq24i37n28RjJmAbGTfpEg==}
+    peerDependencies:
+      react: '>=16.8.0'
+      react-dom: '>=16.8.0'
+
   react-hook-form@7.62.0:
     resolution: {integrity: sha512-7KWFejc98xqG/F4bAxpL41NB3o1nnvQO1RWZT3TqRZYL8RryQETGfEdVnJN2fy1crCiBLLjkRBVK05j24FxJGA==}
     engines: {node: '>=18.0.0'}
@@ -5276,6 +5288,12 @@ packages:
 
   react-is@18.3.1:
     resolution: {integrity: sha512-/LLMVyas0ljjAtoYiPqYiL8VWXzUUdThrmU5+n20DZv+a+ClRoevUzw5JxU+Ieh5/c87ytoTBV9G1FiKfNJdmg==}
+
+  react-multi-date-picker@4.5.2:
+    resolution: {integrity: sha512-FgWjZB3Z6IA6XpcWiLPk85PwcRUhOiYhKK42o5k672gD/n2I6rzPfQ8bUrldOIiF/Z7FfOCdH7a6FeubzqteLg==}
+    peerDependencies:
+      react: '>=16.8.0'
+      react-dom: '>=16.8.0'
 
   react-redux@9.2.0:
     resolution: {integrity: sha512-ROY9fvHhwOD9ySfrF0wmvu//bKCQ6AeZZq1nJNtbDC+kk5DuSuNX/n6YWYF/SYy7bSba4D4FSz8DJeKY/S/r+g==}
@@ -11472,6 +11490,8 @@ snapshots:
       react: 19.1.1
       react-dom: 19.1.1(react@19.1.1)
 
+  react-date-object@2.1.9: {}
+
   react-device-mockups@0.1.12(html5-device-mockups@3.2.1)(prop-types@15.8.1)(react-dom@19.1.1(react@19.1.1))(react@19.1.1):
     dependencies:
       html5-device-mockups: 3.2.1
@@ -11484,6 +11504,11 @@ snapshots:
       react: 19.1.1
       scheduler: 0.26.0
 
+  react-element-popper@2.1.7(react-dom@19.1.1(react@19.1.1))(react@19.1.1):
+    dependencies:
+      react: 19.1.1
+      react-dom: 19.1.1(react@19.1.1)
+
   react-hook-form@7.62.0(react@19.1.1):
     dependencies:
       react: 19.1.1
@@ -11491,6 +11516,13 @@ snapshots:
   react-is@16.13.1: {}
 
   react-is@18.3.1: {}
+
+  react-multi-date-picker@4.5.2(react-dom@19.1.1(react@19.1.1))(react@19.1.1):
+    dependencies:
+      react: 19.1.1
+      react-date-object: 2.1.9
+      react-dom: 19.1.1(react@19.1.1)
+      react-element-popper: 2.1.7(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
 
   react-redux@9.2.0(@types/react@19.1.11)(react@19.1.1)(redux@5.0.1):
     dependencies:

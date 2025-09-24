@@ -11,7 +11,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import { Loader2 } from "lucide-react";
+import { Loader2, ChevronDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface PlanCellProps {
   orgId: number;
@@ -31,18 +32,26 @@ export function PlanCell({ orgId, plan }: PlanCellProps) {
       className="relative">
       <DropdownMenu open={open} onOpenChange={setOpen} dir="rtl">
         <DropdownMenuTrigger asChild>
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             className={cn(
-              "rounded-md bg-muted px-1.5 py-0.5 text-xs inline-flex items-center gap-1 hover:bg-muted/70 transition-colors",
+              "h-6 pl-2 pr-1 gap-1 text-[11px] font-medium bg-muted/60 hover:bg-muted/80 border-muted-foreground/20 inline-flex items-center",
               open && "ring-1 ring-primary/30"
             )}>
-            {OrgPlanEnum.t(localPlan as any) || localPlan}
-          </button>
+            <span>{OrgPlanEnum.t(localPlan as any) || localPlan}</span>
+            <ChevronDown
+              className={cn(
+                "h-3.5 w-3.5 text-muted-foreground/70 transition-transform duration-200",
+                open && "rotate-180"
+              )}
+            />
+          </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
-          align="end"
-          className="min-w-[8rem] p-1"
+          align="center"
+          className="min-w-[8rem] p-1 mr-2"
           onClick={(e) => e.stopPropagation()}>
           <DropdownMenuLabel className="text-xs">انتخاب پلن</DropdownMenuLabel>
           <DropdownMenuSeparator />

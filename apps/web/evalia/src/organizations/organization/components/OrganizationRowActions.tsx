@@ -14,15 +14,27 @@ import {
 export interface OrganizationRowActionsProps {
   canEdit?: boolean;
   canDelete?: boolean;
+  canActivate?: boolean;
+  canSuspend?: boolean;
+  canRestore?: boolean;
   onEdit?: () => void;
   onDelete?: () => void;
+  onActivate?: () => void;
+  onSuspend?: () => void;
+  onRestore?: () => void;
 }
 
 export function OrganizationRowActions({
   canEdit,
   canDelete,
+  canActivate,
+  canSuspend,
+  canRestore,
   onEdit,
   onDelete,
+  onActivate,
+  onSuspend,
+  onRestore,
 }: OrganizationRowActionsProps) {
   return (
     <DropdownMenu dir="rtl">
@@ -31,13 +43,25 @@ export function OrganizationRowActions({
           <MoreHorizontal className="size-4" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-44" sideOffset={4}>
+      <DropdownMenuContent
+        align="center"
+        className="min-w-44 mr-2"
+        sideOffset={4}>
         <div className="px-2 pt-1 pb-1.5 text-[11px] font-medium text-muted-foreground select-none">
           عملیات سازمان
         </div>
         <DropdownMenuSeparator />
         {canEdit && (
           <DropdownMenuItem onClick={onEdit}>ویرایش سازمان</DropdownMenuItem>
+        )}
+        {canActivate && (
+          <DropdownMenuItem onClick={onActivate}>فعال‌سازی</DropdownMenuItem>
+        )}
+        {canSuspend && (
+          <DropdownMenuItem onClick={onSuspend}>تعلیق</DropdownMenuItem>
+        )}
+        {canRestore && (
+          <DropdownMenuItem onClick={onRestore}>بازگردانی</DropdownMenuItem>
         )}
         {canDelete && (
           <>

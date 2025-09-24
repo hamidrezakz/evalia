@@ -24,6 +24,7 @@ import {
   PlusCircle,
   Check,
   X,
+  ChevronDown,
 } from "lucide-react";
 import AddMemberDialog from "../add-member-dialog";
 import { useUser } from "@/users/api/users-hooks";
@@ -197,7 +198,7 @@ function MemberRow({ orgId, membership }: MemberRowProps) {
     <div
       dir="rtl"
       className={cn(
-        "flex flex-col gap-1 rounded-md px-2 py-1 text-xs transition-colors group border border-transparent hover:bg-accent/40"
+        "flex flex-col gap-1 rounded-md px-2 py-2 text-xs transition-colors group border border-transparent hover:bg-accent/40"
       )}>
       <div className="flex items-center gap-2 min-w-[18rem]">
         <Link
@@ -318,19 +319,27 @@ export function MembersDropdown({ orgId, count }: MembersDropdownProps) {
       className="relative">
       <DropdownMenu open={open} onOpenChange={setOpen} dir="rtl">
         <DropdownMenuTrigger asChild>
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             className={cn(
-              "inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 text-xs font-medium hover:bg-muted/70 transition-colors",
+              "h-6 pl-2 pr-1 gap-1 text-[11px] font-medium bg-muted/60 hover:bg-muted/80 border-muted-foreground/20 inline-flex items-center",
               open && "ring-1 ring-primary/30"
             )}>
             <Users2 className="h-3.5 w-3.5 text-muted-foreground" />
-            {count != null ? count : "—"}
-          </button>
+            <span className="tabular-nums">{count != null ? count : "—"}</span>
+            <ChevronDown
+              className={cn(
+                "h-3.5 w-3.5 text-muted-foreground/70 transition-transform duration-200",
+                open && "rotate-180"
+              )}
+            />
+          </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
-          align="end"
-          className="w-fit"
+          align="center"
+          className="w-fit mr-2"
           onClick={(e) => e.stopPropagation()}>
           <DropdownMenuLabel className="flex items-center gap-1 text-xs">
             <UsersRound className="h-3.5 w-3.5" /> اعضای سازمان

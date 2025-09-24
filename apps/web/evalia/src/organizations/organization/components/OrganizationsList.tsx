@@ -3,6 +3,8 @@ import * as React from "react";
 import {
   useOrganizations,
   useUpdateOrganization,
+  useChangeOrganizationStatusAction,
+  useRestoreOrganizationAction,
 } from "../api/organization-hooks";
 import { OrganizationsTable } from "./OrganizationsTable";
 import { Input } from "@/components/ui/input";
@@ -26,12 +28,18 @@ export interface OrganizationsListProps {
   initialQuery?: Partial<{ q: string; page: number; pageSize: number }>;
   canEdit?: (orgId: number) => boolean;
   canDelete?: (orgId: number) => boolean;
+  canActivate?: (orgId: number) => boolean;
+  canSuspend?: (orgId: number) => boolean;
+  canRestore?: (orgId: number) => boolean;
 }
 
 export function OrganizationsList({
   initialQuery,
   canEdit,
   canDelete,
+  canActivate,
+  canSuspend,
+  canRestore,
 }: OrganizationsListProps) {
   const [q, setQ] = React.useState(initialQuery?.q || "");
   const [status, setStatus] = React.useState<string | null>(null);
@@ -48,6 +56,8 @@ export function OrganizationsList({
 
   // Mutations for actions
   const del = useDeleteOrganizationAction();
+  const changeStatus = useChangeOrganizationStatusAction();
+  const restore = useRestoreOrganizationAction();
 
   return (
     <div className="w-full space-y-4">
@@ -136,12 +146,28 @@ export function OrganizationsList({
       ) : (
         <OrganizationsTable
           rows={rows}
-          rowActions={(o) => ({
-            canEdit: canEdit?.(o.id),
-            canDelete: canDelete?.(o.id),
-            onEdit: () => setEditId(o.id),
-            onDelete: () => del.mutate(o.id),
-          })}
+          rowActions={(o) => {
+            const status = o.status as string;
+            return {
+              canEdit: canEdit?.(o.id),
+              canDelete: canDelete?.(o.id),
+              canActivate:
+                (status === "INACTIVE" || status === "SUSPENDED") &&
+                !!canActivate?.(o.id),
+              canSuspend: status === "ACTIVE" && !!canSuspend?.(o.id),
+              canRestore:
+                status === "DELETED" || status === "SUSPENDED"
+                  ? !!canRestore?.(o.id)
+                  : false,
+              onEdit: () => setEditId(o.id),
+              onDelete: () => del.mutate(o.id),
+              onActivate: () =>
+                changeStatus.mutate({ id: o.id, status: "ACTIVE" as any }),
+              onSuspend: () =>
+                changeStatus.mutate({ id: o.id, status: "SUSPENDED" as any }),
+              onRestore: () => restore.mutate(o.id),
+            };
+          }}
         />
       )}
       <AddOrganizationDialog open={createOpen} onOpenChange={setCreateOpen} />

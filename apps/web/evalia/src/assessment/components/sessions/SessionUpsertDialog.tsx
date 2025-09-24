@@ -13,7 +13,13 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Calendar, FileText, Users, CheckCircle2, Pencil } from "lucide-react";
+import {
+  FileText,
+  Users,
+  CheckCircle2,
+  Pencil,
+  AlertTriangle,
+} from "lucide-react";
 import {
   useOrganization,
   useOrganizations,
@@ -26,65 +32,40 @@ import {
   useSession,
 } from "@/assessment/api/templates-hooks";
 import { useTeams } from "@/organizations/team/api/team-hooks";
+import { JalaliDatePicker } from "@/components/date/JalaliDateComponents";
 
 type FormVals = {
   organizationId: number | null;
   templateId: number | null;
   name: string;
   description?: string;
-  startAt: string;
-  endAt: string;
+  startAt: string; // ISO
+  endAt: string; // ISO
   teamScopeId?: number | null;
 };
 
-// Helpers: safe date parsing and formatting for input[type="datetime-local"]
-function formatLocalInput(d: Date): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
-    d.getHours()
-  )}:${pad(d.getMinutes())}`;
-}
+const nowISO = () => new Date().toISOString();
+const plusDaysISO = (days: number) =>
+  new Date(Date.now() + days * 86400000).toISOString();
 
-function safeToLocalInput(v?: string | null): string {
-  if (!v) return "";
-  // Try native parse first
-  let date: Date | null = null;
-  if (!isNaN(Date.parse(v))) {
-    date = new Date(v);
-  } else {
-    // Try replace space with T (e.g. "2025-09-20 10:00:00")
-    const withT = v.replace(" ", "T");
-    if (!isNaN(Date.parse(withT))) {
-      date = new Date(withT);
-    } else if (!withT.endsWith("Z") && !isNaN(Date.parse(withT + "Z"))) {
-      // Try appending Z to treat as UTC if no tz
-      date = new Date(withT + "Z");
-    }
-  }
-  if (date && !isNaN(date.getTime())) return formatLocalInput(date);
-  // Fallback: extract YYYY-MM-DD HH:mm or YYYY-MM-DDTHH:mm
-  const m = v.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})/);
-  if (m) return `${m[1]}T${m[2]}`;
-  return "";
-}
-
-export function SessionUpsertDialog({
-  open,
-  onOpenChange,
-  sessionId,
-  defaultOrganizationId,
-  trigger,
-  onSuccess,
-  initialSession,
-}: {
+export function SessionUpsertDialog(props: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  sessionId?: number | null; // if provided => edit mode
+  sessionId?: number | null;
   defaultOrganizationId?: number | null;
-  trigger?: React.ReactNode; // optional external trigger
+  trigger?: React.ReactNode;
   onSuccess?: (id: number) => void;
   initialSession?: any;
 }) {
+  const {
+    open,
+    onOpenChange,
+    sessionId,
+    defaultOrganizationId,
+    trigger,
+    onSuccess,
+    initialSession,
+  } = props;
   const isEdit = !!sessionId;
   const { data: sessionData } = useSession(isEdit ? sessionId! : null);
 
@@ -94,13 +75,12 @@ export function SessionUpsertDialog({
       templateId: null,
       name: "",
       description: "",
-      startAt: formatLocalInput(new Date()),
-      endAt: formatLocalInput(new Date(Date.now() + 7 * 24 * 3600 * 1000)),
+      startAt: nowISO(),
+      endAt: plusDaysISO(7),
       teamScopeId: null,
     },
   });
 
-  // Prefill from initialSession immediately (before fetch), then refine with fetched sessionData
   useEffect(() => {
     if (isEdit && initialSession) {
       reset({
@@ -108,8 +88,8 @@ export function SessionUpsertDialog({
         templateId: initialSession.templateId ?? null,
         name: initialSession.name,
         description: initialSession.description || "",
-        startAt: safeToLocalInput(initialSession.startAt),
-        endAt: safeToLocalInput(initialSession.endAt),
+        startAt: initialSession.startAt,
+        endAt: initialSession.endAt,
         teamScopeId: initialSession.teamScopeId ?? null,
       });
     }
@@ -122,14 +102,14 @@ export function SessionUpsertDialog({
         templateId: sessionData.templateId ?? null,
         name: sessionData.name,
         description: (sessionData as any).description || "",
-        startAt: safeToLocalInput((sessionData as any).startAt),
-        endAt: safeToLocalInput((sessionData as any).endAt),
+        startAt: (sessionData as any).startAt,
+        endAt: (sessionData as any).endAt,
         teamScopeId: (sessionData as any).teamScopeId ?? null,
       });
     }
   }, [isEdit, sessionData, reset]);
 
-  // Organization selection + search
+  // Orgs
   const [orgSearch, setOrgSearch] = React.useState("");
   const orgQ = useOrganizations({ q: orgSearch, page: 1, pageSize: 50 });
   const organizations = (orgQ.data as any)?.data || [];
@@ -142,7 +122,7 @@ export function SessionUpsertDialog({
     return exists ? organizations : [sel, ...organizations];
   }, [organizations, selectedOrgQ.data]);
 
-  // Template selection + remote search
+  // Templates
   const [templateSearch, setTemplateSearch] = React.useState("");
   const { data: templatesData, isLoading: tplLoading } = useTemplates({
     search: templateSearch,
@@ -160,8 +140,18 @@ export function SessionUpsertDialog({
   const createMut = useCreateSession();
   const updateMut = useUpdateSession();
 
+  const startAtVal = watch("startAt");
+  const endAtVal = watch("endAt");
+  const invalidRange = React.useMemo(() => {
+    if (!startAtVal || !endAtVal) return false;
+    try {
+      return new Date(endAtVal).getTime() < new Date(startAtVal).getTime();
+    } catch {
+      return false;
+    }
+  }, [startAtVal, endAtVal]);
+
   const onSubmit = handleSubmit(async (vals) => {
-    // Be robust: if ids are missing (e.g., due to async prefill), fallback to initial/session data
     const effOrgId =
       vals.organizationId ??
       initialSession?.organizationId ??
@@ -172,19 +162,15 @@ export function SessionUpsertDialog({
       initialSession?.templateId ??
       (sessionData as any)?.templateId ??
       null;
-    if (!effOrgId || !effTplId) {
-      // As a minimal UX guard, do nothing if critical ids are unavailable
-      // You can replace this with a toast/error message if desired.
-      return;
-    }
+    if (!effOrgId || !effTplId || invalidRange) return;
     if (isEdit && sessionId) {
       const updated = await updateMut.mutateAsync({
         id: sessionId,
         body: {
           name: vals.name,
           description: vals.description || undefined,
-          startAt: new Date(vals.startAt).toISOString(),
-          endAt: new Date(vals.endAt).toISOString(),
+          startAt: vals.startAt,
+          endAt: vals.endAt,
           teamScopeId: vals.teamScopeId ?? undefined,
         },
       });
@@ -196,20 +182,19 @@ export function SessionUpsertDialog({
         templateId: effTplId,
         name: vals.name,
         description: vals.description || undefined,
-        startAt: new Date(vals.startAt).toISOString(),
-        endAt: new Date(vals.endAt).toISOString(),
+        startAt: vals.startAt,
+        endAt: vals.endAt,
         teamScopeId: vals.teamScopeId ?? undefined,
       });
       onOpenChange(false);
       onSuccess?.(created.id);
-      // Reset form for next create
       reset({
         organizationId: defaultOrganizationId ?? null,
         templateId: null,
         name: "",
         description: "",
-        startAt: formatLocalInput(new Date()),
-        endAt: formatLocalInput(new Date(Date.now() + 7 * 24 * 3600 * 1000)),
+        startAt: nowISO(),
+        endAt: plusDaysISO(7),
         teamScopeId: null,
       });
     }
@@ -218,21 +203,17 @@ export function SessionUpsertDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       {trigger}
-      <DialogContent>
+      <DialogContent className="sm:max-w-3xl p-4 md:p-6 rounded-xl border border-border/60 bg-background/95 backdrop-blur">
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle className="text-base font-semibold tracking-tight">
             {isEdit ? "ویرایش جلسه" : "ایجاد جلسه جدید"}
           </DialogTitle>
-          <DialogDescription>
-            {isEdit
-              ? "ویرایش اطلاعات جلسه"
-              : "تمپلیت، محدوده زمانی و نام جلسه را تعیین کنید."}
+          <DialogDescription className="text-xs text-muted-foreground">
+            {isEdit ? "ویرایش اطلاعات جلسه" : "تمپلیت، محدوده و جزئیات جلسه"}
           </DialogDescription>
         </DialogHeader>
-
-        {/* Form fields */}
-        <div className="flex flex-col gap-4">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="flex flex-col gap-5 mt-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="space-y-2">
               <Label>سازمان</Label>
               <Combobox<any>
@@ -249,11 +230,11 @@ export function SessionUpsertDialog({
                 getLabel={(o) => o.name}
                 loading={orgQ.isLoading}
                 leadingIcon={Users}
-                placeholder={"انتخاب سازمان"}
+                placeholder="انتخاب سازمان"
                 disabled={isEdit}
               />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 md:col-span-1">
               <Label>تمپلیت</Label>
               <Combobox<{ id: number; name: string }>
                 items={mergedTemplates}
@@ -262,7 +243,7 @@ export function SessionUpsertDialog({
                 searchable
                 searchValue={templateSearch}
                 onSearchChange={setTemplateSearch}
-                placeholder={"انتخاب/جستجوی تمپلیت"}
+                placeholder="انتخاب/جستجوی تمپلیت"
                 getKey={(t) => t.id}
                 getLabel={(t) => t.name}
                 loading={tplLoading}
@@ -270,7 +251,7 @@ export function SessionUpsertDialog({
                 disabled={isEdit}
               />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 md:col-span-1">
               <Label>نام جلسه</Label>
               <Input
                 placeholder="مثلاً سنجش ماهانه تیم ۱"
@@ -278,58 +259,79 @@ export function SessionUpsertDialog({
               />
             </div>
           </div>
-
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label>شروع</Label>
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="datetime-local"
-                  {...register("startAt", { required: true })}
-                />
-              </div>
+              <Label className="text-xs">شروع</Label>
+              <JalaliDatePicker
+                withTime
+                value={startAtVal}
+                onChange={(iso) => setValue("startAt", iso || nowISO())}
+                placeholder="انتخاب تاریخ شروع"
+              />
             </div>
             <div className="space-y-2">
-              <Label>پایان</Label>
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="datetime-local"
-                  {...register("endAt", { required: true })}
-                />
-              </div>
+              <Label className="text-xs">پایان</Label>
+              <JalaliDatePicker
+                withTime
+                value={endAtVal}
+                onChange={(iso) => setValue("endAt", iso || plusDaysISO(7))}
+                placeholder="انتخاب تاریخ پایان"
+              />
             </div>
+            {invalidRange && (
+              <div className="md:col-span-2 flex items-center gap-2 rounded-md border border-amber-400/50 bg-amber-100/40 px-3 py-2 text-[11px] text-amber-700 dark:bg-amber-400/10 dark:text-amber-300">
+                <AlertTriangle className="h-4 w-4" />
+                تاریخ پایان نمی‌تواند قبل از تاریخ شروع باشد.
+              </div>
+            )}
           </div>
-
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <TeamScopeField
               orgId={watch("organizationId")}
               value={watch("teamScopeId")}
               onChange={(v) => setValue("teamScopeId", v)}
             />
-            <div className="space-y-2">
+            <div className="space-y-2 md:col-span-2">
               <Label>توضیحات</Label>
-              <Input placeholder="توضیح کوتاه" {...register("description")} />
+              <Input
+                placeholder="توضیح کوتاه"
+                className="text-sm"
+                {...register("description")}
+              />
             </div>
           </div>
-
-          <div className="flex justify-end">
-            <Button
-              size="sm"
-              onClick={onSubmit}
-              isLoading={createMut.isPending || updateMut.isPending}
-              disabled={createMut.isPending || updateMut.isPending}>
-              {isEdit ? (
-                <>
-                  <Pencil className="h-4 w-4 ms-1" /> به‌روزرسانی
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="h-4 w-4 ms-1" /> ثبت جلسه
-                </>
-              )}
-            </Button>
+          <div className="flex items-center justify-between pt-2 border-t border-border/60 mt-2">
+            <span className="text-[11px] text-muted-foreground">
+              {isEdit ? "ویرایش رکورد موجود" : "رکورد جدید"}
+            </span>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-3 text-xs"
+                onClick={() => onOpenChange(false)}
+                disabled={createMut.isPending || updateMut.isPending}>
+                انصراف
+              </Button>
+              <Button
+                size="sm"
+                className="h-8 px-4 text-xs"
+                onClick={onSubmit}
+                isLoading={createMut.isPending || updateMut.isPending}
+                disabled={
+                  createMut.isPending || updateMut.isPending || invalidRange
+                }>
+                {isEdit ? (
+                  <>
+                    <Pencil className="h-4 w-4 ms-1" /> ذخیره تغییرات
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="h-4 w-4 ms-1" /> ثبت جلسه
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       </DialogContent>
@@ -405,7 +407,7 @@ function TeamScopeActiveSelect({
       getLabel={(t) => t.name}
       leadingIcon={Users}
       loading={teamsQ.isLoading}
-      placeholder={"انتخاب تیم یا خالی"}
+      placeholder="انتخاب تیم یا خالی"
     />
   );
 }

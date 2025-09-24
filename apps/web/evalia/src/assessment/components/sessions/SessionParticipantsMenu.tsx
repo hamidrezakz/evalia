@@ -28,7 +28,7 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
-import { Trash2, Loader2 } from "lucide-react";
+import { Trash2, Loader2, ChevronDown } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { getUser } from "@/users/api/users.api";
 
@@ -234,7 +234,11 @@ export function SessionParticipantsMenu({
         <Button
           variant="outline"
           size="sm"
-          className={cn("h-5 px-2 text-[10px] leading-none", triggerClassName)}
+          className={cn(
+            "h-5 pl-2 pr-1 gap-1 text-[10px] leading-none flex items-center bg-muted/60 hover:bg-muted/80 border-muted-foreground/20",
+            open && "ring-1 ring-primary/30",
+            triggerClassName
+          )}
           onMouseEnter={() => {
             clearCloseTimer();
             setOpen(true);
@@ -251,12 +255,17 @@ export function SessionParticipantsMenu({
             }
           }}
           onClick={(e) => {
-            // Click toggles (touch / mouse)
             e.preventDefault();
             clearCloseTimer();
             setOpen((prev) => !prev);
           }}>
-          اعضا: {participantsCount}
+          <span>اعضا: {participantsCount}</span>
+          <ChevronDown
+            className={cn(
+              "h-3 w-3 text-muted-foreground/70 transition-transform duration-200",
+              open && "rotate-180"
+            )}
+          />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
@@ -422,7 +431,7 @@ export function SessionParticipantsMenu({
                       </Button>
                     </div>
                     {g.subjects.length > 0 && (
-                      <div className="flex flex-col gap-1 mt-1">
+                      <div className="flex flex-col gap-1 mt-1 mx-6">
                         {g.subjects.map((subj) => {
                           const subInit = subj.name
                             .split(/\s+/)
@@ -433,7 +442,7 @@ export function SessionParticipantsMenu({
                           return (
                             <div
                               key={subj.id}
-                              className="group/subject relative flex items-center gap-2 rounded-md bg-muted/60 px-2 py-1 text-[10px]">
+                              className="group/subject relative flex items-center gap-2 rounded-md bg-muted/40 px-2 py-1 text-[10px]">
                               <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-muted text-[9px]">
                                 {subInit}
                               </span>

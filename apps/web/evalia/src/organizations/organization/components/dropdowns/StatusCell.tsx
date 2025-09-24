@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import { Loader2 } from "lucide-react";
+import { Loader2, ChevronDown } from "lucide-react";
 import { OrganizationStatusBadge } from "../OrganizationStatusBadge";
 
 interface StatusCellProps {
@@ -32,13 +32,29 @@ export function StatusCell({ orgId, status }: StatusCellProps) {
       className="relative">
       <DropdownMenu open={open} onOpenChange={setOpen} dir="rtl">
         <DropdownMenuTrigger asChild>
-          <button type="button">
-            <OrganizationStatusBadge status={localStatus as any} />
+          <button
+            type="button"
+            className={cn(
+              "group inline-flex items-center gap-1 rounded-full pr-1 pl-1.5 h-6 text-[11px] focus:outline-none transition",
+              "bg-transparent hover:bg-accent/60 hover:text-accent-foreground",
+              open && "ring-1 ring-primary/40 bg-accent/60",
+              "border border-transparent"
+            )}>
+            <OrganizationStatusBadge
+              status={localStatus as any}
+              className="px-2 py-0.5 text-[11px]"
+            />
+            <ChevronDown
+              className={cn(
+                "h-3.5 w-3.5 text-muted-foreground transition-transform duration-200",
+                open && "rotate-180"
+              )}
+            />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
-          align="end"
-          className="min-w-[9rem] p-1"
+          align="center"
+          className="min-w-[9rem] p-1 mr-2 rounded-lg"
           onClick={(e) => e.stopPropagation()}>
           <DropdownMenuLabel className="text-xs">
             وضعیت سازمان

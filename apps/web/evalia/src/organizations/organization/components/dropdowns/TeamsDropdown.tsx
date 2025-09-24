@@ -12,7 +12,15 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, UsersRound, PlusCircle, Pencil, Check } from "lucide-react";
+import {
+  Loader2,
+  UsersRound,
+  PlusCircle,
+  Pencil,
+  Check,
+  ChevronDown,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
 import AddTeamDialog from "../add-team-dialog";
 
 interface TeamsDropdownProps {
@@ -43,19 +51,27 @@ export function TeamsDropdown({ orgId, count }: TeamsDropdownProps) {
       className="relative">
       <DropdownMenu open={open} onOpenChange={setOpen} dir="rtl">
         <DropdownMenuTrigger asChild>
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             className={cn(
-              "inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 text-xs font-medium hover:bg-muted/70 transition-colors",
+              "h-6 pl-2 pr-1 gap-1 text-[11px] font-medium bg-muted/60 hover:bg-muted/80 border-muted-foreground/20 inline-flex items-center",
               open && "ring-1 ring-primary/30"
             )}>
             <UsersRound className="h-3.5 w-3.5 text-muted-foreground" />
-            {count != null ? count : "—"}
-          </button>
+            <span className="tabular-nums">{count != null ? count : "—"}</span>
+            <ChevronDown
+              className={cn(
+                "h-3.5 w-3.5 text-muted-foreground/70 transition-transform duration-200",
+                open && "rotate-180"
+              )}
+            />
+          </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
-          align="end"
-          className="w-60"
+          align="center"
+          className="w-60 mr-2"
           onClick={(e) => e.stopPropagation()}>
           <DropdownMenuLabel className="flex items-center gap-1 text-xs">
             <UsersRound className="h-3.5 w-3.5" /> تیم‌های سازمان
