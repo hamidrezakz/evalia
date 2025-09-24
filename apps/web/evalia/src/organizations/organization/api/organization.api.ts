@@ -62,7 +62,7 @@ export async function listOrganizations(
       "Organization list response validation failed: " + validated.error.message
     );
   }
-  return res.data;
+  return validated.data; // return full envelope (data, meta)
 }
 
 // Get single organization

@@ -44,9 +44,8 @@ export function useOrganizations(params?: Partial<Record<string, unknown>>) {
   return useQuery({
     queryKey: orgKeys.list(params),
     queryFn: async () => {
-      const res = await listOrganizations(params || {});
-      // Return full envelope: { data, meta }
-      return res;
+      const envelope = await listOrganizations(params || {});
+      return envelope; // { data, meta }
     },
     staleTime: STALE_TIME_LIST,
     // If using React Query v4 and want transition smoothing, re-add keepPreviousData: true
@@ -54,7 +53,7 @@ export function useOrganizations(params?: Partial<Record<string, unknown>>) {
 }
 
 /** Fetch a single organization by id (disabled when id is null). */
-export function useOrganization(id: number | null) {
+export function useOrganization(id: number | null, enabled: boolean = true) {
   return useQuery({
     queryKey: id ? orgKeys.byId(id) : ["org", "disabled"],
     queryFn: async () => {
@@ -62,7 +61,7 @@ export function useOrganization(id: number | null) {
       const res = await getOrganization(id);
       return res.data as Organization;
     },
-    enabled: !!id,
+    enabled: !!id && enabled,
     staleTime: STALE_TIME_DETAIL,
   });
 }

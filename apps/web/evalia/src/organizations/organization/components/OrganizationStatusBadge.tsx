@@ -1,12 +1,20 @@
 import { cn } from "@/lib/utils";
 import type { Organization } from "../types/organization.types";
 
+const STATUS_LABELS: Record<string, string> = {
+  ACTIVE: "فعال",
+  SUSPENDED: "معلق",
+  INACTIVE: "غیرفعال",
+};
+
 export function OrganizationStatusBadge({
   status,
   className,
+  dot = true,
 }: {
   status: Organization["status"];
   className?: string;
+  dot?: boolean;
 }) {
   const color =
     status === "ACTIVE"
@@ -19,12 +27,12 @@ export function OrganizationStatusBadge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
+        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium select-none",
         color,
         className
       )}>
-      <span className="size-1.5 rounded-full bg-current" />
-      {status}
+      {dot && <span className="size-1.5 rounded-full bg-current" />}
+      {STATUS_LABELS[status] || status}
     </span>
   );
 }

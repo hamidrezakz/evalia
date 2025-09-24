@@ -75,12 +75,40 @@ export class OrganizationService {
 
     // ...existing code...
     const total = await this.prisma.organization.count({ where });
-    const items = await this.prisma.organization.findMany({
+    const itemsRaw = await this.prisma.organization.findMany({
       where,
       skip: (page - 1) * pageSize,
       take: pageSize,
       orderBy: { [orderBy || 'createdAt']: orderDir || 'desc' },
     });
+
+    // Fetch aggregated counts in parallel for listed orgs
+    const orgIds = itemsRaw.map((o) => o.id);
+    const [memberCounts, teamCounts] = await Promise.all([
+      this.prisma.organizationMembership.groupBy({
+        by: ['organizationId'],
+        where: { organizationId: { in: orgIds }, deletedAt: null },
+        _count: { organizationId: true },
+      }),
+      this.prisma.team.groupBy({
+        by: ['organizationId'],
+        where: { organizationId: { in: orgIds }, deletedAt: null },
+        _count: { organizationId: true },
+      }),
+    ]);
+    const memberCountMap = new Map<number, number>();
+    memberCounts.forEach((r: any) =>
+      memberCountMap.set(r.organizationId, r._count.organizationId),
+    );
+    const teamCountMap = new Map<number, number>();
+    teamCounts.forEach((r: any) =>
+      teamCountMap.set(r.organizationId, r._count.organizationId),
+    );
+    const items = itemsRaw.map((o) => ({
+      ...o,
+      membersCount: memberCountMap.get(o.id) || 0,
+      teamsCount: teamCountMap.get(o.id) || 0,
+    }));
 
     const result = {
       data: items,
@@ -106,7 +134,46 @@ export class OrganizationService {
         message: 'Organization not found',
         code: 'ORG_NOT_FOUND',
       });
-    return org;
+    // Aggregate members + teams summaries
+    const [members, teams] = await Promise.all([
+      this.prisma.organizationMembership.findMany({
+        where: { organizationId: id, deletedAt: null },
+        include: { user: { select: { id: true, fullName: true } } },
+        orderBy: { createdAt: 'asc' },
+      }),
+      this.prisma.team.findMany({
+        where: { organizationId: id, deletedAt: null },
+        orderBy: { createdAt: 'asc' },
+      }),
+    ]);
+    const teamsMemberCounts = await this.prisma.teamMembership
+      .groupBy({
+        by: ['teamId'],
+        where: { team: { organizationId: id }, deletedAt: null },
+        _count: { teamId: true },
+      })
+      .catch(() => [] as any[]);
+    const teamMemberCountMap = new Map<number, number>();
+    teamsMemberCounts.forEach((r: any) =>
+      teamMemberCountMap.set(r.teamId, r._count.teamId),
+    );
+    return {
+      ...org,
+      membersCount: members.length,
+      teamsCount: teams.length,
+      members: members.map((m) => ({
+        id: m.userId,
+        userId: m.userId,
+        fullName: (m as any).user?.fullName || null,
+        name: (m as any).user?.fullName || null,
+      })),
+      teams: teams.map((t) => ({
+        id: t.id,
+        name: t.name,
+        slug: t.slug,
+        membersCount: teamMemberCountMap.get(t.id) || 0,
+      })),
+    };
   }
 
   async update(id: number, dto: UpdateOrganizationDto) {

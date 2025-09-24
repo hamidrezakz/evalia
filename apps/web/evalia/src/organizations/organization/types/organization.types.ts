@@ -40,6 +40,30 @@ export const OrganizationSchema = z.object({
   lockedAt: z.string().nullable().optional(),
   updatedAt: z.string().optional(),
   createdById: z.number().nullable().optional(),
+  // Aggregated counts (optional; provided in list for quick display)
+  membersCount: z.number().int().nonnegative().optional(),
+  teamsCount: z.number().int().nonnegative().optional(),
+  // Expanded relation summaries (optional)
+  members: z
+    .array(
+      z.object({
+        id: z.number(),
+        fullName: z.string().optional().nullable(),
+        name: z.string().optional().nullable(),
+        userId: z.number().optional().nullable(),
+      })
+    )
+    .optional(),
+  teams: z
+    .array(
+      z.object({
+        id: z.number(),
+        name: z.string(),
+        slug: z.string().optional().nullable(),
+        membersCount: z.number().int().nonnegative().optional(),
+      })
+    )
+    .optional(),
 });
 
 // Create payload
