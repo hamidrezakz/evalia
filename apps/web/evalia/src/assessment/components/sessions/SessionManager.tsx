@@ -19,6 +19,7 @@ import {
   useDeleteSession,
   useTemplate,
   useFullTemplate,
+  useSessionQuestionCount,
   useUpdateSession,
   useAssignmentsDetailed,
 } from "@/assessment/api/templates-hooks";
@@ -131,13 +132,9 @@ function SessionCard({
 }) {
   const orgQ = useOrganization(s.organizationId ?? null);
   const tplQ = useTemplate(s.templateId ?? null);
-  const fullTplQ = useFullTemplate(s.templateId ?? null);
-  const questionCount = fullTplQ.data
-    ? fullTplQ.data.sections?.reduce(
-        (acc: number, sec: any) => acc + (sec.questions?.length || 0),
-        0
-      )
-    : null;
+  // Lightweight question count per session
+  const qCountQ = useSessionQuestionCount(s.id ?? null);
+  const questionCount = qCountQ.data?.total ?? null;
   const orgName = orgQ.data?.name || `سازمان #${s.organizationId}`;
   const tplName = (tplQ.data as any)?.name || `تمپلیت #${s.templateId}`;
   let startStr: string | null = null;
@@ -371,7 +368,8 @@ export default function SessionManager({
     <>
       <Panel className="p-0 border border-border/60 overflow-hidden bg-gradient-to-b from-background/80 via-background/70 to-background/90 backdrop-blur-sm">
         <PanelHeader className="p-4 pb-2 border-b border-border/50 flex-col gap-3">
-          <div className="flex items-center justify-between w-full gap-3">
+          {/* Row 1: Title on left, primary action on right (only) */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between w-full gap-3">
             <div className="flex flex-col gap-1 min-w-0">
               <PanelTitle className="text-base font-semibold tracking-tight flex items-center gap-2">
                 <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-primary/10 text-primary text-xs font-bold">
@@ -383,12 +381,27 @@ export default function SessionManager({
                 مدیریت، جستجو و فیلتر جلسات سنجش
               </PanelDescription>
             </div>
+            <PanelAction className="w-full sm:w-auto">
+              <Button
+                size="sm"
+                className="h-9 px-3 w-full sm:w-auto"
+                onClick={handleCreate}>
+                <Plus className="h-4 w-4 ms-1" />
+                <span className="hidden sm:inline">افزودن جلسه</span>
+                <span className="sm:hidden">افزودن</span>
+              </Button>
+            </PanelAction>
+          </div>
+          {/* Row 2: Mobile toolbar toggle + count + clear filters */}
+          <div className="flex items-center justify-between w-full gap-2">
+            {filteredSessions.length > 0 ? (
+              <span className="text-[11px] px-2 py-1 rounded-md bg-muted/40 text-foreground/70">
+                {filteredSessions.length.toLocaleString()} جلسه
+              </span>
+            ) : (
+              <span />
+            )}
             <div className="flex items-center gap-2">
-              {filteredSessions.length > 0 && (
-                <span className="text-[11px] px-2 py-1 rounded-md bg-muted/40 text-foreground/70 hidden md:inline-block">
-                  {filteredSessions.length.toLocaleString()} جلسه
-                </span>
-              )}
               {stateFilters.length > 0 && (
                 <Button
                   variant="ghost"
@@ -402,21 +415,11 @@ export default function SessionManager({
               <Button
                 variant="outline"
                 size="icon"
-                className={cn(
-                  "h-8 w-8 md:hidden",
-                  toolbarOpen ? "bg-primary/10" : ""
-                )}
+                className={cn("h-8 w-8", toolbarOpen ? "bg-primary/10" : "")}
                 onClick={() => setToolbarOpen((o) => !o)}
                 title="فیلترها / جستجو">
                 <ListFilter className="h-4 w-4" />
               </Button>
-              <PanelAction>
-                <Button size="sm" className="h-8 px-3" onClick={handleCreate}>
-                  <Plus className="h-4 w-4 ms-1" />
-                  <span className="hidden sm:inline">جلسه جدید</span>
-                  <span className="sm:hidden">جدید</span>
-                </Button>
-              </PanelAction>
             </div>
           </div>
           <div

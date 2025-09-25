@@ -34,6 +34,20 @@ export async function getFullSession(id: number) {
   const res = await apiRequest(`/sessions/${id}/full`, null, null);
   return res;
 }
+// Minimal metadata for a session: question count
+export type SessionQuestionCount = {
+  sessionId: number;
+  templateId: number;
+  total: number;
+};
+export async function getSessionQuestionCount(
+  id: number
+): Promise<SessionQuestionCount> {
+  const res = await apiRequest(`/sessions/${id}/question-count`, null, null);
+  // apiRequest returns envelope; prefer res.data if present
+  const data = (res as any)?.data ?? res;
+  return data as SessionQuestionCount;
+}
 export const createSessionBody = z.object({
   organizationId: z.number().int().positive(),
   templateId: z.number().int().positive(),
@@ -208,6 +222,40 @@ export async function getResponse(id: number) {
 export async function deleteResponse(id: number) {
   await apiRequest(`/responses/${id}`, null, null, { method: "DELETE" });
   return { id };
+}
+
+// --- Progress API ---
+export type ProgressStatus =
+  | "NOT_ASSIGNED"
+  | "NO_QUESTIONS"
+  | "NOT_STARTED"
+  | "IN_PROGRESS"
+  | "COMPLETED";
+export interface UserProgress {
+  total: number;
+  answered: number;
+  percent: number; // 0..100
+  status: ProgressStatus;
+  context?: any;
+}
+export async function getUserProgress(
+  params:
+    | { assignmentId: number }
+    | {
+        sessionId: number;
+        userId: number;
+        perspective?: string;
+        subjectUserId?: number;
+      }
+) {
+  const entries = Object.entries(params).map(
+    ([k, v]) => [k, String(v)] as [string, string]
+  );
+  const qs = entries
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+    .join("&");
+  const res = await apiRequest(`/responses/progress/by?${qs}`, null, null);
+  return (res as any)?.data as UserProgress;
 }
 
 // --- User-centric session APIs ---

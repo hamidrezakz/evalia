@@ -41,6 +41,12 @@ export class SessionController {
     return this.service.getFull(Number(id));
   }
 
+  // Minimal metadata: total number of questions in the session's template
+  @Get(':id/question-count')
+  getQuestionCount(@Param('id') id: string) {
+    return this.service.getQuestionCount(Number(id));
+  }
+
   @Patch(':id')
   update(@Param('id') id: string, @Body() dto: UpdateSessionDto) {
     return this.service.update(Number(id), dto);

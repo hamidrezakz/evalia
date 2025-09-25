@@ -36,6 +36,8 @@ import {
   listUserSessions,
   getUserPerspectives,
   getUserSessionQuestions,
+  getUserProgress,
+  getSessionQuestionCount,
 } from "./sessions.api";
 import { getUser } from "@/users/api/users.api";
 import type { UserDetail } from "@/users/types/users.types";
@@ -86,6 +88,8 @@ export const sessionsKeys = {
   detail: () => ["sessions", "detail"] as const,
   byId: (id: number) => [...sessionsKeys.detail(), id] as const,
   full: (id: number) => [...sessionsKeys.byId(id), "full"] as const,
+  questionCount: (id: number) =>
+    [...sessionsKeys.byId(id), "question-count"] as const,
   assignments: (sessionId: number) =>
     [...sessionsKeys.byId(sessionId), "assignments"] as const,
   assignmentsDetailed: (sessionId: number) =>
@@ -117,6 +121,24 @@ export const sessionsKeys = {
       userId,
       "questions",
       perspective,
+    ] as const,
+  progressByAssignment: (assignmentId: number) =>
+    ["responses", "progress", "assignment", assignmentId] as const,
+  progressBySessionUser: (
+    sessionId: number,
+    userId: number,
+    perspective?: string,
+    subjectUserId?: number
+  ) =>
+    [
+      "responses",
+      "progress",
+      "session",
+      sessionId,
+      "user",
+      userId,
+      perspective || "any",
+      subjectUserId || "none",
     ] as const,
 };
 
@@ -304,6 +326,19 @@ export function useFullSession(id: number | null) {
       return getFullSession(id);
     },
     enabled: !!id,
+  });
+}
+export function useSessionQuestionCount(id: number | null) {
+  return useQuery({
+    queryKey: id
+      ? sessionsKeys.questionCount(id)
+      : (["sessions", "question-count", "disabled"] as const),
+    queryFn: () => {
+      if (!id) throw new Error("no id");
+      return getSessionQuestionCount(id);
+    },
+    enabled: !!id,
+    staleTime: 60 * 1000,
   });
 }
 export function useCreateSession() {
@@ -526,6 +561,49 @@ export function useDeleteResponse() {
   return useMutation({
     mutationFn: deleteResponse,
     onSuccess: () => qc.invalidateQueries({ queryKey: sessionsKeys.all }),
+  });
+}
+
+// Progress hooks
+export function useAssignmentProgress(assignmentId: number | null) {
+  return useQuery({
+    queryKey: assignmentId
+      ? sessionsKeys.progressByAssignment(assignmentId)
+      : (["responses", "progress", "assignment", "disabled"] as const),
+    queryFn: async () => {
+      if (!assignmentId) throw new Error("no assignmentId");
+      return await getUserProgress({ assignmentId });
+    },
+    enabled: !!assignmentId,
+    staleTime: 30 * 1000,
+  });
+}
+export function useUserSessionProgress(
+  sessionId: number | null,
+  userId: number | null,
+  opts?: { perspective?: string; subjectUserId?: number }
+) {
+  return useQuery({
+    queryKey:
+      sessionId && userId
+        ? sessionsKeys.progressBySessionUser(
+            sessionId,
+            userId,
+            opts?.perspective,
+            opts?.subjectUserId
+          )
+        : ["responses", "progress", "session", "disabled"],
+    queryFn: async () => {
+      if (!sessionId || !userId) throw new Error("missing ids");
+      return await getUserProgress({
+        sessionId,
+        userId,
+        perspective: opts?.perspective,
+        subjectUserId: opts?.subjectUserId,
+      } as any);
+    },
+    enabled: !!sessionId && !!userId,
+    staleTime: 30 * 1000,
   });
 }
 

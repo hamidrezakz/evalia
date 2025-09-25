@@ -8,11 +8,13 @@ export function QuestionScale({
   name,
   options,
   value,
+  readOnly,
   onChange,
 }: {
   name: string;
   options: Array<{ value: string; label: string }>;
   value?: AnswerValue;
+  readOnly?: boolean;
   onChange: (v: AnswerValue) => void;
 }) {
   const numericValues = React.useMemo(() => {
@@ -49,7 +51,9 @@ export function QuestionScale({
 
   return (
     <div className="w-full max-w-xl">
-      <Label htmlFor={name} className="cursor-pointer text-[15px] font-custom inline-flex items-center gap-1">
+      <Label
+        htmlFor={name}
+        className="cursor-pointer text-[15px] font-custom inline-flex items-center gap-1">
         انتخاب مقدار
       </Label>
       <div className="py-2">
@@ -59,10 +63,12 @@ export function QuestionScale({
           step={1}
           value={[Number(currentNum)]}
           onValueChange={(vals) => {
+            if (readOnly) return;
             const n = snapToOption(vals[0] ?? min);
             onChange({ kind: "SCALE", value: Number(n) });
           }}
           aria-label="scale"
+          disabled={!!readOnly}
         />
       </div>
       {/* Ticks / labels */}

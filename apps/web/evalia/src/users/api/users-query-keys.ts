@@ -1,48 +1,26 @@
-// Central hierarchical React Query keys for user domain.
-// Pattern mirrors organization query keys for consistency.
-// Usage examples:
-//  queryClient.invalidateQueries(usersKeys.lists());
-//  queryClient.invalidateQueries(usersKeys.detail(5));
+function stableStringify(obj: Record<string, unknown>) {
+  return JSON.stringify(
+    Object.keys(obj)
+      .sort()
+      .reduce((acc: Record<string, unknown>, k: string) => {
+        acc[k] = obj[k];
+        return acc;
+      }, {})
+  );
+}
 
 export const usersKeys = {
   all: ["users"] as const,
-  lists: () => [...usersKeys.all, "list"] as const,
-  list: (params: Record<string, unknown> | undefined) =>
+  lists: () => ["users", "list"] as const,
+  list: (params?: Record<string, unknown>) =>
+    ["users", "list", params ? stableStringify(params) : "all"] as const,
+  detail: () => ["users", "detail"] as const,
+  byId: (id: number) => ["users", "detail", id] as const,
+  infinite: (base?: Record<string, unknown>, pageSize: number = 20) =>
     [
-      ...usersKeys.lists(),
-      params
-        ? JSON.stringify(
-            Object.keys(params)
-              .sort()
-              .reduce((acc: Record<string, unknown>, k: string) => {
-                if (params && typeof params === "object" && k in params) {
-                  acc[k] = (params as Record<string, unknown>)[k];
-                }
-                return acc;
-                return acc;
-              }, {})
-          )
-        : "all",
-    ] as const,
-  detail: () => [...usersKeys.all, "detail"] as const,
-  byId: (id: number) => [...usersKeys.detail(), id] as const,
-  infinite: (base: Record<string, unknown> | undefined, pageSize: number) =>
-    [
-      ...usersKeys.all,
+      "users",
       "infinite",
-      base
-        ? JSON.stringify(
-            Object.keys(base)
-              .sort()
-              .reduce((acc: Record<string, unknown>, k: string) => {
-                if (base && typeof base === "object" && k in base) {
-                  acc[k] = (base as Record<string, unknown>)[k];
-                }
-                return acc;
-                return acc;
-              }, {})
-          )
-        : "base",
+      base ? stableStringify(base) : "base",
       pageSize,
     ] as const,
 };

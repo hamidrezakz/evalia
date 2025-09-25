@@ -8,11 +8,13 @@ export function QuestionSingleChoice({
   name,
   options,
   value,
+  readOnly,
   onChange,
 }: {
   name: string;
   options: Array<{ value: string; label: string }>;
   value?: AnswerValue;
+  readOnly?: boolean;
   onChange: (v: AnswerValue) => void;
 }) {
   const current = value?.kind === "SINGLE_CHOICE" ? value.value : "";
@@ -21,6 +23,7 @@ export function QuestionSingleChoice({
       name={name}
       value={current}
       onValueChange={(val) => {
+        if (readOnly) return;
         onChange({ kind: "SINGLE_CHOICE", value: String(val) });
       }}
       className="items-start gap-2">
@@ -29,13 +32,17 @@ export function QuestionSingleChoice({
         return (
           <div
             key={o.value}
-            className={`inline-flex items-center gap-2 cursor-pointer ${
+            className={`inline-flex items-center gap-2 ${
               selected ? "text-primary" : ""
             }`}>
-            <RadioGroupItem value={o.value} id={`${name}-${o.value}`} />
+            <RadioGroupItem
+              value={o.value}
+              id={`${name}-${o.value}`}
+              disabled={!!readOnly}
+            />
             <Label
               htmlFor={`${name}-${o.value}`}
-              className="cursor-pointer text-[15px] font-custom inline-flex items-center gap-1">
+              className="text-[15px] font-custom inline-flex items-center gap-1">
               <span className="text-[15px] leading-5">{o.value}</span>
             </Label>
           </div>

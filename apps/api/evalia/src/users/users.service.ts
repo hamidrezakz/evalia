@@ -133,6 +133,7 @@ export class UsersService {
         phoneNormalized: true,
         status: true,
         globalRoles: true,
+        avatarAsset: { select: { url: true } },
         createdAt: true,
         memberships: {
           where: { deletedAt: null },
@@ -156,6 +157,7 @@ export class UsersService {
       id: user.id,
       fullName: user.fullName,
       email: user.email,
+      avatarUrl: user.avatarAsset?.url ?? null,
       phone: user.phoneNormalized,
       status: user.status,
       globalRoles: user.globalRoles,
@@ -168,5 +170,26 @@ export class UsersService {
       })),
       teams: user.teams.map((t) => t.team),
     };
+  }
+
+  async update(id: number, body: any) {
+    // Allow only a safe subset of fields
+    const data: any = {};
+    if (body.fullName !== undefined)
+      data.fullName = String(body.fullName || '');
+    if (body.status !== undefined) data.status = body.status;
+    if (body.avatarAssetId !== undefined) {
+      const n = Number(body.avatarAssetId);
+      if (!Number.isInteger(n) || n <= 0)
+        throw new NotFoundException('Invalid avatarAssetId');
+      // ensure asset exists
+      const asset = await this.prisma.asset.findFirst({
+        where: { id: n, deletedAt: null },
+      });
+      if (!asset) throw new NotFoundException('Asset not found');
+      data.avatarAssetId = n;
+    }
+    const updated = await this.prisma.user.update({ where: { id }, data });
+    return this.detail(updated.id);
   }
 }

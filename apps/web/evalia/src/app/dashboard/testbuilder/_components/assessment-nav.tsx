@@ -4,16 +4,10 @@ import { usePathname } from "next/navigation";
 import React from "react";
 
 const links: { href: string; label: string }[] = [
-  { href: "/dashboard/testbuilder", label: "داشبورد آزمون‌ها" },
   { href: "/dashboard/testbuilder/questionbank", label: "مدیریت بانک سوالات" },
   { href: "/dashboard/testbuilder/option-sets", label: "دسته‌بندی گزینه‌ها" },
   { href: "/dashboard/testbuilder/qubuilder", label: "ساخت و ویرایش سوال" },
   { href: "/dashboard/testbuilder/templates", label: "قالب‌های آزمون" },
-  { href: "/dashboard/testbuilder/sessions", label: "جلسات آزمون" },
-  {
-    href: "/dashboard/testbuilder/sessions/assignments",
-    label: "اختصاص کاربر به جلسه",
-  },
 ];
 
 export function AssessmentNav() {

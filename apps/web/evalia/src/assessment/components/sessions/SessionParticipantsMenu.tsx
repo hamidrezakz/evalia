@@ -31,6 +31,11 @@ import {
 import { Trash2, Loader2, ChevronDown } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { getUser } from "@/users/api/users.api";
+import {
+  useAssignmentProgress,
+  useUserSessionProgress,
+} from "@/assessment/api/templates-hooks";
+import { useRouter } from "next/navigation";
 
 /**
  * SessionParticipantsMenu
@@ -49,6 +54,7 @@ export function SessionParticipantsMenu({
   triggerClassName,
   onQuickAssign,
 }: SessionParticipantsMenuProps) {
+  const router = useRouter();
   const { data: assignmentsRaw } = useAssignmentsDetailed(session.id);
   const assignments = React.useMemo(
     () => (Array.isArray(assignmentsRaw) ? (assignmentsRaw as any[]) : []),
@@ -228,6 +234,138 @@ export function SessionParticipantsMenu({
     }
   }
 
+  // Navigate to preview (re-using take page in read-only mode)
+  function goPreview(params: {
+    sessionId: number;
+    userId: number;
+    perspective: string;
+    subjectUserId?: number;
+  }) {
+    const { sessionId, userId, perspective, subjectUserId } = params;
+    const qs = new URLSearchParams({
+      mode: "preview",
+      sessionId: String(sessionId),
+      userId: String(userId),
+      perspective,
+    });
+    if (subjectUserId) qs.set("subjectUserId", String(subjectUserId));
+    router.push(`/dashboard/tests/take?${qs.toString()}`);
+    setOpen(false);
+  }
+
+  // Progress chip components
+  function statusClasses(status?: string) {
+    switch (status) {
+      case "COMPLETED":
+        return "bg-emerald-500/10 text-emerald-600 ring-1 ring-emerald-500/20";
+      case "IN_PROGRESS":
+        return "bg-amber-500/10 text-amber-600 ring-1 ring-amber-500/20";
+      case "NOT_STARTED":
+        return "bg-zinc-500/10 text-zinc-600 ring-1 ring-zinc-500/20";
+      case "NO_QUESTIONS":
+        return "bg-slate-500/10 text-slate-600 ring-1 ring-slate-500/20";
+      case "NOT_ASSIGNED":
+        return "bg-rose-500/10 text-rose-600 ring-1 ring-rose-500/20";
+      default:
+        return "bg-muted text-muted-foreground ring-1 ring-border/40";
+    }
+  }
+  function statusLabelFa(status?: string) {
+    switch (status) {
+      case "COMPLETED":
+        return "تکمیل";
+      case "IN_PROGRESS":
+        return "در حال انجام";
+      case "NOT_STARTED":
+        return "شروع نشده";
+      case "NO_QUESTIONS":
+        return "بدون سوال";
+      case "NOT_ASSIGNED":
+        return "بدون اختصاص";
+      default:
+        return "";
+    }
+  }
+  function ProgressPill({
+    percent,
+    status,
+    title,
+  }: {
+    percent: number;
+    status?: string;
+    title?: string;
+  }) {
+    const pct = `${percent}%`;
+    const st = statusLabelFa(status);
+    return (
+      <span
+        title={title}
+        className={cn(
+          "inline-flex items-center gap-1 h-4 px-1.5 rounded-full text-[10px] font-medium",
+          statusClasses(status)
+        )}>
+        {st && <span className="truncate max-w-[8rem]">{st}</span>}
+        <span className="opacity-60">•</span>
+        <span className="tabular-nums">{pct}</span>
+      </span>
+    );
+  }
+  function ProgressByAssignment({ id }: { id: number }) {
+    const { data } = useAssignmentProgress(id);
+    if (!data) return null;
+    return (
+      <ProgressPill
+        percent={data.percent ?? 0}
+        status={data.status}
+        title={
+          data.status === "COMPLETED"
+            ? "تکمیل"
+            : data.status === "IN_PROGRESS"
+            ? "در حال انجام"
+            : data.status === "NOT_STARTED"
+            ? "شروع نشده"
+            : data.status === "NO_QUESTIONS"
+            ? "بدون سوال"
+            : undefined
+        }
+      />
+    );
+  }
+  function ProgressByUserSession({
+    sessionId,
+    userId,
+    perspective,
+    subjectUserId,
+  }: {
+    sessionId: number;
+    userId: number;
+    perspective?: string;
+    subjectUserId?: number;
+  }) {
+    const { data } = useUserSessionProgress(sessionId, userId, {
+      perspective,
+      subjectUserId,
+    });
+    if (!data) return null;
+    return (
+      <ProgressPill
+        percent={data.percent ?? 0}
+        status={data.status}
+        title={
+          data.status === "COMPLETED"
+            ? "تکمیل"
+            : data.status === "IN_PROGRESS"
+            ? "در حال انجام"
+            : data.status === "NOT_STARTED"
+            ? "شروع نشده"
+            : data.status === "NO_QUESTIONS"
+            ? "بدون سوال"
+            : undefined
+        }
+      />
+    );
+  }
+
   return (
     <DropdownMenu open={open} onOpenChange={setOpen} dir="rtl">
       <DropdownMenuTrigger asChild>
@@ -320,7 +458,15 @@ export function SessionParticipantsMenu({
               return (
                 <DropdownMenuItem
                   key={a.id}
-                  className="pr-2 py-2 cursor-pointer group relative">
+                  className="pr-2 py-2 cursor-pointer group relative"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    goPreview({
+                      sessionId: session.id,
+                      userId: (a.respondentUserId ?? a.userId) as number,
+                      perspective: "SELF",
+                    });
+                  }}>
                   <div className="flex items-center gap-2 w-full">
                     <Avatar className="h-6 w-6">
                       <AvatarFallback className="text-[10px]">
@@ -339,6 +485,8 @@ export function SessionParticipantsMenu({
                         </span>
                       )}
                     </div>
+                    {/* progress: self assignment */}
+                    <ProgressByAssignment id={a.id} />
                     <PerspectiveBadge p={a.perspective} />
                     <Button
                       type="button"
@@ -442,7 +590,16 @@ export function SessionParticipantsMenu({
                           return (
                             <div
                               key={subj.id}
-                              className="group/subject relative flex items-center gap-2 rounded-md bg-muted/40 px-2 py-1 text-[10px]">
+                              className="group/subject relative flex items-center gap-2 rounded-md bg-muted/40 px-2 py-1 text-[10px] cursor-pointer"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                goPreview({
+                                  sessionId: session.id,
+                                  userId: g.respondentUserId,
+                                  perspective: "FACILITATOR",
+                                  subjectUserId: subj.id,
+                                });
+                              }}>
                               <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-muted text-[9px]">
                                 {subInit}
                               </span>
@@ -451,6 +608,13 @@ export function SessionParticipantsMenu({
                                 title={subj.name}>
                                 {subj.name}
                               </span>
+                              {/* progress for facilitator answering about subject */}
+                              <ProgressByUserSession
+                                sessionId={session.id}
+                                userId={g.respondentUserId}
+                                perspective="FACILITATOR"
+                                subjectUserId={subj.id}
+                              />
                               {subj.count > 1 && (
                                 <Badge
                                   variant="outline"
@@ -513,7 +677,16 @@ export function SessionParticipantsMenu({
               return (
                 <DropdownMenuItem
                   key={a.id}
-                  className="pr-2 py-2 cursor-default group relative">
+                  className="pr-2 py-2 cursor-pointer group relative"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    goPreview({
+                      sessionId: session.id,
+                      userId: (a.respondentUserId ?? a.userId) as number,
+                      perspective: a.perspective,
+                      subjectUserId: a.subjectUserId,
+                    });
+                  }}>
                   <div className="flex items-center gap-2 w-full">
                     <Avatar className="h-6 w-6">
                       <AvatarFallback className="text-[10px]">
@@ -525,6 +698,8 @@ export function SessionParticipantsMenu({
                       title={name}>
                       {name}
                     </span>
+                    {/* progress: other perspectives by assignment */}
+                    <ProgressByAssignment id={a.id} />
                     <PerspectiveBadge p={a.perspective} />
                     <Button
                       type="button"

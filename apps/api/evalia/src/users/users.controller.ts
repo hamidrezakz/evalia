@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Query } from '@nestjs/common';
 import { Roles } from '../common/roles.decorator';
 import { UsersService } from './users.service';
 import { ListUsersDto } from './dto/list-users.dto';
@@ -18,5 +18,11 @@ export class UsersController {
   @Get(':id')
   detail(@Param('id') id: string) {
     return this.service.detail(Number(id));
+  }
+
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() body: any) {
+    // Accept partial fields; service enforces allowed updates
+    return this.service.update(Number(id), body);
   }
 }

@@ -128,6 +128,24 @@ export class SessionService {
     });
   }
 
+  // Return only the total number of questions for a session's template
+  async getQuestionCount(id: number) {
+    const s = await this.getById(id);
+    // Count questions across sections for the template without loading full nested graph
+    const sections = await this.prisma.assessmentTemplateSection.findMany({
+      where: { templateId: s.templateId },
+      select: { id: true },
+    });
+    if (!sections.length)
+      return { sessionId: s.id, templateId: s.templateId, total: 0 };
+    const sectionIds = sections.map((sec) => sec.id);
+    // Each section has many 'assessmentTemplateQuestion' links; count directly
+    const total = await this.prisma.assessmentTemplateQuestion.count({
+      where: { sectionId: { in: sectionIds } },
+    });
+    return { sessionId: s.id, templateId: s.templateId, total };
+  }
+
   async update(id: number, dto: any) {
     const existing = await this.getById(id);
     if (

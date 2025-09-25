@@ -234,10 +234,10 @@ const AssessmentStateMap: EnumTranslationRecord<AssessmentState> = {
   ARCHIVED: { fa: "آرشیو شده", en: "Archived" },
 };
 const SessionStateMap: EnumTranslationRecord<SessionState> = {
-  SCHEDULED: { fa: "زمان‌بندی شده", en: "Scheduled" },
-  IN_PROGRESS: { fa: "در حال انجام", en: "In Progress" },
-  ANALYZING: { fa: "در حال تحلیل", en: "Analyzing" },
-  COMPLETED: { fa: "تکمیل شده", en: "Completed" },
+  SCHEDULED: { fa: "در انتظار برگزاری", en: "Scheduled" },
+  IN_PROGRESS: { fa: "در حال برگزاری", en: "In Progress" },
+  ANALYZING: { fa: "در حال پردازش نتایج", en: "Analyzing" },
+  COMPLETED: { fa: "پایان یافته", en: "Completed" },
   CANCELLED: { fa: "لغو شده", en: "Cancelled" },
 };
 const ResponsePerspectiveMap: EnumTranslationRecord<ResponsePerspective> = {

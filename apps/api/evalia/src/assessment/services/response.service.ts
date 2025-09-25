@@ -257,4 +257,168 @@ export class ResponseService {
     await this.prisma.assessmentResponse.delete({ where: { id } });
     return { id };
   }
+
+  /** Compute total questions applicable and answered count for a single assignment. */
+  private async computeAssignmentProgress(assignmentId: number) {
+    const a = await this.prisma.assessmentAssignment.findUnique({
+      where: { id: assignmentId },
+      include: { session: true },
+    });
+    if (!a) throw new BadRequestException('Invalid assignmentId');
+    const templateId = a.session.templateId;
+    const perspective = a.perspective;
+    // Total questions for this perspective in the session's template
+    const total = await this.prisma.assessmentTemplateQuestion.count({
+      where: {
+        section: {
+          templateId,
+          deletedAt: null,
+          template: { deletedAt: null },
+        },
+        question: { deletedAt: null },
+        perspectives: { has: perspective as any },
+      },
+    });
+    const answered = await this.prisma.assessmentResponse.count({
+      where: { assignmentId: a.id },
+    });
+    return {
+      total,
+      answered,
+      assignmentId: a.id,
+      sessionId: a.sessionId,
+      perspective,
+      userId: a.respondentUserId ?? null,
+      subjectUserId: a.subjectUserId ?? null,
+    };
+  }
+
+  /**
+   * Progress endpoint core.
+   * Supports:
+   *  - assignmentId
+   *  - or (sessionId + userId) with optional perspective and subjectUserId
+   */
+  async progress(params: any) {
+    const toNumber = (v: any) => (v == null ? undefined : Number(v));
+    const assignmentId = toNumber(params.assignmentId);
+    const sessionId = toNumber(params.sessionId);
+    const userId = toNumber(params.userId);
+    const perspective = params.perspective as
+      | 'SELF'
+      | 'FACILITATOR'
+      | 'PEER'
+      | 'MANAGER'
+      | 'SYSTEM'
+      | undefined;
+    const subjectUserId = toNumber(params.subjectUserId);
+
+    if (assignmentId) {
+      const { total, answered, ...ctx } =
+        await this.computeAssignmentProgress(assignmentId);
+      const status = !total
+        ? 'NO_QUESTIONS'
+        : answered === 0
+          ? 'NOT_STARTED'
+          : answered >= total
+            ? 'COMPLETED'
+            : 'IN_PROGRESS';
+      const percent = total ? Math.round((answered / total) * 100) : 0;
+      return {
+        data: {
+          total,
+          answered,
+          percent,
+          status,
+          context: ctx,
+        },
+      };
+    }
+
+    if (!sessionId || !userId) {
+      throw new BadRequestException(
+        'Provide either assignmentId or (sessionId and userId)',
+      );
+    }
+
+    // Find relevant assignments for this user in the session
+    const whereAssignments: any = {
+      sessionId,
+      respondentUserId: userId,
+    };
+    if (perspective) whereAssignments.perspective = perspective as any;
+    if (subjectUserId) whereAssignments.subjectUserId = subjectUserId;
+
+    const assignments = await this.prisma.assessmentAssignment.findMany({
+      where: whereAssignments,
+      include: { session: true },
+    });
+    if (!assignments.length)
+      return {
+        data: {
+          total: 0,
+          answered: 0,
+          percent: 0,
+          status: 'NOT_ASSIGNED',
+          context: {
+            sessionId,
+            userId,
+            perspective,
+            subjectUserId,
+            assignments: 0,
+          },
+        },
+      };
+
+    // Compute totals per perspective once
+    const totalsCache = new Map<string, number>();
+    const templateId = assignments[0].session.templateId;
+    const uniquePersp = Array.from(
+      new Set(assignments.map((a) => String(a.perspective))),
+    );
+    for (const p of uniquePersp) {
+      const t = await this.prisma.assessmentTemplateQuestion.count({
+        where: {
+          section: {
+            templateId,
+            deletedAt: null,
+            template: { deletedAt: null },
+          },
+          question: { deletedAt: null },
+          perspectives: { has: p as any },
+        },
+      });
+      totalsCache.set(p, t);
+    }
+    const total = assignments.reduce(
+      (sum, a) => sum + (totalsCache.get(String(a.perspective)) || 0),
+      0,
+    );
+    const answered = await this.prisma.assessmentResponse.count({
+      where: { assignmentId: { in: assignments.map((a) => a.id) } },
+    });
+    const status = !total
+      ? 'NO_QUESTIONS'
+      : answered === 0
+        ? 'NOT_STARTED'
+        : answered >= total
+          ? 'COMPLETED'
+          : 'IN_PROGRESS';
+    const percent = total ? Math.round((answered / total) * 100) : 0;
+    return {
+      data: {
+        total,
+        answered,
+        percent,
+        status,
+        context: {
+          sessionId,
+          userId,
+          perspective,
+          subjectUserId,
+          assignments: assignments.length,
+        },
+      },
+    };
+  }
 }

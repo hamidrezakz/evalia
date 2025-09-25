@@ -7,10 +7,12 @@ import { Label } from "@/components/ui/label";
 export function QuestionBoolean({
   name,
   value,
+  readOnly,
   onChange,
 }: {
   name: string;
   value?: AnswerValue;
+  readOnly?: boolean;
   onChange: (v: AnswerValue) => void;
 }) {
   const checkedTrue = value?.kind === "BOOLEAN" && value.value === true;
@@ -20,30 +22,35 @@ export function QuestionBoolean({
     <RadioGroup
       value={current}
       onValueChange={(val) => {
+        if (readOnly) return;
         const v = val === "true";
         onChange({ kind: "BOOLEAN", value: v });
       }}
       className="items-start gap-2"
       name={name}>
       <div
-        className={`inline-flex items-center gap-2 cursor-pointer ${
+        className={`inline-flex items-center gap-2 ${
           checkedTrue ? "text-primary" : ""
         }`}>
-        <RadioGroupItem value="true" id={`${name}-true`} />
-        <Label
-          htmlFor={`${name}-true`}
-          className="cursor-pointer text-[15px] font-custom">
+        <RadioGroupItem
+          value="true"
+          id={`${name}-true`}
+          disabled={!!readOnly}
+        />
+        <Label htmlFor={`${name}-true`} className="text-[15px] font-custom">
           بله
         </Label>
       </div>
       <div
-        className={`inline-flex items-center gap-2 cursor-pointer ${
+        className={`inline-flex items-center gap-2 ${
           checkedFalse ? "text-primary" : ""
         }`}>
-        <RadioGroupItem value="false" id={`${name}-false`} />
-        <Label
-          htmlFor={`${name}-false`}
-          className="cursor-pointer text-[15px] font-custom">
+        <RadioGroupItem
+          value="false"
+          id={`${name}-false`}
+          disabled={!!readOnly}
+        />
+        <Label htmlFor={`${name}-false`} className="text-[15px] font-custom">
           خیر
         </Label>
       </div>

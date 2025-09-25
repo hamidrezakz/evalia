@@ -7,11 +7,13 @@ import type { AnswerValue } from "../types";
 export function QuestionText({
   id,
   value,
+  readOnly,
   onChange,
   onSubmitNext,
 }: {
   id: number;
   value?: AnswerValue;
+  readOnly?: boolean;
   onChange: (v: AnswerValue) => void;
   onSubmitNext: () => void;
 }) {
@@ -25,16 +27,20 @@ export function QuestionText({
         id={`q-${id}`}
         className="max-w-2xl"
         value={text}
-        onChange={(e) => onChange({ kind: "TEXT", text: e.target.value })}
+        onChange={(e) =>
+          !readOnly && onChange({ kind: "TEXT", text: e.target.value })
+        }
+        readOnly={!!readOnly}
+        disabled={!!readOnly}
         placeholder="بنویسید..."
         onKeyDown={(e) => {
           if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
-            onSubmitNext();
+            if (!readOnly) onSubmitNext();
           }
         }}
         onBlur={() => {
-          onSubmitNext();
+          if (!readOnly) onSubmitNext();
         }}
       />
       {/* Removed explicit next button to reduce visual clutter */}

@@ -38,6 +38,11 @@ export class ResponseController {
     return this.service.get(Number(id));
   }
 
+  @Get('progress/by')
+  progress(@Query() q: any) {
+    return this.service.progress(q);
+  }
+
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.service.remove(Number(id));

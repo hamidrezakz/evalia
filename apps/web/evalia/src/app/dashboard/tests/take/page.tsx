@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import { useSearchParams } from "next/navigation";
 import { useAssessmentUserSessions } from "@/assessment/context/assessment-user-sessions";
 import type {
   UserSessionQuestions,
@@ -13,7 +14,7 @@ import {
 } from "@/assessment/api/templates-hooks";
 import { ResponsePerspectiveEnum, SessionStateEnum } from "@/lib/enums";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { cn, formatIranPhone } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Panel,
@@ -41,9 +42,18 @@ import { QuestionScale } from "./components/QuestionScale";
 import { ProgressCircle } from "./components/ProgressCircle";
 import { AlertTriangle } from "lucide-react";
 import { Combobox } from "@/components/ui/combobox";
-import { useUsers } from "@/users/api/users-hooks";
+import { useUser, useUsers } from "@/users/api/users-hooks";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Label } from "@/components/ui/label";
 
 export default function TakeAssessmentPage() {
+  const sp = useSearchParams();
+  const previewMode = (sp.get("mode") || "").toLowerCase() === "preview";
+  const spSessionId = sp.get("sessionId");
+  const spUserId = sp.get("userId");
+  const spPerspective = sp.get("perspective");
+  const spSubjectUserId = sp.get("subjectUserId");
+
   const { user } = useUserDataContext();
   const {
     userId,
@@ -62,23 +72,62 @@ export default function TakeAssessmentPage() {
   const questionRefs = React.useRef<Record<number, HTMLDivElement | null>>({});
   const [subjectUserId, setSubjectUserId] = React.useState<number | null>(null);
 
-  const needsSubject = activePerspective && activePerspective !== "SELF";
+  // Effective parameters (preview vs interactive mode)
+  const effSessionId = previewMode
+    ? spSessionId
+      ? Number(spSessionId)
+      : null
+    : activeSessionId ?? null;
+  const effUserId = previewMode
+    ? spUserId
+      ? Number(spUserId)
+      : null
+    : userId ?? null;
+  const effPerspective = previewMode
+    ? spPerspective
+      ? String(spPerspective)
+      : null
+    : activePerspective ?? null;
+  const effSubjectUserId = previewMode
+    ? spSubjectUserId
+      ? Number(spSubjectUserId)
+      : null
+    : subjectUserId;
+
+  const needsSubject = effPerspective && effPerspective !== "SELF";
   const canLoad =
-    userId != null &&
-    activeSessionId != null &&
-    !!activePerspective &&
-    (!needsSubject || !!subjectUserId);
+    effUserId != null &&
+    effSessionId != null &&
+    !!effPerspective &&
+    (!needsSubject || !!effSubjectUserId);
+
+  const readOnly = previewMode || activeSession?.state !== "IN_PROGRESS";
+
+  // Fetch respondent and subject details for prettier preview header
+  const respondentQ = useUser(effUserId);
+  const subjectQ = useUser(
+    needsSubject ? (effSubjectUserId as number | null) : null
+  );
 
   // Auto-pick a default perspective if not selected yet
   React.useEffect(() => {
+    if (previewMode) return;
     if (!activePerspective && (availablePerspectives?.length || 0) > 0) {
       setActivePerspective(availablePerspectives![0] as any);
     }
-  }, [activePerspective, availablePerspectives, setActivePerspective]);
+  }, [
+    previewMode,
+    activePerspective,
+    availablePerspectives,
+    setActivePerspective,
+  ]);
 
   // Load assignments to help auto-pick a subject when a unique one exists
-  const assignmentsDetailed = useAssignmentsDetailed(activeSessionId ?? null);
+  const assignmentsDetailed = useAssignmentsDetailed(
+    previewMode ? null : activeSessionId ?? null
+  );
   React.useEffect(() => {
+    if (previewMode) return;
     if (
       !activeSessionId ||
       !activePerspective ||
@@ -108,16 +157,17 @@ export default function TakeAssessmentPage() {
 
   // Clear subject when perspective becomes SELF
   React.useEffect(() => {
+    if (previewMode) return;
     if (activePerspective === "SELF") setSubjectUserId(null);
-  }, [activePerspective]);
+  }, [previewMode, activePerspective]);
 
   // Data via React Query hooks
   const uq = useUserSessionQuestions(
-    canLoad ? (activeSessionId as number) : null,
-    canLoad ? (userId as number) : null,
-    canLoad ? (activePerspective as string) : null,
-    activePerspective && activePerspective !== "SELF"
-      ? subjectUserId ?? undefined
+    canLoad ? (effSessionId as number) : null,
+    canLoad ? (effUserId as number) : null,
+    canLoad ? (effPerspective as string) : null,
+    effPerspective && effPerspective !== "SELF"
+      ? effSubjectUserId ?? undefined
       : undefined
   );
   const hasEmbedded = !!(uq.data as any)?.responses?.length;
@@ -126,7 +176,7 @@ export default function TakeAssessmentPage() {
       ? {
           sessionId: uq.data.session.id,
           assignmentId: uq.data.assignment.id,
-          userId: userId!,
+          userId: effUserId!,
           perspective: uq.data.assignment.perspective,
           pageSize: 500,
         }
@@ -406,7 +456,9 @@ export default function TakeAssessmentPage() {
   }
 
   if (!canLoad) {
-    const reason = !activeSessionId
+    const reason = previewMode
+      ? "لینک پیش‌نمایش نامعتبر است."
+      : !activeSessionId
       ? "ابتدا از سایدبار یک آزمون را انتخاب کنید."
       : !activePerspective
       ? "در حال انتخاب خودکار پرسپکتیو…"
@@ -417,7 +469,7 @@ export default function TakeAssessmentPage() {
       <div className="p-6">
         <h1 className="text-xl font-semibold mb-3">ورود به آزمون</h1>
         <p className="text-muted-foreground">{reason}</p>
-        {activePerspective && activePerspective !== "SELF" ? (
+        {!previewMode && activePerspective && activePerspective !== "SELF" ? (
           <div className="mt-3">
             <SubjectSelector
               organizationId={activeSession?.organizationId}
@@ -438,86 +490,245 @@ export default function TakeAssessmentPage() {
       </div>
 
       {/* Session info panel with perspective selector */}
-      <Panel className="shadow-sm">
+      <Panel className="shadow-sm w-full">
         <PanelHeader className="[.border-b]:border-border/70">
-          <PanelTitle className="flex flex-wrap items-center gap-2 text-base sm:text-lg">
-            <span className="break-words whitespace-normal">
-              {uq.data?.session.name ?? activeSession?.name ?? "آزمون"}
-            </span>
+          <PanelTitle className="flex flex-col sm:flex-row sm:flex-wrap gap-2 text-base sm:text-lg">
+            <div className="inline-flex items-center gap-2">
+              <Label className="text-[10px] text-muted-foreground">آزمون</Label>
+              <span className="break-words whitespace-normal font-medium">
+                {uq.data?.session.name ?? activeSession?.name ?? "آزمون"}
+              </span>
+              {previewMode && (
+                <div className="inline-flex items-center gap-1">
+                  <Label className="text-[10px] text-muted-foreground">
+                    حالت:
+                  </Label>
+                  <Badge variant="outline" className="text-[10px] rounded-full">
+                    پیش‌نمایش
+                  </Badge>
+                </div>
+              )}
+            </div>
             {uq.data?.session?.state && (
-              <Badge
-                variant="outline"
-                className={cn(
-                  "text-[10px] sm:text-[11px] font-medium",
-                  uq.data.session.state === "IN_PROGRESS"
-                    ? "border-emerald-500 text-emerald-700 bg-emerald-50 dark:border-emerald-600/60 dark:text-emerald-300 dark:bg-emerald-950/30"
-                    : uq.data.session.state === "SCHEDULED"
-                    ? "border-sky-500 text-sky-700 bg-sky-50 dark:border-sky-600/60 dark:text-sky-300 dark:bg-sky-950/30"
-                    : uq.data.session.state === "COMPLETED"
-                    ? "border-gray-300 text-gray-700 bg-gray-50 dark:border-gray-600/60 dark:text-gray-300 dark:bg-gray-900"
-                    : "border-amber-500 text-amber-700 bg-amber-50 dark:border-amber-600/60 dark:text-amber-300 dark:bg-amber-950/30"
-                )}>
-                {SessionStateEnum.t(uq.data.session.state as any)}
-              </Badge>
+              <div className="inline-flex items-center gap-1">
+                <Label className="text-[10px] text-muted-foreground">
+                  وضعیت آزمون :
+                </Label>
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "text-[10px] sm:text-[11px] font-medium rounded-full",
+                    uq.data.session.state === "IN_PROGRESS"
+                      ? "border-emerald-500 text-emerald-700 bg-emerald-50 dark:border-emerald-600/60 dark:text-emerald-300 dark:bg-emerald-950/30"
+                      : uq.data.session.state === "SCHEDULED"
+                      ? "border-sky-500 text-sky-700 bg-sky-50 dark:border-sky-600/60 dark:text-sky-300 dark:bg-sky-950/30"
+                      : uq.data.session.state === "COMPLETED"
+                      ? "border-gray-300 text-gray-700 bg-gray-50 dark:border-gray-600/60 dark:text-gray-300 dark:bg-gray-900"
+                      : "border-amber-500 text-amber-700 bg-amber-50 dark:border-amber-600/60 dark:text-amber-300 dark:bg-amber-950/30"
+                  )}>
+                  {SessionStateEnum.t(uq.data.session.state as any)}
+                </Badge>
+              </div>
             )}
           </PanelTitle>
 
-          <PanelAction>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground hidden sm:inline">
-                پرسپکتیو:
-              </span>
-              <Select
-                value={activePerspective ?? undefined}
-                onValueChange={(v) => setActivePerspective(v as any)}>
-                <SelectTrigger size="sm">
-                  <SelectValue placeholder="انتخاب پرسپکتیو" />
-                </SelectTrigger>
-                <SelectContent align="end">
-                  {availablePerspectives?.length ? (
-                    availablePerspectives.map((p) => (
-                      <SelectItem key={p as any} value={p as any}>
-                        {ResponsePerspectiveEnum.t(p as any)}
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <div className="px-2 py-1 text-xs text-muted-foreground">
-                      پرسپکتیوی موجود نیست
+          {!previewMode && (
+            <PanelAction>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full">
+                <span className="text-xs text-muted-foreground hidden sm:inline">
+                  پرسپکتیو:
+                </span>
+                <Select
+                  value={activePerspective ?? undefined}
+                  onValueChange={(v) => setActivePerspective(v as any)}>
+                  <SelectTrigger size="sm" className="w-full sm:w-[220px]">
+                    <SelectValue placeholder="انتخاب پرسپکتیو" />
+                  </SelectTrigger>
+                  <SelectContent align="end">
+                    {availablePerspectives?.length ? (
+                      availablePerspectives.map((p) => (
+                        <SelectItem key={p as any} value={p as any}>
+                          {ResponsePerspectiveEnum.t(p as any)}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <div className="px-2 py-1 text-xs text-muted-foreground">
+                        پرسپکتیوی موجود نیست
+                      </div>
+                    )}
+                  </SelectContent>
+                </Select>
+                {activePerspective && activePerspective !== "SELF" ? (
+                  <div className="w-full sm:w-auto min-w-0">
+                    <SubjectSelector
+                      organizationId={activeSession?.organizationId}
+                      value={subjectUserId}
+                      onChange={setSubjectUserId}
+                    />
+                  </div>
+                ) : null}
+              </div>
+            </PanelAction>
+          )}
+
+          <PanelDescription className="hidden"></PanelDescription>
+        </PanelHeader>
+        <PanelContent className="pt-2 w-full overflow-visible">
+          <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+            {/* Participant card */}
+            {previewMode ? (
+              <div className="w-full rounded-xl border border-border/60 bg-muted/20 p-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                <Avatar className="size-8">
+                  <AvatarImage
+                    alt={String(
+                      respondentQ.data?.fullName ||
+                        respondentQ.data?.email ||
+                        `#${effUserId}`
+                    )}
+                  />
+                  <AvatarFallback className="text-[11px]">
+                    {String(
+                      respondentQ.data?.fullName ||
+                        respondentQ.data?.email ||
+                        "?"
+                    )
+                      .split(" ")
+                      .map((w) => w[0])
+                      .filter(Boolean)
+                      .slice(0, 2)
+                      .join("")}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 w-full">
+                  <Label className="text-[10px] text-muted-foreground">
+                    شرکت‌کننده
+                  </Label>
+                  <div className="text-sm font-medium truncate">
+                    {respondentQ.data?.fullName ||
+                      respondentQ.data?.email ||
+                      `کاربر #${effUserId}`}
+                  </div>
+                  {(respondentQ.data?.email || respondentQ.data?.phone) && (
+                    <div className="text-[11px] text-muted-foreground truncate">
+                      {[
+                        respondentQ.data?.email || "",
+                        respondentQ.data?.phone
+                          ? formatIranPhone(String(respondentQ.data?.phone))
+                          : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" • ")}
                     </div>
                   )}
-                </SelectContent>
-              </Select>
-              {activePerspective && activePerspective !== "SELF" ? (
-                <SubjectSelector
-                  organizationId={activeSession?.organizationId}
-                  value={subjectUserId}
-                  onChange={setSubjectUserId}
-                />
-              ) : null}
-            </div>
-          </PanelAction>
+                  {effPerspective && (
+                    <div className="mt-1 inline-flex items-center gap-1">
+                      <Label className="text-[10px] text-muted-foreground">
+                        پرسپکتیو
+                      </Label>
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] rounded-full">
+                        {ResponsePerspectiveEnum.t(effPerspective as any)}
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : user?.name ? (
+              <div className="w-full rounded-xl border border-border/60 bg-muted/20 p-3 flex items-center gap-3">
+                <div className="min-w-0">
+                  <Label className="text-[10px] text-muted-foreground">
+                    شرکت‌کننده
+                  </Label>
+                  <div className="text-sm font-medium truncate">
+                    {user.name}
+                  </div>
+                </div>
+              </div>
+            ) : null}
 
-          <PanelDescription className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1">
-            {user?.name && (
-              <span className="font-medium text-foreground/80">
-                شرکت‌کننده: {user.name}
-              </span>
+            {/* Perspective card (preview only) */}
+            {false}
+
+            {/* Subject card (if applicable) */}
+            {previewMode && needsSubject && effSubjectUserId ? (
+              <div className="w-full rounded-xl border border-border/60 bg-muted/20 p-3 flex items-center gap-3">
+                <Avatar className="size-7">
+                  <AvatarImage
+                    alt={String(
+                      subjectQ.data?.fullName ||
+                        subjectQ.data?.email ||
+                        `#${effSubjectUserId}`
+                    )}
+                  />
+                  <AvatarFallback className="text-[10px]">
+                    {String(
+                      subjectQ.data?.fullName || subjectQ.data?.email || "?"
+                    )
+                      .split(" ")
+                      .map((w) => w[0])
+                      .filter(Boolean)
+                      .slice(0, 2)
+                      .join("")}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0">
+                  <Label className="text-[10px] text-muted-foreground">
+                    موضوع ارزیابی
+                  </Label>
+                  <div className="text-sm font-medium truncate">
+                    {subjectQ.data?.fullName ||
+                      subjectQ.data?.email ||
+                      `کاربر #${effSubjectUserId}`}
+                  </div>
+                  {(subjectQ.data?.email || subjectQ.data?.phone) && (
+                    <div className="text-[11px] text-muted-foreground truncate">
+                      {[
+                        subjectQ.data?.email || "",
+                        subjectQ.data?.phone
+                          ? formatIranPhone(String(subjectQ.data?.phone))
+                          : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" • ")}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : null}
+
+            {/* Dates card */}
+            {(activeSession?.startAt || activeSession?.endAt) && (
+              <div className="w-full rounded-xl border border-border/60 bg-muted/20 p-3">
+                <Label className="text-[10px] text-muted-foreground">
+                  زمان‌بندی آزمون:
+                </Label>
+                <div className="mt-1 space-y-1 text-[11px] text-muted-foreground">
+                  {activeSession?.startAt && (
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px]">شروع:</span>
+                      <span>
+                        {new Date(activeSession.startAt as any).toLocaleString(
+                          "fa-IR"
+                        )}
+                      </span>
+                    </div>
+                  )}
+                  {activeSession?.endAt && (
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px]">پایان:</span>
+                      <span>
+                        {new Date(activeSession.endAt as any).toLocaleString(
+                          "fa-IR"
+                        )}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
             )}
-            {activeSession?.startAt && (
-              <span>
-                شروع:{" "}
-                {new Date(activeSession.startAt as any).toLocaleString("fa-IR")}
-              </span>
-            )}
-            {activeSession?.endAt && (
-              <span>
-                پایان:{" "}
-                {new Date(activeSession.endAt as any).toLocaleString("fa-IR")}
-              </span>
-            )}
-          </PanelDescription>
-        </PanelHeader>
-        {/* Optional extra content row for future details */}
+          </div>
+        </PanelContent>
       </Panel>
       {data && data.session.state !== "IN_PROGRESS" && (
         <div className="flex items-center gap-2 text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 text-sm dark:text-amber-300 dark:bg-amber-950/30 dark:border-amber-600/60">
@@ -605,8 +816,12 @@ export default function TakeAssessmentPage() {
                         <QuestionText
                           id={linkId}
                           value={current as AnswerValue | undefined}
-                          onChange={(v: any) => setAnswer(linkId, v)}
+                          readOnly={readOnly}
+                          onChange={(v: any) =>
+                            !readOnly && setAnswer(linkId, v)
+                          }
                           onSubmitNext={() =>
+                            !readOnly &&
                             setAnswer(
                               linkId,
                               (current as any) ?? { kind: "TEXT", text: "" },
@@ -619,7 +834,9 @@ export default function TakeAssessmentPage() {
                         <QuestionBoolean
                           name={`q-${linkId}`}
                           value={current as AnswerValue | undefined}
+                          readOnly={readOnly}
                           onChange={(v: any) =>
+                            !readOnly &&
                             setAnswer(linkId, v, { autoScroll: true })
                           }
                         />
@@ -629,7 +846,9 @@ export default function TakeAssessmentPage() {
                           name={`q-${linkId}`}
                           options={options}
                           value={current as AnswerValue | undefined}
+                          readOnly={readOnly}
                           onChange={(v: any) =>
+                            !readOnly &&
                             setAnswer(linkId, v, { autoScroll: true })
                           }
                         />
@@ -638,7 +857,10 @@ export default function TakeAssessmentPage() {
                         <QuestionMultiChoice
                           options={options}
                           value={current as AnswerValue | undefined}
-                          onChange={(v: any) => setAnswer(linkId, v)}
+                          readOnly={readOnly}
+                          onChange={(v: any) =>
+                            !readOnly && setAnswer(linkId, v)
+                          }
                         />
                       )}
                       {type === "SCALE" && (
@@ -653,7 +875,9 @@ export default function TakeAssessmentPage() {
                                 }))
                           }
                           value={current as AnswerValue | undefined}
+                          readOnly={readOnly}
                           onChange={(v: any) =>
+                            !readOnly &&
                             setAnswer(linkId, v, { autoScroll: true })
                           }
                         />
@@ -665,16 +889,18 @@ export default function TakeAssessmentPage() {
             </section>
           ))}
 
-          <div className="mt-8 flex items-center gap-3">
-            {error && <span className="text-rose-600 text-sm">{error}</span>}
-            <Button
-              onClick={handleSaveAll}
-              disabled={
-                saving || (data ? data.session.state !== "IN_PROGRESS" : true)
-              }>
-              {saving ? "در حال ذخیره…" : "ذخیره پاسخ‌ها"}
-            </Button>
-          </div>
+          {!readOnly && (
+            <div className="mt-8 flex items-center gap-3">
+              {error && <span className="text-rose-600 text-sm">{error}</span>}
+              <Button
+                onClick={handleSaveAll}
+                disabled={
+                  saving || (data ? data.session.state !== "IN_PROGRESS" : true)
+                }>
+                {saving ? "در حال ذخیره…" : "ذخیره پاسخ‌ها"}
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>
