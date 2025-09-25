@@ -28,6 +28,8 @@ import {
 import { useAuthSession } from "@/app/auth/event-context/session-context";
 import { formatIranPhone } from "@/lib/utils";
 import * as React from "react";
+import { useAvatarImage } from "@/users/api/useAvatarImage";
+import { resolveApiBase } from "@/lib/api/helpers";
 
 export function NavUser({
   user,
@@ -42,6 +44,31 @@ export function NavUser({
   const { isMobile } = useSidebar();
   const { signOut } = useAuthSession();
   const [loggingOut, setLoggingOut] = React.useState(false);
+  const initials = React.useMemo(
+    () =>
+      (user?.name || "?")
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((p) => p[0])
+        .join("")
+        .toUpperCase(),
+    [user?.name]
+  );
+  const { src: hookSrc } = useAvatarImage(user?.avatar);
+  // Extra safety: build a direct absolute URL in case hookSrc is empty
+  const directSrc = React.useMemo(() => {
+    const raw = user?.avatar || "";
+    if (!raw) return "";
+    if (/^https?:\/\//i.test(raw)) return raw; // absolute
+    const v = raw.startsWith("/") ? raw : "/" + raw;
+    if (v.startsWith("/uploads/")) return resolveApiBase() + v; // backend asset
+    if (typeof window !== "undefined") {
+      return window.location.origin.replace(/\/$/, "") + v; // frontend public asset
+    }
+    return v;
+  }, [user?.avatar]);
+  const avatarUrl = hookSrc || directSrc || "";
 
   async function handleLogout() {
     if (loggingOut) return;
@@ -64,8 +91,12 @@ export function NavUser({
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
               <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarImage src={user.avatar} alt={user.name} />
-                <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+                {avatarUrl ? (
+                  <AvatarImage src={avatarUrl} alt={user.name} />
+                ) : null}
+                <AvatarFallback className="rounded-lg">
+                  {initials}
+                </AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-right text-sm leading-tight">
                 <span className="truncate font-medium">{user.name}</span>
@@ -88,8 +119,12 @@ export function NavUser({
             <DropdownMenuLabel className="p-0 font-normal flex">
               <div className="flex items-center gap-2 px-1 py-1.5 text-right text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+                  {avatarUrl ? (
+                    <AvatarImage src={avatarUrl} alt={user.name} />
+                  ) : null}
+                  <AvatarFallback className="rounded-lg">
+                    {initials}
+                  </AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-[12px] leading-tight">
                   <span className="truncate font-medium">{user.name}</span>

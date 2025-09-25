@@ -60,14 +60,33 @@ export function useAppSidebarData(): AppSidebarData {
 
   // User
   const { user } = useUserDataContext();
+  // Normalize avatar so that:
+  // - prefer backend-provided avatarUrl, otherwise fallback to avatar
+  // - backend uploads like "/uploads/.." remain root-relative (hook resolves against API base)
+  // - public/frontend assets or external links stay absolute to their origin
+  // - missing values yield empty string so components render initials fallback instead of broken images
+  const normalizeUserAvatar = React.useCallback((raw: unknown) => {
+    const s = typeof raw === "string" ? raw.trim() : "";
+    const val = s || "";
+    if (/^https?:\/\//i.test(val)) return val; // already absolute
+    // ensure leading slash for consistency
+    const v = val.startsWith("/") ? val : "/" + val;
+    // Backend uploads should stay root-relative so useAvatarImage resolves to API base
+    if (v.startsWith("/uploads/")) return v;
+    // Otherwise treat as frontend public asset path -> make absolute to frontend origin
+    if (v && typeof window !== "undefined") {
+      return window.location.origin.replace(/\/$/, "") + v;
+    }
+    // SSR fallback: return as-is; client will re-run and normalize to absolute
+    return v;
+  }, []);
   const navUser = user
     ? {
         name: typeof user.fullName === "string" ? user.fullName : "",
         email: typeof user.email === "string" ? user.email : "",
-        avatar:
-          typeof user.avatar === "string"
-            ? user.avatar
-            : "/avatars/default.png",
+        avatar: normalizeUserAvatar(
+          (user as any).avatarUrl ?? (user as any).avatar
+        ),
         phoneNumber: typeof user.phone === "string" ? user.phone : undefined,
       }
     : undefined;

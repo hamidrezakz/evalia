@@ -10,8 +10,9 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatIranPhone, cn } from "@/lib/utils";
+import { useAvatarImage } from "@/users/api/useAvatarImage";
 import { ResponsePerspectiveEnum } from "@/lib/enums";
 import {
   useAssignmentsDetailed,
@@ -60,6 +61,59 @@ export function SessionParticipantsMenu({
     () => (Array.isArray(assignmentsRaw) ? (assignmentsRaw as any[]) : []),
     [assignmentsRaw]
   );
+
+  // Local avatar component using the standardized hook
+  function UserAvatar({
+    url,
+    alt,
+    fallback,
+    className,
+    fallbackClassName,
+  }: {
+    url: string | null | undefined;
+    alt: string;
+    fallback: string;
+    className?: string;
+    fallbackClassName?: string;
+  }) {
+    const { src } = useAvatarImage(url);
+    return (
+      <Avatar className={className || "h-6 w-6"}>
+        {src ? <AvatarImage src={src} alt={alt} /> : null}
+        <AvatarFallback className={fallbackClassName || "text-[10px]"}>
+          {fallback}
+        </AvatarFallback>
+      </Avatar>
+    );
+  }
+
+  // Cache respondent/user details (to get avatarUrl like MembersDropdown)
+  const [userCache, setUserCache] = React.useState<Map<number, any>>(
+    () => new Map()
+  );
+  React.useEffect(() => {
+    const needed = new Set<number>();
+    for (const a of assignments) {
+      const uid = Number(a.respondentUserId ?? a.userId ?? 0);
+      if (uid > 0 && !userCache.has(uid)) needed.add(uid);
+    }
+    if (needed.size === 0) return;
+    let alive = true;
+    (async () => {
+      const fetched = await Promise.all(
+        Array.from(needed).map((id) => getUser(id).catch(() => null))
+      );
+      if (!alive) return;
+      setUserCache((prev) => {
+        const next = new Map(prev);
+        Array.from(needed).forEach((id, idx) => next.set(id, fetched[idx]));
+        return next;
+      });
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [assignments, userCache]);
 
   // Build grouping
   const selfItems = assignments.filter(
@@ -449,6 +503,16 @@ export function SessionParticipantsMenu({
                 "کاربر";
               const phoneRaw = a.respondent?.phone || a.user?.phone;
               const phone = phoneRaw ? formatIranPhone(phoneRaw) : null;
+              const uid = Number(a.respondentUserId ?? a.userId ?? 0);
+              const userMeta = (uid && userCache.get(uid)) || null;
+              const rawAvatar =
+                userMeta?.avatarUrl ||
+                userMeta?.avatar ||
+                a.respondent?.avatarUrl ||
+                a.user?.avatarUrl ||
+                a.respondent?.avatar ||
+                a.user?.avatar ||
+                null;
               const initials = name
                 .split(/\s+/)
                 .slice(0, 2)
@@ -468,11 +532,12 @@ export function SessionParticipantsMenu({
                     });
                   }}>
                   <div className="flex items-center gap-2 w-full">
-                    <Avatar className="h-6 w-6">
-                      <AvatarFallback className="text-[10px]">
-                        {initials}
-                      </AvatarFallback>
-                    </Avatar>
+                    <UserAvatar
+                      url={rawAvatar}
+                      alt={name}
+                      fallback={initials}
+                      className="h-6 w-6"
+                    />
                     <div className="flex flex-col min-w-0">
                       <span
                         className="truncate text-[10px] font-medium"
@@ -528,17 +593,26 @@ export function SessionParticipantsMenu({
                 .map((p: string) => p[0])
                 .join("")
                 .toUpperCase();
+              const uDet = userCache.get(g.respondentUserId) || null;
+              const firstItem = g.items?.[0];
+              const rawAvatar =
+                uDet?.avatarUrl ||
+                uDet?.avatar ||
+                firstItem?.respondent?.avatarUrl ||
+                firstItem?.respondent?.avatar ||
+                null;
               return (
                 <DropdownMenuItem
                   key={g.respondentUserId}
                   className="cursor-pointer py-2 group relative">
                   <div className="flex flex-col gap-1 w-full">
                     <div className="flex items-center gap-2">
-                      <Avatar className="h-6 w-6">
-                        <AvatarFallback className="text-[10px]">
-                          {initials}
-                        </AvatarFallback>
-                      </Avatar>
+                      <UserAvatar
+                        url={rawAvatar}
+                        alt={g.respondentName}
+                        fallback={initials}
+                        className="h-6 w-6"
+                      />
                       <span
                         className="text-[10px] font-medium truncate"
                         title={g.respondentName}>
@@ -587,6 +661,9 @@ export function SessionParticipantsMenu({
                             .map((p: string) => p[0])
                             .join("")
                             .toUpperCase();
+                          const subjDet = subjectCache.get(subj.id) || null;
+                          const subjRawAvatar =
+                            subjDet?.avatarUrl || subjDet?.avatar || null;
                           return (
                             <div
                               key={subj.id}
@@ -600,9 +677,13 @@ export function SessionParticipantsMenu({
                                   subjectUserId: subj.id,
                                 });
                               }}>
-                              <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-muted text-[9px]">
-                                {subInit}
-                              </span>
+                              <UserAvatar
+                                url={subjRawAvatar}
+                                alt={subj.name}
+                                fallback={subInit}
+                                className="h-5 w-5"
+                                fallbackClassName="text-[9px]"
+                              />
                               <span
                                 className="truncate flex-1"
                                 title={subj.name}>
@@ -668,6 +749,16 @@ export function SessionParticipantsMenu({
                 a.respondent?.email ||
                 a.user?.email ||
                 "کاربر";
+              const uid = Number(a.respondentUserId ?? a.userId ?? 0);
+              const userMeta = (uid && userCache.get(uid)) || null;
+              const rawAvatar =
+                userMeta?.avatarUrl ||
+                userMeta?.avatar ||
+                a.respondent?.avatarUrl ||
+                a.user?.avatarUrl ||
+                a.respondent?.avatar ||
+                a.user?.avatar ||
+                null;
               const initials = name
                 .split(/\s+/)
                 .slice(0, 2)
@@ -688,11 +779,12 @@ export function SessionParticipantsMenu({
                     });
                   }}>
                   <div className="flex items-center gap-2 w-full">
-                    <Avatar className="h-6 w-6">
-                      <AvatarFallback className="text-[10px]">
-                        {initials}
-                      </AvatarFallback>
-                    </Avatar>
+                    <UserAvatar
+                      url={rawAvatar}
+                      alt={name}
+                      fallback={initials}
+                      className="h-6 w-6"
+                    />
                     <span
                       className="truncate text-[10px] font-medium"
                       title={name}>

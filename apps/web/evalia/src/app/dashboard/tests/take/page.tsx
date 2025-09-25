@@ -45,6 +45,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { useUser, useUsers } from "@/users/api/users-hooks";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
+import { useAvatarImage } from "@/users/api/useAvatarImage";
 
 export default function TakeAssessmentPage() {
   const sp = useSearchParams();
@@ -108,6 +109,14 @@ export default function TakeAssessmentPage() {
   const subjectQ = useUser(
     needsSubject ? (effSubjectUserId as number | null) : null
   );
+
+  // Standardized avatar srcs for preview header
+  const respondentRawAvatar =
+    (respondentQ.data as any)?.avatarUrl || (respondentQ.data as any)?.avatar;
+  const { src: respondentAvatarSrc } = useAvatarImage(respondentRawAvatar);
+  const subjectRawAvatar =
+    (subjectQ.data as any)?.avatarUrl || (subjectQ.data as any)?.avatar;
+  const { src: subjectAvatarSrc } = useAvatarImage(subjectRawAvatar);
 
   // Auto-pick a default perspective if not selected yet
   React.useEffect(() => {
@@ -580,6 +589,7 @@ export default function TakeAssessmentPage() {
               <div className="w-full rounded-xl border border-border/60 bg-muted/20 p-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
                 <Avatar className="size-8">
                   <AvatarImage
+                    src={respondentAvatarSrc || undefined}
                     alt={String(
                       respondentQ.data?.fullName ||
                         respondentQ.data?.email ||
@@ -655,6 +665,7 @@ export default function TakeAssessmentPage() {
               <div className="w-full rounded-xl border border-border/60 bg-muted/20 p-3 flex items-center gap-3">
                 <Avatar className="size-7">
                   <AvatarImage
+                    src={subjectAvatarSrc || undefined}
                     alt={String(
                       subjectQ.data?.fullName ||
                         subjectQ.data?.email ||

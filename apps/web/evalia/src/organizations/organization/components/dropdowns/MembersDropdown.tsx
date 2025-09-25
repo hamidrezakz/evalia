@@ -22,8 +22,6 @@ import {
   Users2,
   UsersRound,
   PlusCircle,
-  Check,
-  X,
   ChevronDown,
 } from "lucide-react";
 import AddMemberDialog from "../add-member-dialog";
@@ -32,6 +30,7 @@ import Link from "next/link";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { useAvatarImage } from "@/users/api/useAvatarImage";
 
 interface MembersDropdownProps {
   orgId: number;
@@ -85,6 +84,10 @@ function MemberRow({ orgId, membership }: MemberRowProps) {
     .toUpperCase();
 
   const roleOptions = React.useMemo(() => OrgRoleEnum.options(), []);
+  // Avatar image via standard hook (fetch + cache + absolute URL resolution)
+  const { src: avatarUrl, isLoading: avatarLoading } = useAvatarImage(
+    (data as any)?.avatarUrl || (data as any)?.avatar
+  );
   // 1) Try to get roles from user detail (source of truth now) for this orgId
   const userOrgRoles = React.useMemo(() => {
     if (!data) return [] as string[];
@@ -207,8 +210,8 @@ function MemberRow({ orgId, membership }: MemberRowProps) {
           <Avatar className="h-6 w-6 border">
             {data ? (
               <>
-                {data && (data as any).avatarUrl ? (
-                  <AvatarImage src={(data as any).avatarUrl} alt={fullName} />
+                {avatarUrl ? (
+                  <AvatarImage src={avatarUrl} alt={fullName} />
                 ) : null}
                 <AvatarFallback className="text-[10px]">
                   {initials}
