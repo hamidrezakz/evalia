@@ -2,6 +2,9 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { ListUsersDto } from './dto/list-users.dto';
 import { Prisma } from '@prisma/client';
+import * as fs from 'fs';
+import * as path from 'path';
+import { extname } from 'path';
 
 @Injectable()
 export class UsersService {
@@ -187,7 +190,96 @@ export class UsersService {
         where: { id: n, deletedAt: null },
       });
       if (!asset) throw new NotFoundException('Asset not found');
-      data.avatarAssetId = n;
+      // Ensure single, canonical avatar per user: rename file to <userId>.<ext>, update asset
+      // and remove any previous avatar asset + its file.
+      const userCurrent = await this.prisma.user.findUnique({
+        where: { id },
+        select: { avatarAssetId: true },
+      });
+
+      const uploadsDir = path.resolve(process.cwd(), 'uploads');
+      const currentFilename =
+        asset.filename || (asset.url ? asset.url.split('/').pop()! : null);
+      const currentExt = currentFilename ? extname(currentFilename) : '';
+      const targetFilename = `${id}${currentExt || ''}`;
+      const srcPath = currentFilename
+        ? path.join(uploadsDir, currentFilename)
+        : null;
+      const destPath = path.join(uploadsDir, targetFilename);
+
+      // Make uploads directory if missing
+      try {
+        if (!fs.existsSync(uploadsDir))
+          fs.mkdirSync(uploadsDir, { recursive: true });
+      } catch {}
+
+      // If the new asset file name is not canonical, rename it
+      if (srcPath && currentFilename && currentFilename !== targetFilename) {
+        try {
+          if (fs.existsSync(srcPath)) {
+            // If a previous file with target name exists, remove it before rename
+            if (fs.existsSync(destPath)) {
+              try {
+                fs.unlinkSync(destPath);
+              } catch {}
+            }
+            fs.renameSync(srcPath, destPath);
+          }
+        } catch (e) {
+          // If rename fails, we continue but keep the asset as-is; however we still set avatar below
+        }
+      }
+
+      // Hard-delete strategy with ordered DB updates
+      const oldAssetId = userCurrent?.avatarAssetId;
+      let oldFilename: string | null = null;
+
+      // Apply DB changes in a transaction to avoid FK issues
+      const updatedUser = await this.prisma.$transaction(async (tx) => {
+        // 1) Update the new asset record to canonical name/url
+        await tx.asset.update({
+          where: { id: asset.id },
+          data: {
+            type: 'AVATAR' as any,
+            filename: targetFilename,
+            url: `/uploads/${targetFilename}`,
+          },
+        });
+
+        // 2) Update user to point to the new asset and apply other field updates
+        const user = await tx.user.update({
+          where: { id },
+          data: { ...data, avatarAssetId: asset.id },
+        });
+
+        // 3) Hard-delete old asset if different from new one
+        if (oldAssetId && oldAssetId !== asset.id) {
+          try {
+            const prev = await tx.asset.findUnique({
+              where: { id: oldAssetId },
+            });
+            if (prev) {
+              oldFilename =
+                prev.filename || (prev.url ? prev.url.split('/').pop()! : null);
+            }
+          } catch {}
+          try {
+            await tx.asset.delete({ where: { id: oldAssetId } });
+          } catch {}
+        }
+        return user;
+      });
+
+      // Remove the old physical file if present and not the same as the new canonical name
+      if (oldFilename && oldFilename !== targetFilename) {
+        const oldPath = path.join(uploadsDir, oldFilename);
+        try {
+          if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+        } catch {}
+      }
+
+      // Best-effort cleanup: if a file with old random name still exists (when different), it's already removed before rename or by earlier block.
+      return this.detail(updatedUser.id);
     }
     const updated = await this.prisma.user.update({ where: { id }, data });
     return this.detail(updated.id);

@@ -1,4 +1,8 @@
+import { z } from "zod";
+import { apiRequest } from "@/lib/api.client";
+import { apiRequestMultipart } from "@/lib/api/multipart";
 import { tokenStorage } from "@/lib/token-storage";
+import { resolveApiBase } from "@/lib/api/helpers";
 
 export interface UploadedAsset {
   id: number;
@@ -8,58 +12,31 @@ export interface UploadedAsset {
   sizeBytes: number;
   type: string;
 }
+const uploadedAssetSchema = z.object({
+  id: z.number().int().positive(),
+  url: z.string(),
+  filename: z.string(),
+  mimeType: z.string(),
+  sizeBytes: z.number().int().nonnegative(),
+  type: z.string(),
+});
 
 export async function uploadAvatar(file: File): Promise<UploadedAsset> {
-  let rawBase = process.env.NEXT_PUBLIC_API_BASE || "api.evalia.ir";
-  if (!/^https?:\/\//i.test(rawBase))
-    rawBase = "https://" + rawBase.replace(/^\/+/, "");
-  const base = rawBase.replace(/\/$/, "");
-  const tokens = tokenStorage.get();
   const fd = new FormData();
   fd.append("file", file);
   fd.append("type", "AVATAR");
-  const res = await fetch(base + "/assets", {
-    method: "POST",
-    body: fd,
-    headers: {
-      ...(tokens?.accessToken
-        ? { Authorization: `Bearer ${tokens.accessToken}` }
-        : {}),
-    },
-    credentials: "include",
-  });
-  if (!res.ok) {
-    const txt = await res.text();
-    throw new Error(txt || "Upload failed");
-  }
-  const json = await res.json();
-  // our api envelope: { success, code, message, error, data, meta, tookMs }
-  const data = (json?.data ?? json) as UploadedAsset;
-  return data;
+  const envelope = await apiRequestMultipart<UploadedAsset>(
+    "/assets",
+    fd,
+    uploadedAssetSchema
+  );
+  return envelope.data;
 }
 
 export async function updateUserAvatar(userId: number, avatarAssetId: number) {
-  let rawBase = process.env.NEXT_PUBLIC_API_BASE || "api.evalia.ir";
-  if (!/^https?:\/\//i.test(rawBase))
-    rawBase = "https://" + rawBase.replace(/^\/+/, "");
-  const base = rawBase.replace(/\/$/, "");
-  const tokens = tokenStorage.get();
-  const res = await fetch(base + `/users/${userId}`, {
+  const res = await apiRequest(`/users/${userId}`, null, null, {
     method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-      ...(tokens?.accessToken
-        ? { Authorization: `Bearer ${tokens.accessToken}` }
-        : {}),
-    },
-    body: JSON.stringify({ avatarAssetId }),
-    credentials: "include",
+    body: { avatarAssetId } as any,
   });
-  if (!res.ok) {
-    const txt = await res.text();
-    throw new Error(txt || "Update user failed");
-  }
-  const json = await res.json();
-  return json?.data ?? json;
+  return res.data;
 }

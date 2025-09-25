@@ -51,6 +51,7 @@ import { uploadAvatar, updateUserAvatar } from "@/users/api/avatar.api";
 import { useQueryClient } from "@tanstack/react-query";
 import { usersKeys } from "@/users/api/users-query-keys";
 import { Progress } from "@/components/ui/progress";
+import { resolveApiBase } from "@/lib/api/helpers";
 
 // ----------------------------------
 // Utility components
@@ -259,7 +260,11 @@ export default function DashboardLandingPage() {
     }
   }
 
-  const avatarUrl = user?.avatarUrl || user?.avatar;
+  // Always resolve avatarUrl to absolute if it's a relative path
+  let avatarUrl = user?.avatarUrl || user?.avatar;
+  if (avatarUrl && avatarUrl.startsWith("/")) {
+    avatarUrl = resolveApiBase() + avatarUrl;
+  }
   const [localAvatar, setLocalAvatar] = React.useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 

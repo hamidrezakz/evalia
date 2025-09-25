@@ -35,6 +35,8 @@ export const userListItemSchema = z.object({
   fullName: z.string().nullable().optional(),
   email: z.string().nullable().optional(), // relax: allow null or string
   phone: z.string().nullable().optional(), // relax: allow null or string
+  avatarUrl: z.string().nullable().optional(),
+  avatar: z.string().nullable().optional(),
   status: userStatusEnum,
   globalRoles: z.array(z.string()).default([]),
   organizations: z.preprocess(

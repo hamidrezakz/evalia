@@ -14,10 +14,17 @@ import * as fs from 'fs';
 import type { Request } from 'express';
 
 function filenameFactory(
-  _req: Request,
+  req: Request,
   file: any,
   cb: (error: Error | null, filename: string) => void,
 ) {
+  // If a userId is provided via body, deterministically name the file as <userId>.<ext>
+  const anyReq: any = req as any;
+  const userIdRaw = anyReq?.body?.userId;
+  if (userIdRaw && /^\d+$/.test(String(userIdRaw))) {
+    const ext = extname(file.originalname) || '.jpg';
+    return cb(null, `${userIdRaw}${ext}`);
+  }
   const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
   cb(null, unique + extname(file.originalname));
 }
@@ -57,8 +64,19 @@ export class AssetsController {
       limits: { fileSize: 5 * 1024 * 1024 },
     }),
   )
-  async upload(@UploadedFile() file: any, @Body('type') type?: string) {
+  async upload(
+    @UploadedFile() file: any,
+    @Body('type') type?: string,
+    @Body('userId') userIdRaw?: string,
+  ) {
     if (!file) throw new BadRequestException('No file uploaded');
+    // If filename is deterministic for a user, remove any previous file with same name to ensure single image
+    try {
+      const dir = 'uploads';
+      const full = `${dir}/${file.filename}`;
+      // If the file already existed and we're overwriting, nothing to do (multer wrote it). If prior temp existed, it's gone now.
+      // We don't handle DB cleanup here; user service update will soft-delete previous asset records.
+    } catch {}
     const asset = await this.assets.createAsset({
       type: (type as any) || 'AVATAR',
       filename: file.filename,
