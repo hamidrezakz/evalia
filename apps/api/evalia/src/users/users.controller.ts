@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Param, Patch, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Delete,
+} from '@nestjs/common';
 import { Roles } from '../common/roles.decorator';
 import { UsersService } from './users.service';
 import { ListUsersDto } from './dto/list-users.dto';
@@ -24,5 +33,17 @@ export class UsersController {
   update(@Param('id') id: string, @Body() body: any) {
     // Accept partial fields; service enforces allowed updates
     return this.service.update(Number(id), body);
+  }
+
+  @Post()
+  @Roles('SUPER_ADMIN', 'ORG:OWNER')
+  create(@Body() body: any) {
+    return this.service.create(body);
+  }
+
+  @Delete(':id')
+  @Roles('SUPER_ADMIN', 'ORG:OWNER')
+  remove(@Param('id') id: string) {
+    return this.service.remove(Number(id));
   }
 }

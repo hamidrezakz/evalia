@@ -292,6 +292,7 @@ export default function SessionManager({
 }: {
   organizationId?: number;
 }) {
+  const isScoped = !!organizationId;
   const [selectedOrgId, setSelectedOrgId] = React.useState<number | null>(
     organizationId || null
   );
@@ -299,6 +300,9 @@ export default function SessionManager({
     () => setSelectedOrgId(organizationId || null),
     [organizationId]
   );
+
+  // Fetch scoped org name when in scoped mode to display it instead of combobox
+  const scopedOrgQ = useOrganization(isScoped ? organizationId! : null);
 
   const [open, setOpen] = React.useState(false);
   const [editingId, setEditingId] = React.useState<number | null>(null);
@@ -381,16 +385,18 @@ export default function SessionManager({
                 مدیریت، جستجو و فیلتر جلسات سنجش
               </PanelDescription>
             </div>
-            <PanelAction className="w-full sm:w-auto">
-              <Button
-                size="sm"
-                className="h-9 px-3 w-full sm:w-auto"
-                onClick={handleCreate}>
-                <Plus className="h-4 w-4 ms-1" />
-                <span className="hidden sm:inline">افزودن جلسه</span>
-                <span className="sm:hidden">افزودن</span>
-              </Button>
-            </PanelAction>
+            {!isScoped && (
+              <PanelAction className="w-full sm:w-auto">
+                <Button
+                  size="sm"
+                  className="h-9 px-3 w-full sm:w-auto"
+                  onClick={handleCreate}>
+                  <Plus className="h-4 w-4 ms-1" />
+                  <span className="hidden sm:inline">افزودن جلسه</span>
+                  <span className="sm:hidden">افزودن</span>
+                </Button>
+              </PanelAction>
+            )}
           </div>
           {/* Row 2: Mobile toolbar toggle + count + clear filters */}
           <div className="flex items-center justify-between w-full gap-2">
@@ -442,14 +448,24 @@ export default function SessionManager({
               />
             </div>
             <div className="flex items-center h-9">
-              <OrganizationCombobox
-                value={selectedOrgId}
-                onChange={(id) => setSelectedOrgId(id)}
-                placeholder={
-                  userOrgsQ.isLoading ? "در حال بارگذاری..." : "انتخاب سازمان"
-                }
-                className="w-full h-9"
-              />
+              {isScoped ? (
+                <div className="inline-flex items-center gap-2 text-xs px-3 py-1.5 rounded-md border bg-muted/40 w-full">
+                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                  <span className="truncate">
+                    {scopedOrgQ.data?.name ||
+                      (selectedOrgId ? `سازمان #${selectedOrgId}` : "سازمان")}
+                  </span>
+                </div>
+              ) : (
+                <OrganizationCombobox
+                  value={selectedOrgId}
+                  onChange={(id) => setSelectedOrgId(id)}
+                  placeholder={
+                    userOrgsQ.isLoading ? "در حال بارگذاری..." : "انتخاب سازمان"
+                  }
+                  className="w-full h-9"
+                />
+              )}
             </div>
             <div className="flex items-center h-9">
               <DropdownMenu dir="rtl">
@@ -560,9 +576,14 @@ export default function SessionManager({
                     className="text-xs">
                     ریست جستجو و فیلتر
                   </Button>
-                  <Button size="sm" onClick={handleCreate} className="text-xs">
-                    افزودن جلسه
-                  </Button>
+                  {!isScoped && (
+                    <Button
+                      size="sm"
+                      onClick={handleCreate}
+                      className="text-xs">
+                      افزودن جلسه
+                    </Button>
+                  )}
                 </div>
               </div>
             )}

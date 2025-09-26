@@ -223,7 +223,7 @@ const OrgPlanMap: EnumTranslationRecord<OrgPlan> = {
   ENTERPRISE: { fa: "سازمانی", en: "Enterprise" },
 };
 const OrgRoleMap: EnumTranslationRecord<OrgRole> = {
-  OWNER: { fa: "مالک", en: "Owner" },
+  OWNER: { fa: "مدیر عامل", en: "Owner" },
   MANAGER: { fa: "مدیر", en: "Manager" },
   MEMBER: { fa: "عضو", en: "Member" },
 };

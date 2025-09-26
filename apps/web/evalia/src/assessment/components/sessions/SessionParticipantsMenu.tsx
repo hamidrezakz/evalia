@@ -37,6 +37,8 @@ import {
   useUserSessionProgress,
 } from "@/assessment/api/templates-hooks";
 import { useRouter } from "next/navigation";
+import UserUpsertDialog from "@/users/components/UserUpsertDialog";
+import { useAddAssignment } from "@/assessment/api/templates-hooks";
 
 /**
  * SessionParticipantsMenu
@@ -340,6 +342,27 @@ export function SessionParticipantsMenu({
         return "";
     }
   }
+  // Create-and-assign flow
+  const [createOpen, setCreateOpen] = React.useState(false);
+  const addAssign = useAddAssignment();
+  async function handleCreateAndAssign(userId: number) {
+    try {
+      await addAssign.mutateAsync({
+        sessionId: session.id,
+        respondentUserId: userId,
+        perspective: "SELF",
+      } as any);
+      // Refresh lists
+      await qc.invalidateQueries({
+        queryKey: sessionsKeys.assignmentsDetailed(session.id),
+      });
+      await qc.refetchQueries({
+        queryKey: sessionsKeys.assignmentsDetailed(session.id),
+      });
+    } finally {
+      setCreateOpen(false);
+    }
+  }
   function ProgressPill({
     percent,
     status,
@@ -477,6 +500,18 @@ export function SessionParticipantsMenu({
             + جدید
           </Button>
         </DropdownMenuLabel>
+        <div className="px-2 pt-1 pb-0.5">
+          <Button
+            variant="secondary"
+            size="sm"
+            className="h-6 text-[11px] px-2"
+            onClick={(e) => {
+              e.preventDefault();
+              setCreateOpen(true);
+            }}>
+            افزودن کاربر
+          </Button>
+        </div>
         <DropdownMenuSeparator />
         {assignments.length === 0 && (
           <DropdownMenuItem
@@ -857,6 +892,13 @@ export function SessionParticipantsMenu({
           </AlertDialogContent>
         </AlertDialog>
       </DropdownMenuContent>
+      <UserUpsertDialog
+        mode="create"
+        restrictToActiveOrg={true}
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onSuccess={(id) => handleCreateAndAssign(id)}
+      />
     </DropdownMenu>
   );
 }

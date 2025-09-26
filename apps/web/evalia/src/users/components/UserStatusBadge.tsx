@@ -1,4 +1,6 @@
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { UserStatusEnum } from "@/lib/enums";
 
 export function UserStatusBadge({
   status,
@@ -16,14 +18,15 @@ export function UserStatusBadge({
       ? "bg-rose-500/10 text-rose-600 ring-1 ring-rose-500/20"
       : "bg-zinc-500/10 text-zinc-600 ring-1 ring-zinc-500/20";
   return (
-    <span
+    <Badge
+      variant="outline"
       className={cn(
-        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
+        "gap-1 px-2 py-0.5 text-xs font-medium border-0",
         color,
         className
       )}>
       <span className="size-1.5 rounded-full bg-current" />
-      {status}
-    </span>
+      {UserStatusEnum.t(status as any)}
+    </Badge>
   );
 }

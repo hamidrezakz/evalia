@@ -1,5 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
+import { PasswordService } from '../auth/password.service';
 import { ListUsersDto } from './dto/list-users.dto';
 import { Prisma } from '@prisma/client';
 import * as fs from 'fs';
@@ -8,7 +13,10 @@ import { extname } from 'path';
 
 @Injectable()
 export class UsersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private password: PasswordService,
+  ) {}
 
   async list(dto: ListUsersDto) {
     const page = dto.page || 1;
@@ -181,6 +189,37 @@ export class UsersService {
     if (body.fullName !== undefined)
       data.fullName = String(body.fullName || '');
     if (body.status !== undefined) data.status = body.status;
+    if (Array.isArray(body.globalRoles)) {
+      // accept string[]; coerce unique & non-empty; optional validation against known roles
+      const roles = (body.globalRoles as string[])
+        .map((r) => String(r).trim())
+        .filter(Boolean);
+      // Optional: whitelist known platform roles
+      const allowed = new Set([
+        'MEMBER',
+        'SUPER_ADMIN',
+        'ANALYSIS_MANAGER',
+        'FACILITATOR',
+        'SUPPORT',
+        'SALES',
+      ]);
+      const filtered = Array.from(new Set(roles)).filter((r) =>
+        allowed.has(r as any),
+      );
+      data.globalRoles = filtered;
+    }
+    if (body.phone !== undefined || body.phoneNormalized !== undefined) {
+      const norm = this.normalizePhone(
+        body.phone ?? body.phoneNormalized ?? '',
+      );
+      // ensure uniqueness
+      const exists = await this.prisma.user.findFirst({
+        where: { phoneNormalized: norm, NOT: { id } },
+        select: { id: true },
+      });
+      if (exists) throw new BadRequestException('Phone already in use');
+      data.phoneNormalized = norm;
+    }
     if (body.avatarAssetId !== undefined) {
       const n = Number(body.avatarAssetId);
       if (!Number.isInteger(n) || n <= 0)
@@ -283,5 +322,68 @@ export class UsersService {
     }
     const updated = await this.prisma.user.update({ where: { id }, data });
     return this.detail(updated.id);
+  }
+
+  private normalizePhone(raw: string): string {
+    const trimmed = (raw || '').trim();
+    if (!trimmed) throw new BadRequestException('Phone is required');
+    let digits = trimmed.replace(/[^0-9+]/g, '');
+    if (digits.startsWith('0') && digits.length === 11) {
+      digits = '+98' + digits.substring(1);
+    }
+    if (!digits.startsWith('+'))
+      throw new BadRequestException('Phone must start with + or 0');
+    if (digits.length < 10) throw new BadRequestException('Invalid phone');
+    return digits;
+  }
+
+  async create(body: any) {
+    const phoneNormalized = this.normalizePhone(
+      body.phone || body.phoneNormalized || '',
+    );
+    const exists = await this.prisma.user.findFirst({
+      where: { phoneNormalized },
+    });
+    if (exists) throw new BadRequestException('User already exists');
+    const passwordHash = body.password
+      ? await this.password.hash(String(body.password))
+      : null;
+    const status = body.status || 'INVITED';
+    const fullName = body.fullName ? String(body.fullName) : '';
+    const user = await this.prisma.user.create({
+      data: {
+        phoneNormalized,
+        fullName,
+        firstName: '',
+        lastName: '',
+        status,
+        passwordHash,
+      },
+    });
+    return this.detail(user.id);
+  }
+
+  async remove(id: number) {
+    // Soft delete user and cascade-soft-delete related memberships/teams where applicable
+    const exists = await this.prisma.user.findFirst({
+      where: { id, deletedAt: null },
+      select: { id: true },
+    });
+    if (!exists) throw new NotFoundException('User not found');
+    await this.prisma.$transaction(async (tx) => {
+      await tx.organizationMembership.updateMany({
+        where: { userId: id, deletedAt: null },
+        data: { deletedAt: new Date() },
+      } as any);
+      await tx.teamMembership.updateMany({
+        where: { userId: id, deletedAt: null },
+        data: { deletedAt: new Date() },
+      } as any);
+      await tx.user.update({
+        where: { id },
+        data: { deletedAt: new Date(), status: 'DELETED' as any },
+      });
+    });
+    return { success: true };
   }
 }

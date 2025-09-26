@@ -363,7 +363,7 @@ export function MembersDropdown({ orgId, count }: MembersDropdownProps) {
           {!membershipLoading &&
           !membershipFetching &&
           membershipList?.length ? (
-            <ScrollArea className="max-h-60">
+            <ScrollArea className="max-h-80 overflow-auto">
               <div className="p-1 space-y-0.5">
                 {membershipList.map((m: any) => (
                   <MemberRow

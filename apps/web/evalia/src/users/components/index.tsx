@@ -1,8 +1,8 @@
 import * as React from "react";
 export { UsersList } from "./UsersList";
 export { UsersTable } from "./UsersTable";
-export { UserDetailSheet } from "./UserDetailSheet";
 export { UserStatusBadge } from "./UserStatusBadge";
+export { default as UserUpsertDialog } from "./UserUpsertDialog";
 export { UsersRowActions } from "./UsersRowActions";
 
 // Optional demo wrapper for quick embedding

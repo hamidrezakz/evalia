@@ -1,4 +1,3 @@
-import { z } from "zod";
 import { apiRequest } from "@/lib/api.client";
 import { usersKeys } from "./users-query-keys"; // authoritative keys (moved out for consistency)
 import {
@@ -11,6 +10,7 @@ import {
   type UserListItem,
   type UserDetail,
 } from "../types/users.types";
+import { z } from "zod";
 
 /**
  * High-level contract:
@@ -63,7 +63,6 @@ export async function listUsers(
   }
   return validated.data;
 }
-
 /**
  * Fetch detail for a single user by numeric id.
  */
@@ -80,6 +79,75 @@ export async function getUser(id: number): Promise<UserDetail> {
     );
   }
   return validated.data;
+}
+
+/**
+ * Create a new user. Server should default status/password if omitted, but we also set sensible defaults here.
+ */
+const createUserBodySchema = z.object({
+  fullName: z.string().optional(),
+  email: z.string().email().optional(),
+  phone: z.string().optional(),
+  password: z.string().optional(),
+  status: z.string().optional(),
+});
+export type CreateUserInput = z.infer<typeof createUserBodySchema>;
+export async function createUser(input: CreateUserInput): Promise<UserDetail> {
+  const safe: CreateUserInput = {
+    status: input.status ?? "INVITED",
+    password: input.password ?? "123456",
+    fullName: input.fullName,
+    email: input.email,
+    phone: input.phone,
+  };
+  const res = await apiRequest<UserDetail, typeof createUserBodySchema>(
+    "/users",
+    createUserBodySchema,
+    detailUserResponseSchema,
+    { method: "POST", body: safe as any }
+  );
+  return res.data as unknown as UserDetail;
+}
+
+/**
+ * Update a user (e.g., change status). Returns updated user detail.
+ */
+const updateUserBodySchema = z.object({
+  status: z.string().optional(),
+  fullName: z.string().optional(),
+  email: z.string().email().optional(),
+  phone: z.string().optional(),
+  globalRoles: z.array(z.string()).optional(),
+});
+export async function updateUser(
+  id: number,
+  data: Partial<{
+    status: string;
+    fullName: string;
+    email: string;
+    phone: string;
+    globalRoles: string[];
+  }>
+): Promise<UserDetail> {
+  if (!Number.isInteger(id) || id <= 0)
+    throw new Error("User id must be a positive integer");
+  const res = await apiRequest<UserDetail, typeof updateUserBodySchema>(
+    `/users/${id}`,
+    updateUserBodySchema,
+    detailUserResponseSchema,
+    { method: "PATCH", body: data as any }
+  );
+  return res.data as unknown as UserDetail;
+}
+
+/**
+ * Delete a user by id.
+ */
+export async function deleteUser(id: number): Promise<{ id: number }> {
+  if (!Number.isInteger(id) || id <= 0)
+    throw new Error("User id must be a positive integer");
+  await apiRequest(`/users/${id}`, null, null, { method: "DELETE" });
+  return { id };
 }
 
 /**
