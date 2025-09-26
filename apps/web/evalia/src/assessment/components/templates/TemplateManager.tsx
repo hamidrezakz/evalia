@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import {
   Plus,
@@ -67,6 +68,7 @@ export type TemplateManagerProps = {
 };
 
 export default function TemplateManager({ onSelect }: TemplateManagerProps) {
+  const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Template | null>(null);
   const [dialogOpen, setDialogOpen] = useState<
@@ -97,10 +99,22 @@ export default function TemplateManager({ onSelect }: TemplateManagerProps) {
   const onSubmit = handleSubmit(async (vals) => {
     if (!dialogOpen) return;
     if (dialogOpen.mode === "create") {
-      await createMut.mutateAsync({
+      const created = await createMut.mutateAsync({
         name: vals.name,
         description: vals.description || undefined,
       });
+      // Optimistically merge into current list cache (best-effort)
+      try {
+        qc.setQueriesData({ queryKey: ["templates", "list"] }, (old: any) => {
+          if (!old || !Array.isArray(old?.data)) return old;
+          // avoid duplicates
+          if (old.data.some((t: Template) => t.id === created.id)) return old;
+          return { ...old, data: [created, ...old.data] };
+        });
+      } catch {}
+      // Auto-select the newly created template so sections panel updates immediately
+      setSelected(created);
+      onSelect?.(created);
     } else {
       await updateMut.mutateAsync({
         id: dialogOpen.tpl.id,
@@ -243,10 +257,38 @@ export default function TemplateManager({ onSelect }: TemplateManagerProps) {
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           onClick={() =>
-                            createMut.mutate({
-                              name: `${tpl.name} - کپی`,
-                              description: tpl.description ?? undefined,
-                            })
+                            createMut.mutate(
+                              {
+                                name: `${tpl.name} - کپی`,
+                                description: tpl.description ?? undefined,
+                              },
+                              {
+                                onSuccess: (created) => {
+                                  // Merge into list cache and select the clone
+                                  try {
+                                    qc.setQueriesData(
+                                      { queryKey: ["templates", "list"] },
+                                      (old: any) => {
+                                        if (!old || !Array.isArray(old?.data))
+                                          return old;
+                                        if (
+                                          old.data.some(
+                                            (t: Template) => t.id === created.id
+                                          )
+                                        )
+                                          return old;
+                                        return {
+                                          ...old,
+                                          data: [created, ...old.data],
+                                        };
+                                      }
+                                    );
+                                  } catch {}
+                                  setSelected(created);
+                                  onSelect?.(created);
+                                },
+                              }
+                            )
                           }>
                           <Copy className="h-4 w-4" /> کپی از قالب
                         </DropdownMenuItem>

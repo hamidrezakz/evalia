@@ -40,7 +40,15 @@ import { QuestionSingleChoice } from "./components/QuestionSingleChoice";
 import { QuestionMultiChoice } from "./components/QuestionMultiChoice";
 import { QuestionScale } from "./components/QuestionScale";
 import { ProgressCircle } from "./components/ProgressCircle";
-import { AlertTriangle } from "lucide-react";
+import {
+  AlertTriangle,
+  Layers,
+  Sparkles,
+  Bookmark,
+  Puzzle,
+  ListChecks,
+  Save,
+} from "lucide-react";
 import { Combobox } from "@/components/ui/combobox";
 import { useUser, useUsers } from "@/users/api/users-hooks";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -762,149 +770,274 @@ export default function TakeAssessmentPage() {
         <div className="text-sm text-muted-foreground">داده‌ای یافت نشد.</div>
       ) : (
         <div className="max-w-2xl">
-          {data.sections.map((sec: any) => (
-            <section key={sec.id} className="space-y-4">
-              <h2 className="text-lg font-semibold">{sec.title}</h2>
-              <div className="space-y-8">
-                {sec.questions.map((q: any) => {
-                  const qObj = q.question as any;
-                  const linkId = q.templateQuestionId;
-                  const type = qObj?.type as string;
-                  const text = qObj?.text as string;
-                  const direct = Array.isArray(qObj?.options)
-                    ? qObj.options
-                    : [];
-                  const fromSet = Array.isArray(qObj?.optionSet?.options)
-                    ? qObj.optionSet.options
-                    : [];
-                  const options = (direct.length ? direct : fromSet).map(
-                    (o: any) => ({
-                      id: o.id,
-                      value: String(o.value),
-                      label: String(o.label),
-                    })
-                  );
-                  const current = answers[linkId];
-                  const saved = serverAnswers[linkId];
-                  const pending = current && !answersEqual(current, saved);
-                  const hasSaved = !!saved && !pending;
-                  const notAnswered = !current && !saved;
-                  return (
-                    <div
-                      key={linkId}
-                      ref={(el) => {
-                        questionRefs.current[linkId] = el;
-                      }}
-                      className="scroll-mt-[-170px]">
-                      <div className="mb-2">
-                        <span className="font-medium">
-                          {qIndexMap[linkId]}. {text}
-                        </span>
-                        {q.required ? (
-                          <span className="text-amber-600 text-xs mr-2">
-                            (اجباری)
+          {data.sections.map((sec: any, si: number) => {
+            const questions: any[] = Array.isArray(sec?.questions)
+              ? (sec.questions as any[])
+              : [];
+            if (!questions.length) return null; // Skip empty sections (no title, no header)
+            // Order customized per request:
+            // 1st section: Blue (Sky) with Layers icon (more relevant)
+            // 2nd section: Red (Rose) with Bookmark icon
+            // Others: keep prior scheme
+            const icons = [
+              Layers,
+              Bookmark,
+              Puzzle,
+              ListChecks,
+              Sparkles,
+            ] as const;
+            const Icon = icons[si % icons.length];
+            const gradient = [
+              "from-sky-500 to-cyan-500", // 1st: Blue
+              "from-rose-500 to-pink-500", // 2nd: Red
+              "from-violet-500 to-indigo-500",
+              "from-emerald-500 to-lime-500",
+              "from-amber-500 to-orange-500",
+            ][si % 5];
+            const iconColor = [
+              "text-sky-500", // 1st: Blue
+              "text-rose-500", // 2nd: Red
+              "text-violet-500",
+              "text-emerald-500",
+              "text-amber-500",
+            ][si % 5];
+            return (
+              <section key={sec.id} className="space-y-4">
+                {/* Fancy, distinguishable section header with subtle motion */}
+                <div className="relative mt-6 rounded-xl border border-border/60 bg-muted/20 pr-3 pl-2 py-2 overflow-hidden group">
+                  {/* Accent bar on the right (RTL) with gentle pulse */}
+                  <div
+                    className={cn(
+                      "absolute right-0 top-0 h-full w-1.5 bg-gradient-to-b animate-pulse opacity-80",
+                      gradient
+                    )}
+                  />
+                  {/* Title row */}
+                  <div className="relative z-10 flex items-center gap-2 pr-3">
+                    <span
+                      className={cn(
+                        "inline-flex items-center justify-center rounded-md bg-background/70 border border-border/50 size-6"
+                      )}>
+                      <Icon className={cn("size-4", iconColor)} />
+                    </span>
+                    <h2 className="text-lg sm:text-xl font-semibold tracking-tight">
+                      {sec.title}
+                    </h2>
+                  </div>
+                  {/* Decorative large icon in background for a subtle motion effect */}
+                  <Icon
+                    className={cn(
+                      "absolute -left-6 -bottom-6 size-24 opacity-10 transition-transform duration-300 group-hover:scale-105",
+                      iconColor
+                    )}
+                  />
+                </div>
+                <div className="space-y-8">
+                  {questions.map((q: any) => {
+                    const qObj = q.question as any;
+                    const linkId = q.templateQuestionId;
+                    const type = qObj?.type as string;
+                    const text = qObj?.text as string;
+                    const direct = Array.isArray(qObj?.options)
+                      ? qObj.options
+                      : [];
+                    const fromSet = Array.isArray(qObj?.optionSet?.options)
+                      ? qObj.optionSet.options
+                      : [];
+                    const options = (direct.length ? direct : fromSet).map(
+                      (o: any) => ({
+                        id: o.id,
+                        value: String(o.value),
+                        label: String(o.label),
+                      })
+                    );
+                    // For SCALE questions, prefer explicit numeric metadata (minScale/maxScale, etc.)
+                    // to build a continuous range. If not present, derive from existing options (values or labels),
+                    // otherwise fallback to [1..5]. This ensures cases like 1..16 render correctly even when
+                    // optionSet provides only descriptive buckets.
+                    let scaleOptions = options;
+                    if ((qObj?.type as string) === "SCALE") {
+                      const minMetaRaw =
+                        (qObj as any)?.minScale ??
+                        (qObj as any)?.min ??
+                        (qObj as any)?.minValue ??
+                        (qObj as any)?.scaleMin ??
+                        (qObj as any)?.start ??
+                        (qObj as any)?.lower ??
+                        (qObj as any)?.lowerBound;
+                      const maxMetaRaw =
+                        (qObj as any)?.maxScale ??
+                        (qObj as any)?.max ??
+                        (qObj as any)?.maxValue ??
+                        (qObj as any)?.scaleMax ??
+                        (qObj as any)?.end ??
+                        (qObj as any)?.upper ??
+                        (qObj as any)?.upperBound;
+                      const minMeta = Number(minMetaRaw);
+                      const maxMeta = Number(maxMetaRaw);
+                      if (
+                        !Number.isNaN(minMeta) &&
+                        !Number.isNaN(maxMeta) &&
+                        maxMeta >= minMeta
+                      ) {
+                        const len = Math.min(1000, maxMeta - minMeta + 1);
+                        scaleOptions = Array.from({ length: len }, (_, i) => {
+                          const n = minMeta + i;
+                          return { value: String(n), label: String(n) };
+                        });
+                      } else if (options.length) {
+                        const numericFromValues = options
+                          .map((o: any) => Number(o.value))
+                          .filter((n: number) => !Number.isNaN(n));
+                        const numericFromLabels = options
+                          .map((o: any) => Number(o.label))
+                          .filter((n: number) => !Number.isNaN(n));
+                        const nums = numericFromValues.length
+                          ? numericFromValues
+                          : numericFromLabels;
+                        if (nums.length) {
+                          const minOpt = Math.min(...nums);
+                          const maxOpt = Math.max(...nums);
+                          const len = Math.min(1000, maxOpt - minOpt + 1);
+                          scaleOptions = Array.from({ length: len }, (_, i) => {
+                            const n = minOpt + i;
+                            return { value: String(n), label: String(n) };
+                          });
+                        } else {
+                          // Could not infer numbers from options; show 1..5 as last resort
+                          scaleOptions = [1, 2, 3, 4, 5].map((n) => ({
+                            value: String(n),
+                            label: String(n),
+                          }));
+                        }
+                      } else {
+                        // No metadata and no options
+                        scaleOptions = [1, 2, 3, 4, 5].map((n) => ({
+                          value: String(n),
+                          label: String(n),
+                        }));
+                      }
+                    }
+                    const current = answers[linkId];
+                    const saved = serverAnswers[linkId];
+                    const pending = current && !answersEqual(current, saved);
+                    const hasSaved = !!saved && !pending;
+                    const notAnswered = !current && !saved;
+                    return (
+                      <div
+                        key={linkId}
+                        ref={(el) => {
+                          questionRefs.current[linkId] = el;
+                        }}
+                        className="scroll-mt-[-170px]">
+                        <div className="mb-2">
+                          <span className="font-medium">
+                            {qIndexMap[linkId]}. {text}
                           </span>
-                        ) : null}
-                        <span className="mx-2 text-xs">
-                          {pending ? (
-                            <span className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-sky-700 dark:border-sky-600/60 dark:bg-sky-950/30 dark:text-sky-300">
-                              منتظر ذخیره
-                            </span>
-                          ) : hasSaved ? (
-                            <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-emerald-700 dark:border-emerald-600/60 dark:bg-emerald-950/30 dark:text-emerald-300">
-                              پاسخ داده شده
-                            </span>
-                          ) : notAnswered ? (
-                            <span className="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-muted-foreground dark:border-gray-600/60 dark:bg-gray-900 dark:text-gray-400">
-                              پاسخ داده نشده
+                          {q.required ? (
+                            <span className="text-amber-600 text-xs mr-2">
+                              (اجباری)
                             </span>
                           ) : null}
-                        </span>
-                      </div>
+                          <span className="mx-2 text-xs">
+                            {pending ? (
+                              <span className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-sky-700 dark:border-sky-600/60 dark:bg-sky-950/30 dark:text-sky-300">
+                                منتظر ذخیره
+                              </span>
+                            ) : hasSaved ? (
+                              <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-emerald-700 dark:border-emerald-600/60 dark:bg-emerald-950/30 dark:text-emerald-300">
+                                پاسخ داده شده
+                              </span>
+                            ) : notAnswered ? (
+                              <span className="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-muted-foreground dark:border-gray-600/60 dark:bg-gray-900 dark:text-gray-400">
+                                پاسخ داده نشده
+                              </span>
+                            ) : null}
+                          </span>
+                        </div>
 
-                      {/* Render by type via components */}
-                      {type === "TEXT" && (
-                        <QuestionText
-                          id={linkId}
-                          value={current as AnswerValue | undefined}
-                          readOnly={readOnly}
-                          onChange={(v: any) =>
-                            !readOnly && setAnswer(linkId, v)
-                          }
-                          onSubmitNext={() =>
-                            !readOnly &&
-                            setAnswer(
-                              linkId,
-                              (current as any) ?? { kind: "TEXT", text: "" },
-                              { autoScroll: true }
-                            )
-                          }
-                        />
-                      )}
-                      {type === "BOOLEAN" && (
-                        <QuestionBoolean
-                          name={`q-${linkId}`}
-                          value={current as AnswerValue | undefined}
-                          readOnly={readOnly}
-                          onChange={(v: any) =>
-                            !readOnly &&
-                            setAnswer(linkId, v, { autoScroll: true })
-                          }
-                        />
-                      )}
-                      {type === "SINGLE_CHOICE" && (
-                        <QuestionSingleChoice
-                          name={`q-${linkId}`}
-                          options={options}
-                          value={current as AnswerValue | undefined}
-                          readOnly={readOnly}
-                          onChange={(v: any) =>
-                            !readOnly &&
-                            setAnswer(linkId, v, { autoScroll: true })
-                          }
-                        />
-                      )}
-                      {type === "MULTI_CHOICE" && (
-                        <QuestionMultiChoice
-                          options={options}
-                          value={current as AnswerValue | undefined}
-                          readOnly={readOnly}
-                          onChange={(v: any) =>
-                            !readOnly && setAnswer(linkId, v)
-                          }
-                        />
-                      )}
-                      {type === "SCALE" && (
-                        <QuestionScale
-                          name={`q-${linkId}`}
-                          options={
-                            options.length
-                              ? options
-                              : [1, 2, 3, 4, 5].map((n) => ({
-                                  value: String(n),
-                                  label: String(n),
-                                }))
-                          }
-                          value={current as AnswerValue | undefined}
-                          readOnly={readOnly}
-                          onChange={(v: any) =>
-                            !readOnly &&
-                            setAnswer(linkId, v, { autoScroll: true })
-                          }
-                        />
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-          ))}
+                        {/* Render by type via components */}
+                        {type === "TEXT" && (
+                          <QuestionText
+                            id={linkId}
+                            value={current as AnswerValue | undefined}
+                            readOnly={readOnly}
+                            onChange={(v: any) =>
+                              !readOnly && setAnswer(linkId, v)
+                            }
+                            onSubmitNext={() =>
+                              !readOnly &&
+                              setAnswer(
+                                linkId,
+                                (current as any) ?? { kind: "TEXT", text: "" },
+                                { autoScroll: true }
+                              )
+                            }
+                          />
+                        )}
+                        {type === "BOOLEAN" && (
+                          <QuestionBoolean
+                            name={`q-${linkId}`}
+                            value={current as AnswerValue | undefined}
+                            readOnly={readOnly}
+                            onChange={(v: any) =>
+                              !readOnly &&
+                              setAnswer(linkId, v, { autoScroll: true })
+                            }
+                          />
+                        )}
+                        {type === "SINGLE_CHOICE" && (
+                          <QuestionSingleChoice
+                            name={`q-${linkId}`}
+                            options={options}
+                            value={current as AnswerValue | undefined}
+                            readOnly={readOnly}
+                            onChange={(v: any) =>
+                              !readOnly &&
+                              setAnswer(linkId, v, { autoScroll: true })
+                            }
+                          />
+                        )}
+                        {type === "MULTI_CHOICE" && (
+                          <QuestionMultiChoice
+                            options={options}
+                            value={current as AnswerValue | undefined}
+                            readOnly={readOnly}
+                            onChange={(v: any) =>
+                              !readOnly && setAnswer(linkId, v)
+                            }
+                          />
+                        )}
+                        {type === "SCALE" && (
+                          <QuestionScale
+                            name={`q-${linkId}`}
+                            options={scaleOptions}
+                            value={current as AnswerValue | undefined}
+                            readOnly={readOnly}
+                            onChange={(v: any) => {
+                              if (!readOnly) setAnswer(linkId, v);
+                            }}
+                            onCommit={(v: any) => {
+                              if (!readOnly)
+                                setAnswer(linkId, v, { autoScroll: true });
+                            }}
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            );
+          })}
 
           {!readOnly && (
             <div className="mt-8 flex items-center gap-3">
               {error && <span className="text-rose-600 text-sm">{error}</span>}
               <Button
                 onClick={handleSaveAll}
+                isLoading={saving}
+                icon={<Save className="size-4" />}
                 disabled={
                   saving || (data ? data.session.state !== "IN_PROGRESS" : true)
                 }>
