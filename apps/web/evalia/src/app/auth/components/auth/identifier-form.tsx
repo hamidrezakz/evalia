@@ -1,7 +1,7 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Phone } from "lucide-react";
+import { Phone, ArrowLeft } from "lucide-react";
 
 interface Props {
   phone: string;
@@ -28,6 +28,9 @@ export function IdentifierForm({ phone, onChange, disabled, loading }: Props) {
       </div>
       <Button
         disabled={disabled || loading || !phone || phone.length < 11}
+        isLoading={!!loading}
+        icon={<ArrowLeft className="size-4" />}
+        iconPosition="right"
         className="w-full"
         type="submit">
         {loading ? "در حال بررسی..." : "ادامه"}

@@ -1,8 +1,9 @@
 "use client";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useRef } from "react";
+import { Suspense, useEffect, useRef, useMemo } from "react";
 import {
   Card,
+  CardAction,
   CardContent,
   CardFooter,
   CardHeader,
@@ -15,7 +16,17 @@ import { useLoginMachine } from "./hooks/useLoginMachine";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { friendlyError } from "./api/error-map";
-import { User, Lock } from "lucide-react";
+import {
+  User,
+  Lock,
+  Command,
+  Phone,
+  ShieldCheck,
+  UserPlus,
+} from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
+import { LoadingDots } from "@/components/ui/loading-dots";
 
 function LoginPage() {
   const router = useRouter();
@@ -48,6 +59,48 @@ function LoginPage() {
     }
   }
 
+  // Dynamic action label/icon/styles based on current phase
+  const phaseMeta = useMemo(() => {
+    const base = {
+      label: "ورود | ثبت‌نام",
+      Icon: Command,
+      classes:
+        "border-slate-300 text-slate-700 bg-slate-50 dark:border-slate-600/60 dark:text-slate-300 dark:bg-slate-900/40",
+    } as { label: string; Icon: React.ComponentType<any>; classes: string };
+    switch (state.phase) {
+      case "IDENTIFIER":
+        return {
+          label: "شماره موبایل",
+          Icon: Phone,
+          classes:
+            "border-sky-300 text-sky-700 bg-sky-50 dark:border-sky-600/60 dark:text-sky-300 dark:bg-sky-950/30",
+        };
+      case "PASSWORD":
+        return {
+          label: "رمز عبور",
+          Icon: Lock,
+          classes:
+            "border-indigo-300 text-indigo-700 bg-indigo-50 dark:border-indigo-600/60 dark:text-indigo-300 dark:bg-indigo-950/30",
+        };
+      case "OTP":
+        return {
+          label: "کد تایید",
+          Icon: ShieldCheck,
+          classes:
+            "border-amber-300 text-amber-700 bg-amber-50 dark:border-amber-600/60 dark:text-amber-300 dark:bg-amber-950/30",
+        };
+      case "COMPLETE_REGISTRATION":
+        return {
+          label: "تکمیل ثبت‌نام",
+          Icon: UserPlus,
+          classes:
+            "border-emerald-300 text-emerald-700 bg-emerald-50 dark:border-emerald-600/60 dark:text-emerald-300 dark:bg-emerald-950/30",
+        };
+      default:
+        return base;
+    }
+  }, [state.phase]);
+
   return (
     <div className="flex items-center min-h-[100svh] max-h-[100svh] p-4 relative overflow-hidden">
       {/* Centered glowing light source */}
@@ -58,10 +111,37 @@ function LoginPage() {
       <div className="z-10 flex justify-center items-center w-full mt-[-8rem] sm:mt-[-8rem] md:mt-[-6rem] lg:mt-[-4rem] 2xl:mt-0">
         <form onSubmit={handleSubmit} noValidate aria-labelledby="login-title">
           <Card className="w-full max-w-sm transition-all py-8">
-            <CardHeader>
-              <CardTitle id="login-title" className="text-center">
-                ورود / ثبت‌نام
-              </CardTitle>
+            <CardHeader className="space-y-3 justify-between flex items-top">
+              <div className="flex items-center justify-center p-0 m-0 mt-[-0.8rem] gap-2">
+                <Avatar className="size-12 rounded-sm">
+                  <AvatarImage alt="DanPlay" />
+                  <AvatarFallback className="bg-primary/10 text-primary">
+                    <Command className="size-[18px]" />
+                  </AvatarFallback>
+                </Avatar>
+                <div className="text-start space-y-1">
+                  <div className="text-base font-bold leading-none">
+                    دآن‌پلی
+                  </div>
+                  <div className="text-[9px] text-muted-foreground leading-snug">
+                    پلتفرم ارزیابی و توسعه عملکرد تیم‌ها
+                  </div>
+                </div>
+              </div>
+              <CardAction
+                id="login-title"
+                className={cn(
+                  "text-end",
+                  "inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-medium",
+                  phaseMeta.classes
+                )}>
+                {state.loading ? (
+                  <LoadingDots className="scale-90" />
+                ) : (
+                  <phaseMeta.Icon className="size-3.5" />
+                )}
+                <span>{phaseMeta.label}</span>
+              </CardAction>
             </CardHeader>
             <CardContent className="space-y-4">
               {state.error && (
@@ -156,7 +236,7 @@ function LoginPage() {
               <div className="space-y-1">
                 <p>
                   با ورود یا ثبت‌نام در{" "}
-                  <span className="font-bold">ایوالیا</span>، شما تمامی{" "}
+                  <span className="font-bold">دآن‌پلی</span>، شما تمامی{" "}
                   <span className="font-semibold">شرایط استفاده</span> و{" "}
                   <span className="font-semibold">حریم خصوصی</span> را به طور
                   کامل می‌پذیرید.

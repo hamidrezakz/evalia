@@ -1,7 +1,14 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Phone, Lock, User } from "lucide-react";
+import {
+  Phone,
+  Lock,
+  User,
+  UserPlus,
+  KeyRound,
+  ArrowRight,
+} from "lucide-react";
 
 interface Props {
   phone: string;
@@ -66,15 +73,28 @@ export function RegisterForm({
       <div className="flex gap-2">
         <Button
           disabled={loading || password.length < 6}
+          isLoading={!!loading}
           className="flex-1"
-          type="submit">
+          type="submit"
+          icon={<UserPlus className="size-4" />}
+          iconPosition="right">
           ثبت‌نام
         </Button>
-        <Button variant="secondary" type="button" onClick={onOtp}>
+        <Button
+          variant="secondary"
+          type="button"
+          onClick={onOtp}
+          icon={<KeyRound className="size-4" />}
+          iconPosition="right">
           ورود با کد
         </Button>
       </div>
-      <Button variant="ghost" className="w-full" onClick={onBack}>
+      <Button
+        variant="ghost"
+        className="w-full"
+        onClick={onBack}
+        icon={<ArrowRight className="size-4" />}
+        iconPosition="right">
         برگشت
       </Button>
     </div>

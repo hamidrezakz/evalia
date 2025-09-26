@@ -57,8 +57,11 @@ export function OtpForm({
       <div className="flex gap-2">
         <Button
           disabled={loading || otp.length < 6}
+          isLoading={!!loading}
           className="flex-1"
-          type="submit">
+          type="submit"
+          icon={<Clock className="size-4" />}
+          iconPosition="right">
           تایید و ورود
         </Button>
         <Button
@@ -70,12 +73,10 @@ export function OtpForm({
             onResend();
             setSeconds(30);
           }}
-          className="flex items-center gap-1 min-w-[110px] justify-center text-[12px]">
+          icon={<RefreshCcw className="size-4" />}
+          className="min-w-[110px] text-[12px]">
           {canResend ? (
-            <>
-              <RefreshCcw className="size-4" />
-              ارسال مجدد
-            </>
+            <span>ارسال مجدد</span>
           ) : (
             <span className="tabular-nums mt-0.5">{seconds}s</span>
           )}
