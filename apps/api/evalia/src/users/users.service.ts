@@ -39,6 +39,10 @@ export class UsersService {
         some: { organizationId: dto.orgId, deletedAt: null },
       };
     }
+    if (dto.platformRoles && dto.platformRoles.length) {
+      // Filter users whose globalRoles has any of the requested roles
+      where.globalRoles = { hasSome: dto.platformRoles as any } as any;
+    }
     if (dto.teamName) {
       where.teams = {
         some: {
@@ -94,6 +98,7 @@ export class UsersService {
           status: true,
           globalRoles: true,
           createdAt: true,
+          avatarAsset: { select: { url: true } },
           memberships: {
             where: { deletedAt: null },
             select: { organizationId: true, roles: true },
@@ -116,6 +121,7 @@ export class UsersService {
         phone: u.phoneNormalized,
         status: u.status,
         globalRoles: u.globalRoles,
+        avatarUrl: u.avatarAsset?.url ?? null,
         organizations: u.memberships.map((m) => ({
           orgId: m.organizationId,
           roles: m.roles,

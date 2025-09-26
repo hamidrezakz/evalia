@@ -66,4 +66,12 @@ export class ListUsersDto {
   @IsOptional()
   @IsString()
   sort?: string;
+
+  // filter by platform/global roles (comma separated or array)
+  @IsOptional()
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.split(',').map((v) => v.trim()) : value,
+  )
+  @IsArray()
+  platformRoles?: string[];
 }

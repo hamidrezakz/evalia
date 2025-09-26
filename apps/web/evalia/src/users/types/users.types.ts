@@ -106,6 +106,14 @@ export const listUsersQuerySchema = z.object({
   q: z.string().optional(),
   orgId: z.union([z.string(), z.number()]).optional(),
   teamName: z.string().optional(),
+  platformRoles: z
+    .union([z.string(), z.array(z.string())])
+    .optional()
+    .transform((v) => {
+      if (!v) return undefined;
+      if (Array.isArray(v)) return v;
+      return v.split(",");
+    }),
   createdAtFrom: z.string().optional(),
   createdAtTo: z.string().optional(),
   sort: z.string().optional(),
@@ -133,6 +141,7 @@ export function buildUsersQuery(params: Partial<ListUsersQuery>): string {
     if (Array.isArray(v)) {
       if (!v.length) continue;
       if (k === "statuses") entries.push([k, v.join(",")]);
+      else if (k === "platformRoles") entries.push([k, v.join(",")]);
       else v.forEach((val) => entries.push([k, String(val)]));
     } else {
       entries.push([k, String(v)]);

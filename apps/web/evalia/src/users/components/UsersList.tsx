@@ -18,6 +18,13 @@ import Combobox from "@/components/ui/combobox";
 import { UserStatusEnum } from "@/lib/enums";
 import { useOrganizations } from "@/organizations/organization/context/queries";
 import { Label } from "@/components/ui/label";
+import { PlatformRoleEnum } from "@/lib/enums";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+} from "@/components/ui/dropdown-menu";
 
 export interface UsersListProps {
   orgId?: number; // reserve for org scoping if needed
@@ -38,6 +45,7 @@ export function UsersList({
   const [createOpen, setCreateOpen] = React.useState(false);
   const [statusFilter, setStatusFilter] = React.useState<string | null>(null);
   const [orgFilter, setOrgFilter] = React.useState<number | null>(null);
+  const [roleFilter, setRoleFilter] = React.useState<string[]>([]);
 
   const orgsQuery = useOrganizations(true);
   const orgItems = React.useMemo(
@@ -49,6 +57,7 @@ export function UsersList({
     q,
     status: (statusFilter as any) || undefined,
     orgId: orgFilter || undefined,
+    platformRoles: roleFilter.length ? roleFilter : undefined,
     page: 1,
     pageSize: 20,
   });
@@ -120,6 +129,48 @@ export function UsersList({
                   getKey={(it) => (it as any).id}
                   getLabel={(it) => (it as any).name}
                 />
+              </div>
+              {/* Platform roles filter */}
+              <div className="min-w-48">
+                <Label className="mb-1 hidden sm:block">نقش‌های پلتفرم</Label>
+                <DropdownMenu dir="rtl">
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full h-9 justify-between">
+                      <span className="text-sm">
+                        {roleFilter.length > 0
+                          ? `${roleFilter.length} نقش انتخاب شد`
+                          : "همه نقش‌ها"}
+                      </span>
+                      <span className="opacity-60">▾</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    className="min-w-56 p-1 text-[12px]">
+                    {PlatformRoleEnum.options().map((opt) => {
+                      const checked = roleFilter.includes(opt.value);
+                      return (
+                        <DropdownMenuCheckboxItem
+                          key={opt.value}
+                          checked={checked}
+                          onCheckedChange={(v) => {
+                            setRoleFilter((prev) => {
+                              const next = v
+                                ? Array.from(
+                                    new Set([...(prev || []), opt.value])
+                                  )
+                                : (prev || []).filter((x) => x !== opt.value);
+                              return next;
+                            });
+                          }}>
+                          {opt.label}
+                        </DropdownMenuCheckboxItem>
+                      );
+                    })}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
             {/* Add button */}
