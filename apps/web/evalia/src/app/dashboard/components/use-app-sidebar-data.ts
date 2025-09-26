@@ -12,7 +12,7 @@ import type {
   SidebarProjectItem,
 } from "./sidebar-data/types";
 import { buildNavMain, buildProjects } from "./sidebar-data/builders";
-import { OrgPlanEnum, OrgRoleEnum } from "@/lib/enums";
+import { OrgPlanEnum, OrgRoleEnum, OrganizationStatusEnum } from "@/lib/enums";
 
 export function useAppSidebarData(): AppSidebarData {
   // Organizations
@@ -26,6 +26,7 @@ export function useAppSidebarData(): AppSidebarData {
     const o = org as Record<string, unknown>;
     const membership = o.membership as Record<string, unknown> | undefined;
     const plan = OrgPlanEnum.coerce(o.plan);
+    const status = OrganizationStatusEnum.coerce(o.status);
     const rawRoles = Array.isArray(membership?.roles)
       ? (membership?.roles as unknown[])
       : [];
@@ -38,6 +39,7 @@ export function useAppSidebarData(): AppSidebarData {
       id: o.id ? String(o.id) : "",
       name: o.name ? String(o.name) : "",
       slug: o.slug ? String(o.slug) : "",
+      status: status || undefined,
       plan: plan || undefined,
       planLabel: plan ? OrgPlanEnum.t(plan) : undefined,
       logo: typeof o.logo === "string" ? (o.logo as string) : undefined,

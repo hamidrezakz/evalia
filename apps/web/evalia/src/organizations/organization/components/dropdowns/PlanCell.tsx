@@ -12,7 +12,8 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { Loader2, ChevronDown } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { OrgPlanBadge } from "@/components/status-badges";
+// Button removed; trigger will be a badge with chevron
 
 interface PlanCellProps {
   orgId: number;
@@ -32,22 +33,19 @@ export function PlanCell({ orgId, plan }: PlanCellProps) {
       className="relative">
       <DropdownMenu open={open} onOpenChange={setOpen} dir="rtl">
         <DropdownMenuTrigger asChild>
-          <Button
+          <button
             type="button"
-            variant="outline"
-            size="sm"
             className={cn(
-              "h-6 pl-2 pr-1 gap-1 text-[11px] font-medium bg-muted/60 hover:bg-muted/80 border-muted-foreground/20 inline-flex items-center",
-              open && "ring-1 ring-primary/30"
+              "inline-flex items-center gap-1 focus:outline-none",
             )}>
-            <span>{OrgPlanEnum.t(localPlan as any) || localPlan}</span>
+            <OrgPlanBadge plan={localPlan as any} size="xs" tone="soft" />
             <ChevronDown
               className={cn(
                 "h-3.5 w-3.5 text-muted-foreground/70 transition-transform duration-200",
                 open && "rotate-180"
               )}
             />
-          </Button>
+          </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
           align="center"
@@ -77,7 +75,11 @@ export function PlanCell({ orgId, plan }: PlanCellProps) {
                     onError: () => setLocalPlan(plan),
                   });
                 }}>
-                <span>{opt.label}</span>
+                <OrgPlanBadge
+                  plan={opt.value as any}
+                  tone={active ? "solid" : "soft"}
+                  size="xs"
+                />
                 {pending ? (
                   <Loader2 className="h-3 w-3 animate-spin" />
                 ) : active ? (

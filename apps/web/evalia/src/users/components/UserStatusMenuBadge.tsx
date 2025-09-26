@@ -5,12 +5,13 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
-import { UserStatusBadge } from "./UserStatusBadge";
+import { UserStatusBadge } from "@/components/status-badges";
 import { UserStatusEnum } from "@/lib/enums";
 import { updateUser } from "@/users/api/users.api";
 import { useUpdateUser } from "@/users/api/users-hooks";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Check, CircleCheck } from "lucide-react";
 
 export function UserStatusMenuBadge({
   userId,
@@ -55,7 +56,7 @@ export function UserStatusMenuBadge({
           onMouseEnter={onMouseEnter}
           onMouseLeave={onMouseLeave}
           onClick={(e) => e.stopPropagation()}>
-          <UserStatusBadge status={pending || status} />
+          <UserStatusBadge status={(pending || status) as any} />
           <ChevronDown
             className={
               "size-4 text-muted-foreground transition-transform duration-200 " +
@@ -69,17 +70,28 @@ export function UserStatusMenuBadge({
         className="min-w-48"
         onMouseEnter={onMouseEnter}
         onMouseLeave={onMouseLeave}>
-        {UserStatusEnum.options().map((opt) => (
-          <DropdownMenuItem
-            key={opt.value}
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelect(opt.value);
-            }}
-            className="text-[12px]">
-            {opt.label}
-          </DropdownMenuItem>
-        ))}
+        <DropdownMenuLabel className="text-[11px] text-muted-foreground flex items-center gap-2">
+          <CircleCheck className="size-3.5" /> وضعیت کاربر
+        </DropdownMenuLabel>
+        {UserStatusEnum.options().map((opt) => {
+          const isActive = (pending || status) === opt.value;
+          return (
+            <DropdownMenuItem
+              key={opt.value}
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelect(opt.value);
+              }}
+              className="text-[12px] flex items-center justify-between gap-2">
+              <UserStatusBadge
+                status={opt.value as any}
+                tone={isActive ? "solid" : "soft"}
+                size="xs"
+              />
+              {isActive && <Check className="size-4 text-primary" />}
+            </DropdownMenuItem>
+          );
+        })}
       </DropdownMenuContent>
     </DropdownMenu>
   );

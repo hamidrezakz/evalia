@@ -15,6 +15,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useSidebar } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
+import {
+  OrganizationStatusBadge,
+  PlatformRoleBadge,
+  OrgRoleBadge,
+  OrgPlanBadge,
+} from "@/components/status-badges";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
   ChevronDown,
@@ -36,19 +42,7 @@ export interface OrgSwitcherProps {
   className?: string;
 }
 
-const planColor = (plan?: import("@/lib/enums").OrgPlan | null) => {
-  switch (plan) {
-    case "ENTERPRISE":
-      return "bg-amber-100 text-amber-800 dark:bg-amber-400/10 dark:text-amber-300";
-    case "PRO":
-      return "bg-sky-100 text-sky-700 dark:bg-sky-400/10 dark:text-sky-300";
-    case "BUSINESS":
-      return "bg-emerald-100 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300";
-    case "FREE":
-    default:
-      return "bg-muted text-muted-foreground";
-  }
-};
+// plan badge is handled by OrgPlanBadge
 
 export const OrgSwitcher = memo(function OrgSwitcher({
   accounts,
@@ -104,20 +98,28 @@ export const OrgSwitcher = memo(function OrgSwitcher({
             )}
           </div>
           <div className="grid flex-1 text-right leading-tight">
-            <span className="truncate font-semibold text-sm">
+            <span className="truncate font-semibold text-sm flex items-center gap-1">
               {activeOrg?.name ||
                 (accounts.length === 0 ? "بدون سازمان" : "انتخاب سازمان")}
+              {activeOrg?.status && (
+                <OrganizationStatusBadge
+                  status={activeOrg.status as any}
+                  tone="soft"
+                  size="xs"
+                />
+              )}
             </span>
             <span className="truncate text-[0.60rem] text-muted-foreground flex items-center gap-1 justify-start">
               {activeOrg?.plan ? (
-                <span
-                  className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[0.55rem] font-medium shadow-sm ${planColor(
-                    activeOrg.plan
-                  )}`}>
+                <span className="inline-flex items-center gap-1">
                   {activeOrg.isPrimary && (
-                    <Star className="size-3 mb-0.5 fill-current" />
+                    <Star className="size-3 mb-0.5 text-amber-500" />
                   )}
-                  پلن {activeOrg.planLabel || activeOrg.plan}
+                  <OrgPlanBadge
+                    plan={activeOrg.plan as any}
+                    size="xs"
+                    tone="soft"
+                  />
                 </span>
               ) : accounts.length === 0 ? (
                 <span className="text-[0.55rem] text-muted-foreground">
@@ -165,6 +167,13 @@ export const OrgSwitcher = memo(function OrgSwitcher({
                   <div className="flex flex-col text-right leading-tight">
                     <span className="text-[12px] font-medium flex items-center gap-1">
                       {acc.name}
+                      {acc.status && (
+                        <OrganizationStatusBadge
+                          status={acc.status as any}
+                          tone="soft"
+                          size="xs"
+                        />
+                      )}
                       {acc.isPrimary && (
                         <Star
                           className="size-3 text-amber-500"
@@ -172,8 +181,16 @@ export const OrgSwitcher = memo(function OrgSwitcher({
                         />
                       )}
                     </span>
-                    <span className="text-[10px] text-muted-foreground">
-                      پلن {acc.planLabel || acc.plan || "Free"}
+                    <span className="text-[10px] text-muted-foreground inline-flex items-center gap-1">
+                      {acc.plan ? (
+                        <OrgPlanBadge
+                          plan={acc.plan as any}
+                          size="xs"
+                          tone="soft"
+                        />
+                      ) : (
+                        <span>بدون پلن</span>
+                      )}
                     </span>
                   </div>
                 </div>
@@ -195,14 +212,17 @@ export const OrgSwitcher = memo(function OrgSwitcher({
                     const active =
                       activeRoleSource === "platform" && activeRole === r;
                     return (
-                      <Badge
+                      <PlatformRoleBadge
                         key={r}
-                        variant={active ? "default" : "outline"}
-                        className={`cursor-pointer text-[0.64rem]`}
+                        role={r as any}
+                        active={active}
+                        size="xs"
+                        tone={active ? "solid" : "soft"}
+                        className="cursor-pointer"
+                        as="button"
                         onClick={() => setPlatformActiveRole(r)}
-                        aria-pressed={active}>
-                        {PlatformRoleEnum.t(r)}
-                      </Badge>
+                        aria-pressed={active}
+                      />
                     );
                   })}
                 </div>
@@ -218,16 +238,19 @@ export const OrgSwitcher = memo(function OrgSwitcher({
                     const active =
                       activeRoleSource === "organization" && activeRole === r;
                     return (
-                      <Badge
+                      <OrgRoleBadge
                         key={r}
-                        variant={active ? "default" : "outline"}
-                        className={`cursor-pointer text-[0.64rem]`}
+                        role={r as any}
+                        active={active}
+                        size="xs"
+                        tone={active ? "solid" : "soft"}
+                        className="cursor-pointer"
+                        as="button"
                         onClick={() =>
                           setOrganizationActiveRole(r, activeOrganizationId)
                         }
-                        aria-pressed={active}>
-                        {OrgRoleEnum.t(r)}
-                      </Badge>
+                        aria-pressed={active}
+                      />
                     );
                   })}
                 </div>

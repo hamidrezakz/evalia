@@ -31,6 +31,7 @@ export interface OrgAccount {
   id: string;
   name: string;
   slug: string;
+  status?: import("@/lib/enums").OrganizationStatus;
   plan?: import("@/lib/enums").OrgPlan;
   planLabel?: string; // localized label from enums
   logo?: string;

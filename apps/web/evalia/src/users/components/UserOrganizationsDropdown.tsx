@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Building2, Shield, ChevronDown } from "lucide-react";
+import { OrgRoleBadge } from "@/components/status-badges";
 import { OrgRoleEnum } from "@/lib/enums";
 import { useOrganization } from "@/organizations/organization/api/organization-hooks";
 import { cn } from "@/lib/utils";
@@ -79,11 +80,12 @@ export function UserOrganizationsDropdown({
                 {o.roles?.length ? (
                   <span className="flex flex-wrap gap-1 mt-1">
                     {o.roles.map((r, idx) => (
-                      <span
+                      <OrgRoleBadge
                         key={idx}
-                        className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-[11px]">
-                        <Shield className="h-3 w-3" /> {OrgRoleEnum.t(r as any)}
-                      </span>
+                        role={r as any}
+                        tone="soft"
+                        size="xs"
+                      />
                     ))}
                   </span>
                 ) : null}

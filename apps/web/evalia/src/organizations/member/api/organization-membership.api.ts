@@ -13,11 +13,13 @@ import {
 
 export async function listOrganizationMembers(
   orgId: number,
-  params: { page?: number; pageSize?: number } = {}
+  params: { page?: number; pageSize?: number; q?: string; role?: string } = {}
 ) {
   const search = new URLSearchParams();
   if (params.page) search.set("page", String(params.page));
   if (params.pageSize) search.set("pageSize", String(params.pageSize));
+  if (params.q) search.set("q", params.q);
+  if (params.role) search.set("role", params.role);
   const qs = search.toString();
   const res = await apiRequest<OrganizationMembershipArray>(
     `/organizations/${orgId}/members${qs ? `?${qs}` : ""}`,

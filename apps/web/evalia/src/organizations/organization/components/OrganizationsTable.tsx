@@ -17,6 +17,10 @@ import MembersDropdown from "./dropdowns/MembersDropdown";
 import TeamsDropdown from "./dropdowns/TeamsDropdown";
 import PlanCell from "./dropdowns/PlanCell";
 import StatusCell from "./dropdowns/StatusCell";
+import {
+  OrganizationStatusBadge,
+  OrgPlanBadge,
+} from "@/components/status-badges";
 
 export interface OrganizationsTableProps {
   rows: Organization[];
@@ -61,11 +65,17 @@ export function OrganizationsTable({
               <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
                 <div className="flex flex-col gap-1">
                   <span className="text-muted-foreground">وضعیت</span>
-                  <StatusCell orgId={o.id} status={o.status} />
+                  {/* Inline status view for mobile; dropdown remains in desktop table */}
+                  <OrganizationStatusBadge
+                    status={o.status as any}
+                    tone="soft"
+                    size="xs"
+                  />
                 </div>
                 <div className="flex flex-col gap-1">
                   <span className="text-muted-foreground">پلن</span>
-                  <PlanCell orgId={o.id} plan={o.plan as any} />
+                  {/* Inline plan badge for mobile; dropdown remains in desktop table */}
+                  <OrgPlanBadge plan={o.plan as any} tone="soft" size="xs" />
                 </div>
                 <div className="flex flex-col gap-1">
                   <span className="text-muted-foreground">اعضا</span>

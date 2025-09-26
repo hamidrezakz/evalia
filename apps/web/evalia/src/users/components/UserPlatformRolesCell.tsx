@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import { Check, ChevronDown } from "lucide-react";
+import { Check, ChevronDown, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -8,8 +8,10 @@ import {
   DropdownMenuContent,
   DropdownMenuCheckboxItem,
   DropdownMenuSeparator,
+  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { PlatformRoleBadge } from "@/components/status-badges";
 import { PlatformRoleEnum } from "@/lib/enums";
 import { updateUser } from "@/users/api/users.api";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -26,6 +28,18 @@ export default function UserPlatformRolesCell({
 }) {
   const [open, setOpen] = React.useState(false);
   const [local, setLocal] = React.useState<string[]>(roles || []);
+  const hoverCloseTimer = React.useRef<number | null>(null);
+  const openMenu = React.useCallback(() => {
+    if (hoverCloseTimer.current) {
+      window.clearTimeout(hoverCloseTimer.current);
+      hoverCloseTimer.current = null;
+    }
+    setOpen(true);
+  }, []);
+  const scheduleCloseMenu = React.useCallback(() => {
+    if (hoverCloseTimer.current) window.clearTimeout(hoverCloseTimer.current);
+    hoverCloseTimer.current = window.setTimeout(() => setOpen(false), 150);
+  }, []);
   const qc = useQueryClient();
   React.useEffect(() => setLocal(roles || []), [roles]);
 
@@ -46,24 +60,33 @@ export default function UserPlatformRolesCell({
     <DropdownMenu open={open} onOpenChange={setOpen} dir="rtl">
       <DropdownMenuTrigger asChild>
         <Button
+          aria-label="ویرایش نقش‌های پلتفرم"
           variant="outline"
-          size="sm"
-          className={"h-7 px-2 gap-1 text-[11px] " + (className || "")}
-          onClick={(e) => e.stopPropagation()}>
-          <span className="inline-flex items-center gap-1">
-            <span className="text-muted-foreground">نقش‌ها:</span>
-            <Badge
-              variant={hasAny ? "secondary" : "outline"}
-              className="h-5 px-1 text-[10px] ltr:font-mono">
-              {local?.length ?? 0}
-            </Badge>
+          size="icon"
+          className={"h-7 w-7 relative " + (className || "")}
+          onClick={(e) => e.stopPropagation()}
+          onMouseEnter={openMenu}
+          onMouseLeave={scheduleCloseMenu}>
+          <Shield className="size-3.5" />
+          <span
+            className={`absolute -top-1 -right-1 inline-flex items-center justify-center rounded-full text-[10px] min-w-4 h-4 px-1 ${
+              hasAny
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground"
+            }`}>
+            {local?.length ?? 0}
           </span>
-          <ChevronDown
-            className={`h-3 w-3 opacity-60 ${open ? "rotate-180" : ""}`}
-          />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-48 p-1 text-[12px]">
+      <DropdownMenuContent
+        align="end"
+        className="min-w-56 p-1 text-[12px]"
+        onMouseEnter={openMenu}
+        onMouseLeave={scheduleCloseMenu}>
+        <DropdownMenuLabel className="text-[11px] text-muted-foreground flex items-center gap-2">
+          <Shield className="size-3.5" /> نقش‌های پلتفرم
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
         {opts.map((o) => {
           const checked = local.includes(o.value);
           return (
@@ -76,8 +99,16 @@ export default function UserPlatformRolesCell({
                   : (local || []).filter((x) => x !== o.value);
                 setLocal(next);
                 mut.mutate(next);
-              }}>
-              <span className="text-[12px]">{o.label}</span>
+              }}
+              className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <PlatformRoleBadge
+                  role={o.value as any}
+                  active={checked}
+                  tone={checked ? "solid" : "soft"}
+                  size="xs"
+                />
+              </div>
             </DropdownMenuCheckboxItem>
           );
         })}

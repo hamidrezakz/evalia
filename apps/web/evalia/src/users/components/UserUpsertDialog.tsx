@@ -33,7 +33,7 @@ import {
 } from "@/users/api/users.api";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { usersKeys } from "@/users/api/users-query-keys";
-import { Plus, UserPen } from "lucide-react";
+import { Plus, UserPen, AlertTriangle } from "lucide-react";
 
 type BaseUserForm = {
   fullName?: string;
@@ -81,6 +81,13 @@ export default function UserUpsertDialog(props: UserUpsertDialogProps) {
   const qc = useQueryClient();
   const { activeOrganizationId, organizations: myOrgs } = useOrgState();
   const orgsQuery = useOrganizations(true);
+  const activeOrgName = React.useMemo(() => {
+    const list = ((orgsQuery.data as any[]) ||
+      (myOrgs as any[]) ||
+      []) as any[];
+    const found = list.find((o: any) => o?.id === activeOrganizationId);
+    return (found?.name as string) || undefined;
+  }, [orgsQuery.data, myOrgs, activeOrganizationId]);
 
   // Form state
   const [fullName, setFullName] = React.useState(defaultValues?.fullName || "");
@@ -245,19 +252,24 @@ export default function UserUpsertDialog(props: UserUpsertDialogProps) {
             </div>
           )}
           <div>
-            <Label className="mb-1 block">وضعیت</Label>
-            <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="انتخاب وضعیت" />
-              </SelectTrigger>
-              <SelectContent>
-                {UserStatusEnum.options().map((o) => (
-                  <SelectItem key={o.value} value={o.value}>
-                    {o.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {!restrictToActiveOrg && (
+              <div>
+                {" "}
+                <Label className="mb-1 block">وضعیت</Label>
+                <Select value={status} onValueChange={setStatus}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="انتخاب وضعیت" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {UserStatusEnum.options().map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
           {/* Organization selection only in create mode */}
@@ -265,17 +277,35 @@ export default function UserUpsertDialog(props: UserUpsertDialogProps) {
             <div className="sm:col-span-2">
               <Label className="mb-1 block">عضویت سازمانی</Label>
               {restrictToActiveOrg ? (
-                <div className="text-sm mt-2 rounded-md border p-3 bg-amber-50/50 dark:bg-amber-900/20">
-                  کاربر به سازمان فعال شما افزوده می‌شود.
-                  {activeOrganizationId ? (
-                    <div className="text-xs opacity-70 mt-1">
-                      شناسه سازمان فعال: #{activeOrganizationId}
+                <div
+                  className="mt-2 rounded-md border border-amber-200/70 bg-amber-50/60 dark:bg-amber-900/20 dark:border-amber-800/40 p-3"
+                  dir="rtl">
+                  <div className="flex flex-row-reverse items-start gap-3">
+                    <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                    <div className="flex-1 space-y-1">
+                      <div className="text-sm font-medium">
+                        افزودن به سازمان فعال
+                      </div>
+                      <div className="text-[12px] leading-6 text-muted-foreground">
+                        کاربر به سازمان فعال شما افزوده می‌شود.
+                        {activeOrganizationId ? (
+                          <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200 px-2 py-0.5">
+                            <span>سازمان:</span>
+                            <span className="text-foreground">
+                              {activeOrgName || "نامشخص"}
+                            </span>
+                            <span className="opacity-70">
+                              #{activeOrganizationId}
+                            </span>
+                          </span>
+                        ) : (
+                          <span className="block mt-1 text-rose-600">
+                            سازمان فعالی یافت نشد.
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  ) : (
-                    <div className="text-xs text-rose-500 mt-1">
-                      سازمان فعالی یافت نشد.
-                    </div>
-                  )}
+                  </div>
                 </div>
               ) : (
                 <div className="mt-2">

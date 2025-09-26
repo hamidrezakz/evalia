@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
 import UserUpsertDialog from "./UserUpsertDialog";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Shield } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -19,11 +19,14 @@ import { UserStatusEnum } from "@/lib/enums";
 import { useOrganizations } from "@/organizations/organization/context/queries";
 import { Label } from "@/components/ui/label";
 import { PlatformRoleEnum } from "@/lib/enums";
+import { PlatformRoleBadge } from "@/components/status-badges";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuCheckboxItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 
 export interface UsersListProps {
@@ -131,24 +134,29 @@ export function UsersList({
                 />
               </div>
               {/* Platform roles filter */}
-              <div className="min-w-48">
-                <Label className="mb-1 hidden sm:block">نقش‌های پلتفرم</Label>
+              <div className="min-w-10">
+                <Label className="mb-1 hidden sm:block">نقش‌ها</Label>
                 <DropdownMenu dir="rtl">
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="outline"
-                      className="w-full h-9 justify-between">
-                      <span className="text-sm">
-                        {roleFilter.length > 0
-                          ? `${roleFilter.length} نقش انتخاب شد`
-                          : "همه نقش‌ها"}
-                      </span>
-                      <span className="opacity-60">▾</span>
+                      size="icon"
+                      className="h-9 w-9 relative">
+                      <Shield className="size-4" />
+                      {roleFilter.length > 0 && (
+                        <span className="absolute -top-1 -right-1 inline-flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] min-w-4 h-4 px-1">
+                          {roleFilter.length}
+                        </span>
+                      )}
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent
                     align="end"
-                    className="min-w-56 p-1 text-[12px]">
+                    className="min-w-60 p-1 text-[12px]">
+                    <DropdownMenuLabel className="text-[11px] text-muted-foreground">
+                      نقش‌های پلتفرم
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
                     {PlatformRoleEnum.options().map((opt) => {
                       const checked = roleFilter.includes(opt.value);
                       return (
@@ -165,10 +173,25 @@ export function UsersList({
                               return next;
                             });
                           }}>
-                          {opt.label}
+                          <div className="flex items-center gap-2">
+                            <PlatformRoleBadge
+                              role={opt.value as any}
+                              active={checked}
+                              size="xs"
+                              tone={checked ? "solid" : "soft"}
+                            />
+                          </div>
                         </DropdownMenuCheckboxItem>
                       );
                     })}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuCheckboxItem
+                      checked={roleFilter.length === 0}
+                      onCheckedChange={(v) => {
+                        if (v) setRoleFilter([]);
+                      }}>
+                      <span className="text-[12px]">نمایش همه نقش‌ها</span>
+                    </DropdownMenuCheckboxItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>

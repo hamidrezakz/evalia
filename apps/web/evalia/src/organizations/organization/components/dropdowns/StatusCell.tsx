@@ -12,7 +12,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { Loader2, ChevronDown } from "lucide-react";
-import { OrganizationStatusBadge } from "../OrganizationStatusBadge";
+import { OrganizationStatusBadge } from "@/components/status-badges";
 
 interface StatusCellProps {
   orgId: number;
@@ -84,7 +84,11 @@ export function StatusCell({ orgId, status }: StatusCellProps) {
                     { onError: () => setLocalStatus(prev) }
                   );
                 }}>
-                <span>{opt.label}</span>
+                <OrganizationStatusBadge
+                  status={opt.value as any}
+                  tone={active ? "solid" : "soft"}
+                  size="xs"
+                />
                 {pending ? (
                   <Loader2 className="h-3 w-3 animate-spin" />
                 ) : active ? (
