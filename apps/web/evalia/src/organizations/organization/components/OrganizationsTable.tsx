@@ -100,7 +100,7 @@ export function OrganizationsTable({
             <TableHead className="px-3 py-2 font-medium">اعضا</TableHead>
             <TableHead className="px-3 py-2 font-medium">تیم‌ها</TableHead>
             <TableHead className="px-3 py-2 font-medium hidden lg:table-cell">
-              پلن
+              لایسنس{" "}
             </TableHead>
             <TableHead className="px-3 py-2 font-medium w-0 text-left">
               عملیات

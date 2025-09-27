@@ -17,6 +17,7 @@ import { z } from "zod";
  * - listUsers: fetch paginated users with optional filters (GET /users)
  * - getUser: fetch single user detail (GET /users/:id)
  * Both return strictly validated data using zod schemas.
+ * Search semantics (q): matches fullName (case-insensitive), email (case-insensitive) and normalized phone (substring, after stripping formatting / converting 0********** to +98**********).
  */
 
 // Internal envelope shape adapter (apiRequest already validates outer envelope; here we model inner data layout)

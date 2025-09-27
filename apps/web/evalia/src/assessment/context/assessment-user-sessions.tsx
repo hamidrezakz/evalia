@@ -116,14 +116,14 @@ export function AssessmentUserSessionsProvider({
       return;
     }
     // If no active session or not found, pick the first session
-    let sid =
+    const sid =
       activeSessionId && sessions.some((s) => s.id === activeSessionId)
         ? activeSessionId
         : sessions[0].id;
     // Validate perspective for selected session
     const sess = sessions.find((s) => s.id === sid)!;
     const perspectives = (sess.perspectives as ResponsePerspective[]) || [];
-    let p =
+    const p =
       activePerspective && perspectives.includes(activePerspective)
         ? activePerspective
         : perspectives[0] || null;

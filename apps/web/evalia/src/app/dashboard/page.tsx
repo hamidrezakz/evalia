@@ -36,6 +36,9 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { UserStatusBadge } from "@/components/status-badges/UserStatusBadge";
+import { SessionStateBadge } from "@/components/status-badges/SessionStateBadge";
+import { AssignmentProgressBadge } from "@/components/status-badges/AssignmentProgressBadge";
 import { Label } from "@/components/ui/label";
 import {
   useUserSessions,
@@ -52,55 +55,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { usersKeys } from "@/users/api/users-query-keys";
 import { Progress } from "@/components/ui/progress";
 import { resolveApiBase } from "@/lib/api/helpers";
-
-// ----------------------------------
-// Utility components
-// ----------------------------------
-function UserStatusBadge({ status }: { status?: string }) {
-  if (!status) return null;
-  const norm = status.toUpperCase();
-  const map: Record<string, { label: string; cls: string }> = {
-    ACTIVE: {
-      label: "فعال",
-      cls: "bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700",
-    },
-    SUSPENDED: {
-      label: "معلق",
-      cls: "bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700",
-    },
-    DISABLED: {
-      label: "غیرفعال",
-      cls: "bg-rose-100 text-rose-700 border-rose-300 dark:bg-rose-900/30 dark:text-rose-300 dark:border-rose-700",
-    },
-  };
-  const meta = map[norm] || {
-    label: status,
-    cls: "bg-muted text-muted-foreground border-muted-foreground/30",
-  };
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1 rounded-full border px-2 py-[2px] text-[10px] font-medium",
-        meta.cls
-      )}>
-      <span className="relative flex h-1.5 w-1.5">
-        <span
-          className={cn(
-            "absolute inset-0 rounded-full",
-            norm === "ACTIVE"
-              ? "bg-emerald-500"
-              : norm === "SUSPENDED"
-              ? "bg-amber-500"
-              : norm === "DISABLED"
-              ? "bg-rose-500"
-              : "bg-muted-foreground"
-          )}
-        />
-      </span>
-      {meta.label}
-    </span>
-  );
-}
 
 function StatItem({
   icon: Icon,
@@ -131,58 +85,6 @@ function StatItem({
 }
 
 // (Removed roles selector UI)
-
-// Colorful progress status chip for user progress
-function ProgressStatusChip({
-  status,
-  percent,
-}: {
-  status?: string;
-  percent?: number;
-}) {
-  if (!status) return null;
-  const map: Record<
-    string,
-    { cls: string; icon: React.ReactNode; label: string }
-  > = {
-    COMPLETED: {
-      cls: "bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700",
-      icon: <CheckCircle2 className="h-3.5 w-3.5" />,
-      label: "تکمیل شد",
-    },
-    IN_PROGRESS: {
-      cls: "bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700",
-      icon: <Clock className="h-3.5 w-3.5" />,
-      label: "در حال انجام",
-    },
-    NOT_STARTED: {
-      cls: "bg-muted text-muted-foreground border-muted-foreground/30 dark:bg-muted/30",
-      icon: <HelpCircle className="h-3.5 w-3.5" />,
-      label: "شروع نشده",
-    },
-    NO_QUESTIONS: {
-      cls: "bg-slate-100 text-slate-600 border-slate-300 dark:bg-slate-900/30 dark:text-slate-300 dark:border-slate-700",
-      icon: <HelpCircle className="h-3.5 w-3.5" />,
-      label: "بدون سوال",
-    },
-  };
-  const meta = map[status] || {
-    cls: "bg-muted text-muted-foreground border-muted-foreground/30",
-    icon: <HelpCircle className="h-3.5 w-3.5" />,
-    label: "—",
-  };
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium",
-        meta.cls
-      )}>
-      {meta.icon}
-      <span>{meta.label}</span>
-      <span className="opacity-60 ltr:font-mono">{percent ?? 0}%</span>
-    </span>
-  );
-}
 
 export default function DashboardLandingPage() {
   const { userId } = useAuthSession();
@@ -544,23 +446,16 @@ function SessionMiniCard({
         {/* State + Progress */}
         <div className="flex items-center gap-2">
           <Label className="text-[10px] text-muted-foreground">وضعیت</Label>
-          <Badge
-            variant={
-              s.state === "CANCELLED"
-                ? "destructive"
-                : s.state === "COMPLETED"
-                ? "secondary"
-                : "outline"
-            }
-            className="text-[10px] rounded-full">
-            {SessionStateEnum.t(s.state)}
-          </Badge>
+          <SessionStateBadge state={s.state} size="xs" tone="soft" />
           {progressLoading ? (
             <Skeleton className="h-4 w-20 rounded" />
           ) : progress ? (
-            <ProgressStatusChip
-              status={progress.status}
+            <AssignmentProgressBadge
+              status={progress.status as any}
               percent={progress.percent}
+              size="xs"
+              tone="soft"
+              showPercent
             />
           ) : null}
         </div>

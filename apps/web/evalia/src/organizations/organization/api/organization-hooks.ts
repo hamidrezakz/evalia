@@ -58,8 +58,11 @@ export function useOrganization(id: number | null, enabled: boolean = true) {
     queryKey: id ? orgKeys.byId(id) : ["org", "disabled"],
     queryFn: async () => {
       if (!id) throw new Error("No organization id");
+      // getOrganization already returns a validated Organization object (NOT an envelope)
+      // Previous code incorrectly tried to access res.data causing undefined and loss of related 'teams' & 'members'
       const res = await getOrganization(id);
-      return res.data as Organization;
+      const org = (res as any)?.data ? (res as any).data : res; // defensive in case backend later wraps in { data }
+      return org as Organization;
     },
     enabled: !!id && enabled,
     staleTime: STALE_TIME_DETAIL,

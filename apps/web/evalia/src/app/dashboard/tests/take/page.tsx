@@ -19,18 +19,17 @@ import { Button } from "@/components/ui/button";
 import {
   Panel,
   PanelHeader,
-  PanelTitle,
-  PanelAction,
-  PanelDescription,
   PanelContent,
 } from "@/components/ui/panel";
+// Replacing previous Select with dropdown menu for perspectives
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
 import { useUserDataContext } from "@/users/context";
 // no separators for ultra-simple look
 import type { AnswerMap, FlatQuestion, AnswerValue } from "./types";
@@ -40,6 +39,8 @@ import { QuestionSingleChoice } from "./components/QuestionSingleChoice";
 import { QuestionMultiChoice } from "./components/QuestionMultiChoice";
 import { QuestionScale } from "./components/QuestionScale";
 import { ProgressCircle } from "./components/ProgressCircle";
+import { SessionStateBadge } from "@/components/status-badges/SessionStateBadge";
+import { QuestionAnswerStatusBadge } from "@/components/status-badges/QuestionAnswerStatusBadge";
 import {
   AlertTriangle,
   Layers,
@@ -48,12 +49,47 @@ import {
   Puzzle,
   ListChecks,
   Save,
+  UserCircle2,
+  Users2,
+  Eye,
+  Target,
+  MoreHorizontal,
+  ChevronDown,
+  UserCheck,
 } from "lucide-react";
 import { Combobox } from "@/components/ui/combobox";
 import { useUser, useUsers } from "@/users/api/users-hooks";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
 import { useAvatarImage } from "@/users/api/useAvatarImage";
+
+// Lightweight shared shape for user data we access here
+interface BasicUser {
+  id: number;
+  fullName?: string | null;
+  name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  avatarUrl?: string | null;
+  avatar?: string | null; // legacy / alternate field
+}
+
+// Map perspective code to an icon for dropdown (extend as needed)
+function iconForPerspective(p: string) {
+  const cls = "size-4 text-muted-foreground";
+  switch (p) {
+    case "SELF":
+      return <UserCheck className={cls} />;
+    case "PEER":
+      return <Users2 className={cls} />;
+    case "MANAGER":
+      return <Eye className={cls} />;
+    case "DIRECT":
+      return <Target className={cls} />;
+    default:
+      return <UserCircle2 className={cls} />;
+  }
+}
 
 export default function TakeAssessmentPage() {
   const sp = useSearchParams();
@@ -120,13 +156,16 @@ export default function TakeAssessmentPage() {
 
   // Standardized avatar srcs for preview header
   const respondentRawAvatar =
-    (respondentQ.data as any)?.avatarUrl || (respondentQ.data as any)?.avatar;
+    ((respondentQ.data || {}) as BasicUser).avatarUrl ||
+    ((respondentQ.data || {}) as BasicUser).avatar;
   const { src: respondentAvatarSrc } = useAvatarImage(respondentRawAvatar);
   const subjectRawAvatar =
-    (subjectQ.data as any)?.avatarUrl || (subjectQ.data as any)?.avatar;
+    ((subjectQ.data || {}) as BasicUser).avatarUrl ||
+    ((subjectQ.data || {}) as BasicUser).avatar;
   const { src: subjectAvatarSrc } = useAvatarImage(subjectRawAvatar);
 
   // Auto-pick a default perspective if not selected yet
+  // Auto pick perspective (first) if none selected (non-preview)
   React.useEffect(() => {
     if (previewMode) return;
     if (!activePerspective && (availablePerspectives?.length || 0) > 0) {
@@ -143,28 +182,29 @@ export default function TakeAssessmentPage() {
   const assignmentsDetailed = useAssignmentsDetailed(
     previewMode ? null : activeSessionId ?? null
   );
+  // Auto pick subject if required perspective and exactly one candidate OR none chosen
   React.useEffect(() => {
     if (previewMode) return;
-    if (
-      !activeSessionId ||
-      !activePerspective ||
-      activePerspective === "SELF" ||
-      subjectUserId != null
-    )
+    if (!activeSessionId || !activePerspective || activePerspective === "SELF")
       return;
     const list = (assignmentsDetailed.data || []) as any[];
+    if (!list.length) return;
     const mine = list.filter(
       (a) =>
         (a.respondentUserId ?? a.userId) === userId &&
         a.perspective === activePerspective
     );
-    const uniqueSubjects = Array.from(
-      new Set(mine.map((a) => a.subjectUserId).filter(Boolean))
-    ) as number[];
-    if (uniqueSubjects.length === 1) {
-      setSubjectUserId(uniqueSubjects[0]!);
-    }
+    const subjectIds = mine
+      .map((a) => a.subjectUserId)
+      .filter((v) => v != null) as number[];
+    if (!subjectIds.length) return;
+    // Prefer previously selected if still valid
+    if (subjectUserId && subjectIds.includes(subjectUserId)) return;
+    // Else choose first deterministic (sorted) for stability
+    const pick = [...new Set(subjectIds)].sort((a, b) => a - b)[0];
+    if (pick && pick !== subjectUserId) setSubjectUserId(pick);
   }, [
+    previewMode,
     activeSessionId,
     activePerspective,
     subjectUserId,
@@ -501,82 +541,132 @@ export default function TakeAssessmentPage() {
 
   return (
     <div className="space-y-6 text-right" dir="rtl">
-      {/* Floating progress only (top-left, unobtrusive, no container) */}
-      <div className="fixed left-2 sm:left-2 bottom-0 z-40 pointer-events-none">
+      {/* Floating progress */}
+      <div className="fixed left-2 sm:left-3 bottom-2 z-40 pointer-events-none">
         <ProgressCircle value={answeredCount} total={flatQuestions.length} />
       </div>
 
-      {/* Session info panel with perspective selector */}
-      <Panel className="shadow-sm w-full">
-        <PanelHeader className="[.border-b]:border-border/70">
-          <PanelTitle className="flex flex-col sm:flex-row sm:flex-wrap gap-2 text-base sm:text-lg">
-            <div className="inline-flex items-center gap-2">
-              <Label className="text-[10px] text-muted-foreground">آزمون</Label>
-              <span className="break-words whitespace-normal font-medium">
-                {uq.data?.session.name ?? activeSession?.name ?? "آزمون"}
-              </span>
-              {previewMode && (
-                <div className="inline-flex items-center gap-1">
-                  <Label className="text-[10px] text-muted-foreground">
-                    حالت:
-                  </Label>
-                  <Badge variant="outline" className="text-[10px] rounded-full">
+      {/* Enhanced header card */}
+      <Panel className="shadow-sm w-full overflow-hidden">
+        <PanelHeader className="relative gap-4 flex flex-col xl:flex-row xl:items-start [.border-b]:border-border/70">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between w-full gap-4">
+            {/* Left cluster (title & meta) */}
+            <div className="flex flex-col gap-2 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="inline-flex items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 border border-border/60 p-1.5">
+                  <Target className="size-4 text-primary" />
+                </div>
+                <h1 className="font-semibold text-base sm:text-lg tracking-tight truncate max-w-[60vw]">
+                  {uq.data?.session.name ?? activeSession?.name ?? "آزمون"}
+                </h1>
+                {previewMode && (
+                  <Badge
+                    variant="outline"
+                    className="h-5 px-2 text-[11px] rounded-full">
                     پیش‌نمایش
                   </Badge>
-                </div>
-              )}
-            </div>
-            {uq.data?.session?.state && (
-              <div className="inline-flex items-center gap-1">
-                <Label className="text-[10px] text-muted-foreground">
-                  وضعیت آزمون :
-                </Label>
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    "text-[10px] sm:text-[11px] font-medium rounded-full",
-                    uq.data.session.state === "IN_PROGRESS"
-                      ? "border-emerald-500 text-emerald-700 bg-emerald-50 dark:border-emerald-600/60 dark:text-emerald-300 dark:bg-emerald-950/30"
-                      : uq.data.session.state === "SCHEDULED"
-                      ? "border-sky-500 text-sky-700 bg-sky-50 dark:border-sky-600/60 dark:text-sky-300 dark:bg-sky-950/30"
-                      : uq.data.session.state === "COMPLETED"
-                      ? "border-gray-300 text-gray-700 bg-gray-50 dark:border-gray-600/60 dark:text-gray-300 dark:bg-gray-900"
-                      : "border-amber-500 text-amber-700 bg-amber-50 dark:border-amber-600/60 dark:text-amber-300 dark:bg-amber-950/30"
-                  )}>
-                  {SessionStateEnum.t(uq.data.session.state as any)}
-                </Badge>
+                )}
+                {uq.data?.session?.state && (
+                  <SessionStateBadge
+                    state={uq.data.session.state as any}
+                    size="xs"
+                    tone="soft"
+                  />
+                )}
               </div>
-            )}
-          </PanelTitle>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
+                {activeSession?.startAt && (
+                  <span className="flex items-center gap-1">
+                    <span className="opacity-70">شروع:</span>
+                    <time suppressHydrationWarning>
+                      {new Date(activeSession.startAt as any).toLocaleString(
+                        "fa-IR"
+                      )}
+                    </time>
+                  </span>
+                )}
+                {activeSession?.endAt && (
+                  <span className="flex items-center gap-1">
+                    <span className="opacity-70">پایان:</span>
+                    <time suppressHydrationWarning>
+                      {new Date(activeSession.endAt as any).toLocaleString(
+                        "fa-IR"
+                      )}
+                    </time>
+                  </span>
+                )}
+                {activePerspective && (
+                  <span className="flex items-center gap-1">
+                    <span className="opacity-70">پرسپکتیو فعلی:</span>
+                    <span className="font-medium">
+                      {ResponsePerspectiveEnum.t(activePerspective as any)}
+                    </span>
+                  </span>
+                )}
+                {activePerspective &&
+                  activePerspective !== "SELF" &&
+                  subjectUserId && (
+                    <span className="flex items-center gap-1">
+                      <span className="opacity-70">سوژه:</span>
+                      <span className="font-medium">
+                        {subjectQ.data?.fullName ||
+                          subjectQ.data?.email ||
+                          `کاربر #${subjectUserId}`}
+                      </span>
+                    </span>
+                  )}
+              </div>
+            </div>
 
-          {!previewMode && (
-            <PanelAction>
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full">
-                <span className="text-xs text-muted-foreground hidden sm:inline">
-                  پرسپکتیو:
-                </span>
-                <Select
-                  value={activePerspective ?? undefined}
-                  onValueChange={(v) => setActivePerspective(v as any)}>
-                  <SelectTrigger size="sm" className="w-full sm:w-[220px]">
-                    <SelectValue placeholder="انتخاب پرسپکتیو" />
-                  </SelectTrigger>
-                  <SelectContent align="end">
+            {/* Right cluster: actions & choosers */}
+            {!previewMode && (
+              <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-end w-full sm:w-auto">
+                {/* Perspective dropdown */}
+                <DropdownMenu dir="rtl">
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      aria-label="انتخاب پرسپکتیو"
+                      aria-haspopup="menu"
+                      title="انتخاب پرسپکتیو"
+                      className="inline-flex items-center gap-1 font-normal h-8">
+                      <UserCircle2 className="size-4" />
+                      <span className="text-xs">
+                        {activePerspective
+                          ? ResponsePerspectiveEnum.t(activePerspective as any)
+                          : "انتخاب پرسپکتیو"}
+                      </span>
+                      <ChevronDown className="size-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    className="min-w-48"
+                    sideOffset={6}>
+                    <DropdownMenuLabel className="text-[11px]">
+                      انتخاب پرسپکتیو
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
                     {availablePerspectives?.length ? (
                       availablePerspectives.map((p) => (
-                        <SelectItem key={p as any} value={p as any}>
-                          {ResponsePerspectiveEnum.t(p as any)}
-                        </SelectItem>
+                        <DropdownMenuItem
+                          key={p as any}
+                          onClick={() => setActivePerspective(p as any)}
+                          className="text-[12px] flex items-center gap-2">
+                          {iconForPerspective(p as any)}
+                          <span>{ResponsePerspectiveEnum.t(p as any)}</span>
+                        </DropdownMenuItem>
                       ))
                     ) : (
-                      <div className="px-2 py-1 text-xs text-muted-foreground">
+                      <div className="px-2 py-1 text-[11px] text-muted-foreground">
                         پرسپکتیوی موجود نیست
                       </div>
                     )}
-                  </SelectContent>
-                </Select>
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 {activePerspective && activePerspective !== "SELF" ? (
-                  <div className="w-full sm:w-auto min-w-0">
+                  <div className="sm:w-[220px]">
                     <SubjectSelector
                       organizationId={activeSession?.organizationId}
                       value={subjectUserId}
@@ -585,13 +675,11 @@ export default function TakeAssessmentPage() {
                   </div>
                 ) : null}
               </div>
-            </PanelAction>
-          )}
-
-          <PanelDescription className="hidden"></PanelDescription>
+            )}
+          </div>
         </PanelHeader>
-        <PanelContent className="pt-2 w-full overflow-visible">
-          <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+        <PanelContent className="pt-3 mb-3 w-full overflow-visible">
+          <div className="grid gap-2 sm:gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             {/* Participant card */}
             {previewMode ? (
               <div className="w-full rounded-xl border border-border/60 bg-muted/20 p-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
@@ -715,37 +803,6 @@ export default function TakeAssessmentPage() {
                 </div>
               </div>
             ) : null}
-
-            {/* Dates card */}
-            {(activeSession?.startAt || activeSession?.endAt) && (
-              <div className="w-full rounded-xl border border-border/60 bg-muted/20 p-3">
-                <Label className="text-[10px] text-muted-foreground">
-                  زمان‌بندی آزمون:
-                </Label>
-                <div className="mt-1 space-y-1 text-[11px] text-muted-foreground">
-                  {activeSession?.startAt && (
-                    <div className="flex items-center gap-1">
-                      <span className="text-[10px]">شروع:</span>
-                      <span>
-                        {new Date(activeSession.startAt as any).toLocaleString(
-                          "fa-IR"
-                        )}
-                      </span>
-                    </div>
-                  )}
-                  {activeSession?.endAt && (
-                    <div className="flex items-center gap-1">
-                      <span className="text-[10px]">پایان:</span>
-                      <span>
-                        {new Date(activeSession.endAt as any).toLocaleString(
-                          "fa-IR"
-                        )}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
         </PanelContent>
       </Panel>
@@ -940,19 +997,18 @@ export default function TakeAssessmentPage() {
                             </span>
                           ) : null}
                           <span className="mx-2 text-xs">
-                            {pending ? (
-                              <span className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-sky-700 dark:border-sky-600/60 dark:bg-sky-950/30 dark:text-sky-300">
-                                منتظر ذخیره
-                              </span>
-                            ) : hasSaved ? (
-                              <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-emerald-700 dark:border-emerald-600/60 dark:bg-emerald-950/30 dark:text-emerald-300">
-                                پاسخ داده شده
-                              </span>
-                            ) : notAnswered ? (
-                              <span className="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-muted-foreground dark:border-gray-600/60 dark:bg-gray-900 dark:text-gray-400">
-                                پاسخ داده نشده
-                              </span>
-                            ) : null}
+                            <QuestionAnswerStatusBadge
+                              status={
+                                pending
+                                  ? "PENDING"
+                                  : hasSaved
+                                  ? "ANSWERED"
+                                  : "UNANSWERED"
+                              }
+                              size="xs"
+                              tone="soft"
+                              withIcon
+                            />
                           </span>
                         </div>
 

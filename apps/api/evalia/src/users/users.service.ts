@@ -28,10 +28,35 @@ export class UsersService {
     if (dto.statuses && dto.statuses.length)
       where.status = { in: dto.statuses } as any;
     if (dto.q) {
+      const q = dto.q.trim();
+      // If the query looks like a phone fragment (mostly digits / + / spaces), build an additional normalized phone search
+      const digitFragment = q.replace(/[^0-9+]/g, '');
+      const phoneVariants: Prisma.UserWhereInput[] = [];
+      if (digitFragment.length >= 4) {
+        // Support searching with or without +98 leading zeros:
+        // If user types 0912..., also search +98912...; if they type 98912 search +98912
+        const normalizedCandidate =
+          this.tryNormalizePhoneFragment(digitFragment);
+        if (normalizedCandidate) {
+          phoneVariants.push({
+            phoneNormalized: { contains: normalizedCandidate },
+          });
+          // Also allow raw digits contains (fallback)
+          if (
+            normalizedCandidate.startsWith('+98') &&
+            digitFragment.startsWith('0')
+          ) {
+            const alt = '+98' + digitFragment.substring(1);
+            phoneVariants.push({ phoneNormalized: { contains: alt } });
+          }
+        } else {
+          phoneVariants.push({ phoneNormalized: { contains: digitFragment } });
+        }
+      }
       where.OR = [
-        { fullName: { contains: dto.q, mode: 'insensitive' } },
-        { email: { contains: dto.q, mode: 'insensitive' } },
-        { phoneNormalized: { contains: dto.q } },
+        { fullName: { contains: q, mode: 'insensitive' } },
+        { email: { contains: q, mode: 'insensitive' } },
+        ...phoneVariants,
       ];
     }
     if (dto.orgId) {
@@ -341,6 +366,21 @@ export class UsersService {
       throw new BadRequestException('Phone must start with + or 0');
     if (digits.length < 10) throw new BadRequestException('Invalid phone');
     return digits;
+  }
+
+  /**
+   * Attempt to normalize a partial phone fragment for searching.
+   * Returns null if fragment too short or invalid to transform.
+   */
+  private tryNormalizePhoneFragment(fragment: string): string | null {
+    if (!fragment) return null;
+    let f = fragment.replace(/[^0-9+]/g, '');
+    // If starts with 0 and at least 5 digits, convert to +98 pattern (Iran) like normalizePhone does.
+    if (f.startsWith('0') && f.length >= 5) {
+      f = '+98' + f.substring(1);
+    }
+    if (!f.startsWith('+')) return f.length >= 4 ? f : null;
+    return f.length >= 4 ? f : null;
   }
 
   async create(body: any) {

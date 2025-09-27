@@ -101,9 +101,7 @@ export function SessionManagerHeader({
 
       <div className="flex items-center justify-between w-full gap-2">
         {filteredCount > 0 ? (
-          <span className="text-[11px] px-2 py-1 rounded-md bg-muted/40 text-foreground/70">
-            {filteredCount.toLocaleString()} جلسه
-          </span>
+          <ClientStableCount count={filteredCount} />
         ) : (
           <span />
         )}
@@ -228,3 +226,18 @@ export function SessionManagerHeader({
 }
 
 export default SessionManagerHeader;
+
+// --- Hydration-safe counter component (avoids server/client locale mismatch) ---
+function ClientStableCount({ count }: { count: number }) {
+  const [text, setText] = React.useState<string>("" + count);
+  React.useEffect(() => {
+    setText(count.toLocaleString());
+  }, [count]);
+  return (
+    <span
+      className="text-[11px] px-2 py-1 rounded-md bg-muted/40 text-foreground/70"
+      suppressHydrationWarning>
+      {text} جلسه
+    </span>
+  );
+}

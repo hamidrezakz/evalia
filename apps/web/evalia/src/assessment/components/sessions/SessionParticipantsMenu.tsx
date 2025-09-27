@@ -36,6 +36,7 @@ import {
   useAssignmentProgress,
   useUserSessionProgress,
 } from "@/assessment/api/templates-hooks";
+import { AssignmentProgressBadge } from "@/components/status-badges/AssignmentProgressBadge";
 import { useRouter } from "next/navigation";
 // Removed inline user creation per design feedback
 
@@ -309,82 +310,17 @@ export function SessionParticipantsMenu({
   }
 
   // Progress chip components
-  function statusClasses(status?: string) {
-    switch (status) {
-      case "COMPLETED":
-        return "bg-emerald-500/10 text-emerald-600 ring-1 ring-emerald-500/20";
-      case "IN_PROGRESS":
-        return "bg-amber-500/10 text-amber-600 ring-1 ring-amber-500/20";
-      case "NOT_STARTED":
-        return "bg-zinc-500/10 text-zinc-600 ring-1 ring-zinc-500/20";
-      case "NO_QUESTIONS":
-        return "bg-slate-500/10 text-slate-600 ring-1 ring-slate-500/20";
-      case "NOT_ASSIGNED":
-        return "bg-rose-500/10 text-rose-600 ring-1 ring-rose-500/20";
-      default:
-        return "bg-muted text-muted-foreground ring-1 ring-border/40";
-    }
-  }
-  function statusLabelFa(status?: string) {
-    switch (status) {
-      case "COMPLETED":
-        return "تکمیل";
-      case "IN_PROGRESS":
-        return "در حال انجام";
-      case "NOT_STARTED":
-        return "شروع نشده";
-      case "NO_QUESTIONS":
-        return "بدون سوال";
-      case "NOT_ASSIGNED":
-        return "بدون اختصاص";
-      default:
-        return "";
-    }
-  }
-  // Create-and-assign flow
-  // Removed create-and-assign flow
-  function ProgressPill({
-    percent,
-    status,
-    title,
-  }: {
-    percent: number;
-    status?: string;
-    title?: string;
-  }) {
-    const pct = `${percent}%`;
-    const st = statusLabelFa(status);
-    return (
-      <span
-        title={title}
-        className={cn(
-          "inline-flex items-center gap-1 h-4 px-1.5 rounded-full text-[10px] font-medium",
-          statusClasses(status)
-        )}>
-        {st && <span className="truncate max-w-[8rem]">{st}</span>}
-        <span className="opacity-60">•</span>
-        <span className="tabular-nums">{pct}</span>
-      </span>
-    );
-  }
+  // Standardized progress badge wrappers
   function ProgressByAssignment({ id }: { id: number }) {
     const { data } = useAssignmentProgress(id);
     if (!data) return null;
     return (
-      <ProgressPill
+      <AssignmentProgressBadge
+        status={(data.status as any) || "NOT_ASSIGNED"}
         percent={data.percent ?? 0}
-        status={data.status}
-        title={
-          data.status === "COMPLETED"
-            ? "تکمیل"
-            : data.status === "IN_PROGRESS"
-            ? "در حال انجام"
-            : data.status === "NOT_STARTED"
-            ? "شروع نشده"
-            : data.status === "NO_QUESTIONS"
-            ? "بدون سوال"
-            : undefined
-        }
+        tone="soft"
+        size="xs"
+        showPercent
       />
     );
   }
@@ -405,20 +341,12 @@ export function SessionParticipantsMenu({
     });
     if (!data) return null;
     return (
-      <ProgressPill
+      <AssignmentProgressBadge
+        status={(data.status as any) || "NOT_ASSIGNED"}
         percent={data.percent ?? 0}
-        status={data.status}
-        title={
-          data.status === "COMPLETED"
-            ? "تکمیل"
-            : data.status === "IN_PROGRESS"
-            ? "در حال انجام"
-            : data.status === "NOT_STARTED"
-            ? "شروع نشده"
-            : data.status === "NO_QUESTIONS"
-            ? "بدون سوال"
-            : undefined
-        }
+        tone="soft"
+        size="xs"
+        showPercent
       />
     );
   }

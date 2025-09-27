@@ -219,7 +219,7 @@ const AuthProviderMap: EnumTranslationRecord<AuthProvider> = {
 const OrgPlanMap: EnumTranslationRecord<OrgPlan> = {
   FREE: { fa: "رایگان", en: "Free" },
   PRO: { fa: "حرفه‌ای", en: "Pro" },
-  BUSINESS: { fa: "بیزینس", en: "Business" },
+  BUSINESS: { fa: "مدرسه‌ای", en: "Business" },
   ENTERPRISE: { fa: "سازمانی", en: "Enterprise" },
 };
 const OrgRoleMap: EnumTranslationRecord<OrgRole> = {

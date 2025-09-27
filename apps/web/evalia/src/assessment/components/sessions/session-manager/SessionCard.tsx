@@ -1,3 +1,4 @@
+"use client";
 import * as React from "react";
 
 import {
@@ -9,7 +10,6 @@ import {
   Building2,
   MoreVertical,
   Clock,
-  Hash,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -36,6 +36,14 @@ import { Button } from "@/components/ui/button";
 import SessionParticipantsMenu from "../SessionParticipantsMenu";
 import { composeBadgeClass } from "@/components/status-badges";
 import SessionStateDropdown from "./SessionStateDropdown";
+import {
+  Panel,
+  PanelHeader,
+  PanelContent,
+  PanelAction,
+  PanelTitle,
+  PanelDescription,
+} from "@/components/ui/panel";
 
 export interface SessionSummary {
   id: number;
@@ -68,19 +76,38 @@ export default function SessionCard({
   const tplQ = useTemplate(session.templateId ?? null);
 
   const questionCountQuery = useSessionQuestionCount(session.id ?? null);
-  const questionCount = questionCountQuery.data?.total ?? null;
+  // Defer question count to avoid SSR/CSR mismatch when query resolves only on client
+  const [questionCount, setQuestionCount] = React.useState<number | null>(null);
+  React.useEffect(() => {
+    if (typeof questionCountQuery.data?.total === "number") {
+      setQuestionCount(questionCountQuery.data.total);
+    }
+  }, [questionCountQuery.data?.total]);
 
-  const orgName =
-    (typeof orgQ.data?.name === "string" && orgQ.data.name.trim().length > 0
-      ? orgQ.data.name
-      : null) || `سازمان #${session.organizationId}`;
+  const [orgName, setOrgName] = React.useState<string>(
+    `سازمان #${session.organizationId}`
+  );
+  React.useEffect(() => {
+    if (
+      typeof orgQ.data?.name === "string" &&
+      orgQ.data.name.trim().length > 0
+    ) {
+      setOrgName(orgQ.data.name);
+    }
+  }, [orgQ.data?.name]);
 
-  const templateData = tplQ.data as { name?: string | null } | undefined;
-  const tplName =
-    (typeof templateData?.name === "string" &&
-    templateData.name.trim().length > 0
-      ? templateData.name
-      : null) || `تمپلیت #${session.templateId}`;
+  const [tplName, setTplName] = React.useState<string>(
+    `تمپلیت #${session.templateId}`
+  );
+  React.useEffect(() => {
+    const templateData = tplQ.data as { name?: string | null } | undefined;
+    if (
+      typeof templateData?.name === "string" &&
+      templateData.name.trim().length > 0
+    ) {
+      setTplName(templateData.name);
+    }
+  }, [tplQ.data]);
 
   let startStr: string | null = null;
   let endStr: string | null = null;
@@ -92,7 +119,12 @@ export default function SessionCard({
     // ignore parse errors and fall back to raw values
   }
 
-  const rel = formatJalaliRelative(session.startAt, { futureMode: "relative" });
+  // Relative time is unstable between server & client (time passes between render phases)
+  // We compute it after mount to avoid hydration mismatches.
+  const [rel, setRel] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    setRel(formatJalaliRelative(session.startAt, { futureMode: "relative" }));
+  }, [session.startAt]);
 
   const stateColors: Partial<Record<SessionState, string>> = {
     SCHEDULED: "border-sky-400/40 hover:border-sky-500/60",
@@ -106,107 +138,110 @@ export default function SessionCard({
     stateColors[session.state] ?? "border-border/50 hover:border-primary/50";
 
   return (
-    <div
+    <Panel
       className={cn(
-        "group relative rounded-xl border bg-background/60 dark:bg-muted/40 transition-colors overflow-hidden p-0 flex flex-col shadow-sm hover:shadow-md",
+        "relative group overflow-hidden border border-border/50 backdrop-blur-sm shadow-sm hover:shadow-md transition",
         panelBorder
       )}>
-      <div className="absolute inset-y-0 right-0 w-1 bg-gradient-to-b from-primary/70 to-primary/30 opacity-60 group-hover:opacity-100 transition" />
-      <div className="p-4 flex flex-col gap-4">
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-2">
-            <div className="flex flex-col gap-1">
-              <h3 className="text-[13px] font-semibold flex items-center gap-1.5 mt-0.5">
-                <Clock className="h-4 w-4 text-muted-foreground" />
-                {session.name}
-              </h3>
-              <SessionStateDropdown
-                state={session.state}
-                onChange={onChangeState}
-              />
-            </div>
-            <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
-              {questionCount !== null && (
-                <span
-                  className={composeBadgeClass("violet", { size: "xs" })}
-                  title={`تعداد سوالات: ${questionCount}`}>
-                  سوال: {questionCount}
-                </span>
-              )}
-
-              <span className="inline-flex items-center gap-1 rounded-md bg-muted/40 px-1.5 py-0.5 text-[10px] text-muted-foreground/90">
-                <Hash className="h-3 w-3" /> جلسه #{session.id}
-              </span>
-              <span className="inline-flex items-center gap-1 rounded-md bg-muted/40 px-1.5 py-0.5 text-[10px] text-muted-foreground/90">
-                <Calendar className="h-3 w-3" /> {rel}
-              </span>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 self-end">
-            <SessionParticipantsMenu
-              session={session}
-              onQuickAssign={onOpenQuickAssign}
-              triggerClassName="h-6 px-2 text-[11px]"
+      <div className="absolute inset-y-0 right-0 w-0.5 bg-gradient-to-b from-primary/70 to-primary/30 opacity-60 group-hover:opacity-100 transition" />
+      <PanelHeader className="gap-3 pb-0">
+        <div className="flex flex-col gap-1.5 min-w-0">
+          <PanelTitle className="flex items-center gap-1.5 text-[13px]">
+            <Clock className="h-4 w-4 text-muted-foreground" />
+            <span className="truncate" title={session.name}>
+              {session.name}
+            </span>
+          </PanelTitle>
+          <PanelDescription className="flex flex-wrap items-center gap-1.5">
+            <span
+              className={composeBadgeClass("violet", { size: "xs" })}
+              suppressHydrationWarning
+              title={
+                questionCount !== null
+                  ? `تعداد سوالات: ${questionCount}`
+                  : "در حال بارگذاری سوالات"
+              }>
+              سوال: {questionCount ?? "…"}
+            </span>
+            <SessionStateDropdown
+              state={session.state}
+              onChange={onChangeState}
             />
-            <DropdownMenu dir="rtl">
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 shrink-0">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="min-w-44">
-                <DropdownMenuItem onClick={() => onOpenQuickAssign(session)}>
-                  <Users className="h-4 w-4" />
-                  <span className="ms-2">دعوت سریع</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={onEdit}>
-                  <Pencil className="h-4 w-4" />
-                  <span className="ms-2">ویرایش</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="text-destructive"
-                  onClick={() => onAskDelete(session.id)}>
-                  <Trash2 className="h-4 w-4" />
-                  <span className="ms-2">حذف</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+            <span
+              className="inline-flex items-center gap-1 rounded-md bg-muted/40 px-1.5 py-0.5 text-[10px] text-muted-foreground/80"
+              suppressHydrationWarning>
+              <Calendar className="h-3 w-3" /> {rel || "…"}
+            </span>
+          </PanelDescription>
         </div>
-        <div className="grid gap-2 text-[11px] text-muted-foreground leading-5">
+        <PanelAction className="flex items-start gap-2">
+          <DropdownMenu dir="rtl">
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-44">
+              <DropdownMenuItem onClick={() => onOpenQuickAssign(session)}>
+                <Users className="h-4 w-4" />
+                <span className="ms-2">دعوت سریع</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={onEdit}>
+                <Pencil className="h-4 w-4" />
+                <span className="ms-2">ویرایش</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-destructive"
+                onClick={() => onAskDelete(session.id)}>
+                <Trash2 className="h-4 w-4" />
+                <span className="ms-2">حذف</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </PanelAction>
+      </PanelHeader>
+      <PanelContent className="flex flex-col gap-4 pt-3 text-[11px] leading-5 text-muted-foreground">
+        <div className="grid gap-3 @2xl/panel-header:grid-cols-2">
           <div className="flex items-center gap-1.5 flex-wrap">
             <Calendar className="h-3.5 w-3.5" />
             <span>{startStr || session.startAt}</span>
             <span className="opacity-60">→</span>
             <span>{endStr || session.endAt}</span>
           </div>
-          <div className="flex flex-col gap-0.5">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <FileText className="h-3.5 w-3.5" />
-              <span className="font-medium text-foreground/90">{tplName}</span>
-            </div>
-            <span className="pl-5 text-[10px] text-muted-foreground/70">
-              شناسه تمپلیت #{session.templateId}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <FileText className="h-3.5 w-3.5" />
+            <span
+              className="font-medium text-foreground/90 truncate"
+              title={tplName}>
+              {tplName}
             </span>
           </div>
           <div className="flex items-center gap-1.5 flex-wrap">
             <Building2 className="h-3.5 w-3.5" />
-            <span>{orgName}</span>
+            <span className="truncate" title={orgName}>
+              {orgName}
+            </span>
           </div>
           {session.description ? (
-            <div className="flex items-start gap-1.5">
-              <FileText className="h-3.5 w-3.5 mt-0.5" />
-              <p className="line-clamp-3 text-foreground/80">
-                {session.description}
-              </p>
+            <div className="col-span-full">
+              <div className="flex items-start gap-1.5">
+                <FileText className="h-3.5 w-3.5 mt-0.5" />
+                <p className="line-clamp-3 text-foreground/80">
+                  {session.description}
+                </p>
+              </div>
             </div>
           ) : null}
         </div>
-      </div>
-    </div>
+        <div className="mt-1 flex flex-wrap items-center gap-2">
+          <SessionParticipantsMenu
+            session={session}
+            onQuickAssign={onOpenQuickAssign}
+            triggerClassName="h-6 px-2 text-[11px]"
+          />
+        </div>
+      </PanelContent>
+    </Panel>
   );
 }

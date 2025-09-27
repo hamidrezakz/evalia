@@ -56,7 +56,7 @@ export function OrgPlanBadge({
   return (
     <Comp className={composeBadgeClass(color, { tone, size, className })}>
       {withIcon && value ? iconFor(value) : null}
-      <span>{label}</span>
+       لایسنس <span>{label}</span>
     </Comp>
   );
 }

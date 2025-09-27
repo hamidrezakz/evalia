@@ -9,8 +9,10 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { Label } from "@/components/ui/label";
+import { useCreateTeam } from "@/organizations/team/api/team-hooks";
+import { orgKeys } from "@/organizations/organization/api/organization-query-keys";
 
 export interface AddTeamDialogProps {
   orgId: number;
@@ -26,23 +28,23 @@ export function AddTeamDialog({
   const qc = useQueryClient();
   const [name, setName] = React.useState("");
   const [desc, setDesc] = React.useState("");
-  const addTeamMut = useMutation({
-    mutationFn: async () => {
-      const res = await fetch(`/organizations/${orgId}/teams`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, description: desc }),
-      });
-      if (!res.ok) throw new Error("خطا در ایجاد تیم");
-      return res.json();
-    },
-    onSuccess: () => {
-      qc.invalidateQueries();
-      setName("");
-      setDesc("");
-      onOpenChange(false);
-    },
-  });
+  const createTeam = useCreateTeam(orgId);
+
+  function handleCreate() {
+    if (!name) return;
+    createTeam.mutate(
+      { name, description: desc || undefined },
+      {
+        onSuccess: () => {
+          // Invalidate specific organization detail to refresh embedded teams array
+          qc.invalidateQueries({ queryKey: orgKeys.byId(orgId) });
+          setName("");
+          setDesc("");
+          onOpenChange(false);
+        },
+      }
+    );
+  }
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent dir="rtl" className="sm:max-w-md">
@@ -74,24 +76,34 @@ export function AddTeamDialog({
               onChange={(e) => setDesc(e.target.value)}
             />
           </div>
-          {addTeamMut.error && (
-            <div className="text-[11px] text-rose-600">
-              {(addTeamMut.error as any)?.message || "خطا"}
-            </div>
-          )}
+          {createTeam.error &&
+            (() => {
+              const err: unknown = createTeam.error;
+              let msg = "خطا";
+              if (err && typeof err === "object") {
+                const maybeError = err as { message?: unknown };
+                if (
+                  typeof maybeError.message === "string" &&
+                  maybeError.message.trim()
+                ) {
+                  msg = maybeError.message;
+                }
+              }
+              return <div className="text-[11px] text-rose-600">{msg}</div>;
+            })()}
         </div>
         <DialogFooter className="justify-start gap-2 pt-2">
           <Button
             size="sm"
-            disabled={!name || addTeamMut.isPending}
-            onClick={() => addTeamMut.mutate()}>
-            {addTeamMut.isPending ? "در حال ثبت..." : "ایجاد"}
+            disabled={!name || createTeam.isPending}
+            onClick={handleCreate}>
+            {createTeam.isPending ? "در حال ثبت..." : "ایجاد"}
           </Button>
           <Button
             size="sm"
             variant="ghost"
             onClick={() => onOpenChange(false)}
-            disabled={addTeamMut.isPending}>
+            disabled={createTeam.isPending}>
             انصراف
           </Button>
         </DialogFooter>
