@@ -14,6 +14,8 @@ import {
   useInfiniteQuery,
   useMutation,
   useQueryClient,
+  useQueries,
+  UseQueryResult,
 } from "@tanstack/react-query";
 import { listUsers, getUser, createUsersQueryFns } from "./users.api";
 import { usersKeys } from "./users-query-keys";
@@ -77,15 +79,65 @@ export function useUsers(params?: Partial<ListUsersQuery>) {
  * Fetch a single user; disabled when id is falsy.
  */
 export function useUser(id: number | null) {
+  // Normalize id: only positive integers allowed
+  const validId =
+    typeof id === "number" && Number.isInteger(id) && id > 0 ? id : null;
+  const queryKey = validId
+    ? usersKeys.byId(validId)
+    : (["users", "detail", "disabled"] as const);
   return useQuery({
-    queryKey: id ? usersKeys.byId(id) : ["users", "detail", "disabled"],
+    queryKey,
     queryFn: async () => {
-      if (!id) throw new Error("No user id");
-      return getUser(id) as Promise<UserDetail>;
+      if (!validId) throw new Error("No user id");
+      return getUser(validId) as Promise<UserDetail>;
     },
-    enabled: !!id,
+    enabled: !!validId,
     staleTime: STALE_DETAIL,
   });
+}
+
+/**
+ * Fetch a set of users by their ids leveraging individual cached detail queries under one hook call.
+ * Uses useQueries so hook order remains stable regardless of id count.
+ * Returns a mapping plus loading/error state per id.
+ */
+export function useUsersByIds(ids: Array<number | null | undefined>) {
+  const validIds = Array.from(
+    new Set(
+      (ids || [])
+        .map((v) =>
+          typeof v === "number" && Number.isInteger(v) && v > 0 ? v : null
+        )
+        .filter((v): v is number => !!v)
+    )
+  );
+
+  const results = useQueries({
+    queries: validIds.map((id) => ({
+      queryKey: usersKeys.byId(id),
+      queryFn: () => getUser(id),
+      staleTime: STALE_DETAIL,
+      enabled: !!id,
+    })),
+  }) as UseQueryResult<UserDetail, unknown>[];
+
+  const users: Record<number, UserDetail> = {};
+  const loadingIds: number[] = [];
+  const errorIds: Record<number, string> = {};
+  results.forEach((res, idx) => {
+    const id = validIds[idx]!;
+    if (res.data) users[id] = res.data;
+    else if (res.isLoading) loadingIds.push(id);
+    else if (res.error) errorIds[id] = (res.error as any)?.message || "error";
+  });
+
+  return {
+    users,
+    loadingIds,
+    errorIds,
+    isLoadingAny: loadingIds.length > 0,
+    hasAny: Object.keys(users).length > 0,
+  } as const;
 }
 
 /**

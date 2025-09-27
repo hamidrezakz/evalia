@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Combobox } from "@/components/ui/combobox";
+import { Combobox } from "@/components/ui/combobox"; // retained for template selection only
 import {
   Dialog,
   DialogContent,
@@ -24,6 +24,8 @@ import {
   useOrganization,
   useOrganizations,
 } from "@/organizations/organization/api/organization-hooks";
+import OrgSelectCombobox from "@/organizations/organization/components/OrgSelectCombobox";
+import TeamSelectCombobox from "@/organizations/team/components/TeamSelectCombobox";
 import {
   useTemplate,
   useTemplates,
@@ -110,8 +112,8 @@ export function SessionUpsertDialog(props: {
   }, [isEdit, sessionData, reset]);
 
   // Orgs
-  const [orgSearch, setOrgSearch] = React.useState("");
-  const orgQ = useOrganizations({ q: orgSearch, page: 1, pageSize: 50 });
+  // Organization listing now handled by centralized OrgSelectCombobox
+  const orgQ = useOrganizations({ pageSize: 50 });
   const organizations = (orgQ.data as any)?.data || [];
   const selectedOrgId = watch("organizationId");
   const selectedOrgQ = useOrganization(selectedOrgId || null);
@@ -216,22 +218,14 @@ export function SessionUpsertDialog(props: {
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="space-y-2">
               <Label>سازمان</Label>
-              <Combobox<any>
-                items={mergedOrgs}
+              <OrgSelectCombobox
                 value={watch("organizationId")}
-                onChange={(v) => {
-                  setValue("organizationId", (v as number) ?? null);
+                onChange={(id) => {
+                  setValue("organizationId", id ?? null);
                   setValue("teamScopeId", null);
                 }}
-                searchable
-                searchValue={orgSearch}
-                onSearchChange={setOrgSearch}
-                getKey={(o) => o.id}
-                getLabel={(o) => o.name}
-                loading={orgQ.isLoading}
-                leadingIcon={Users}
-                placeholder="انتخاب سازمان"
                 disabled={isEdit}
+                placeholder="انتخاب سازمان"
               />
             </div>
             <div className="space-y-2 md:col-span-1">
@@ -348,67 +342,16 @@ function TeamScopeField({
   value: number | null | undefined;
   onChange: (v: number | null) => void;
 }) {
-  const [teamSearch, setTeamSearch] = React.useState("");
   return (
     <div className="space-y-2">
       <Label>دامنه تیم (اختیاری)</Label>
-      {!orgId ? (
-        <Combobox<any>
-          items={[]}
-          value={null}
-          onChange={() => {}}
-          placeholder="ابتدا سازمان را انتخاب کنید"
-          leadingIcon={Users}
-          disabled
-        />
-      ) : (
-        <TeamScopeActiveSelect
-          orgId={orgId as number}
-          value={value ?? null}
-          onChange={onChange}
-          teamSearch={teamSearch}
-          setTeamSearch={setTeamSearch}
-        />
-      )}
+      <TeamSelectCombobox
+        orgId={orgId ?? null}
+        value={value ?? null}
+        onChange={onChange}
+        placeholder={orgId ? "انتخاب تیم یا خالی" : "ابتدا سازمان"}
+      />
     </div>
-  );
-}
-
-function TeamScopeActiveSelect({
-  orgId,
-  value,
-  onChange,
-  teamSearch,
-  setTeamSearch,
-}: {
-  orgId: number;
-  value: number | null;
-  onChange: (v: number | null) => void;
-  teamSearch: string;
-  setTeamSearch: (v: string) => void;
-}) {
-  const teamsQ = useTeams(orgId, { q: teamSearch, pageSize: 50 });
-  const teams = teamsQ.data || [];
-  const items = React.useMemo(() => {
-    if (value && !teams.find((t: any) => t.id === value)) {
-      return [{ id: value, name: `تیم #${value}` }, ...teams];
-    }
-    return teams;
-  }, [teams, value]);
-  return (
-    <Combobox<any>
-      items={items}
-      value={value}
-      onChange={(v) => onChange((v as number) ?? null)}
-      searchable
-      searchValue={teamSearch}
-      onSearchChange={setTeamSearch}
-      getKey={(t) => t.id}
-      getLabel={(t) => t.name}
-      leadingIcon={Users}
-      loading={teamsQ.isLoading}
-      placeholder="انتخاب تیم یا خالی"
-    />
   );
 }
 

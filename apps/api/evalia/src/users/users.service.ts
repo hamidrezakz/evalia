@@ -32,25 +32,35 @@ export class UsersService {
       // If the query looks like a phone fragment (mostly digits / + / spaces), build an additional normalized phone search
       const digitFragment = q.replace(/[^0-9+]/g, '');
       const phoneVariants: Prisma.UserWhereInput[] = [];
-      if (digitFragment.length >= 4) {
-        // Support searching with or without +98 leading zeros:
-        // If user types 0912..., also search +98912...; if they type 98912 search +98912
+      if (digitFragment.length >= 3) {
+        // Build multiple candidate variants to maximize partial match success.
+        // Source fragment examples: 0930, 930, +98930, 98930
+        const variants = new Set<string>();
+        const pushVar = (v: string | null | undefined) => {
+          if (v && v.length >= 3) variants.add(v);
+        };
+        pushVar(digitFragment);
+        // Normalize 0XXXXXXXX => +98XXXXXXXX
+        if (digitFragment.startsWith('0') && digitFragment.length >= 4) {
+          pushVar('+98' + digitFragment.substring(1));
+        }
+        // 9XXXXXXXX => +989XXXXXXXX (missing 0)
+        if (digitFragment.startsWith('9') && digitFragment.length >= 4) {
+          pushVar('+98' + digitFragment);
+        }
+        // 98XXXXXXXX (missing plus)
+        if (
+          digitFragment.startsWith('98') &&
+          !digitFragment.startsWith('+98')
+        ) {
+          pushVar('+' + digitFragment);
+        }
+        // Attempt stricter normalization route
         const normalizedCandidate =
           this.tryNormalizePhoneFragment(digitFragment);
-        if (normalizedCandidate) {
-          phoneVariants.push({
-            phoneNormalized: { contains: normalizedCandidate },
-          });
-          // Also allow raw digits contains (fallback)
-          if (
-            normalizedCandidate.startsWith('+98') &&
-            digitFragment.startsWith('0')
-          ) {
-            const alt = '+98' + digitFragment.substring(1);
-            phoneVariants.push({ phoneNormalized: { contains: alt } });
-          }
-        } else {
-          phoneVariants.push({ phoneNormalized: { contains: digitFragment } });
+        pushVar(normalizedCandidate);
+        for (const v of variants) {
+          phoneVariants.push({ phoneNormalized: { contains: v } });
         }
       }
       where.OR = [
@@ -376,7 +386,10 @@ export class UsersService {
     if (!fragment) return null;
     let f = fragment.replace(/[^0-9+]/g, '');
     // If starts with 0 and at least 5 digits, convert to +98 pattern (Iran) like normalizePhone does.
-    if (f.startsWith('0') && f.length >= 5) {
+    // Previous logic required length >=5 to convert 0xxxx -> +98xxxx; this prevented
+    // short but common Iranian prefixes like 0912 from matching (since stored form is +98912...).
+    // We now relax to >=4 and also return both raw and +98 variants in the caller.
+    if (f.startsWith('0') && f.length >= 4) {
       f = '+98' + f.substring(1);
     }
     if (!f.startsWith('+')) return f.length >= 4 ? f : null;

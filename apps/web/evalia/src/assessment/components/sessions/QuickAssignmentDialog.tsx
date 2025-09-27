@@ -15,9 +15,8 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Combobox } from "@/components/ui/combobox";
-import { Users, User } from "lucide-react";
-import { useUsers } from "@/users/api/users-hooks";
+import { Users } from "lucide-react";
+import UserSelectCombobox from "@/users/components/UserSelectCombobox";
 import { ResponsePerspectiveEnum, type ResponsePerspective } from "@/lib/enums";
 import { useAddAssignment } from "@/assessment/api/templates-hooks";
 
@@ -55,14 +54,7 @@ export default function QuickAssignmentDialog({
     }
   }, [open]);
 
-  // Users search
-  const [userSearch, setUserSearch] = React.useState("");
-  const { data: usersData, isLoading: usersLoading } = useUsers(
-    organizationId && open
-      ? ({ orgId: organizationId, q: userSearch, page: 1, pageSize: 50 } as any)
-      : ({} as any)
-  );
-  const users = (usersData?.data as any[]) || [];
+  // Central user selector handles its own debounced remote search
 
   async function submit() {
     if (!sessionId || !userId) return;
@@ -93,23 +85,14 @@ export default function QuickAssignmentDialog({
         <div className="flex flex-col gap-4 mt-2">
           <div className="space-y-2">
             <Label>کاربر پاسخ‌دهنده</Label>
-            <Combobox<any>
-              items={users}
+            <UserSelectCombobox
               value={userId}
-              onChange={(v) => setUserId((v as number) ?? null)}
-              searchable
-              searchValue={userSearch}
-              onSearchChange={setUserSearch}
-              getKey={(u) => u.id}
-              getLabel={(u) =>
-                u.fullName || u.name || u.email || `کاربر #${u.id}`
-              }
-              loading={usersLoading}
+              onChange={(id) => setUserId(id)}
+              orgId={organizationId ?? (undefined as any)}
+              disabled={!organizationId}
               placeholder={
                 organizationId ? "انتخاب/جستجوی کاربر" : "ابتدا سازمان"
               }
-              leadingIcon={User}
-              disabled={!organizationId}
             />
           </div>
           <div className="space-y-2">
@@ -135,23 +118,14 @@ export default function QuickAssignmentDialog({
           {perspective !== "SELF" && (
             <div className="space-y-2">
               <Label>سوژه (کاربر هدف)</Label>
-              <Combobox<any>
-                items={users}
+              <UserSelectCombobox
                 value={subjectUserId}
-                onChange={(v) => setSubjectUserId((v as number) ?? null)}
-                searchable
-                searchValue={userSearch}
-                onSearchChange={setUserSearch}
-                getKey={(u) => u.id}
-                getLabel={(u) =>
-                  u.fullName || u.name || u.email || `کاربر #${u.id}`
-                }
-                loading={usersLoading}
+                onChange={(id) => setSubjectUserId(id)}
+                orgId={organizationId ?? (undefined as any)}
+                disabled={!organizationId}
                 placeholder={
                   organizationId ? "انتخاب/جستجوی کاربر" : "ابتدا سازمان"
                 }
-                leadingIcon={Users}
-                disabled={!organizationId}
               />
             </div>
           )}

@@ -8,15 +8,11 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Combobox } from "@/components/ui/combobox";
-import { useUsers } from "@/users/api/users-hooks";
-import { useQueryClient } from "@tanstack/react-query";
-import { OrgRoleEnum } from "@/lib/enums"; // centralized enum with translations
 import { Label } from "@/components/ui/label";
-// Removed Select imports (multi-role chips implementation)
 import { cn } from "@/lib/utils";
 import { useAddOrganizationMember } from "@/organizations/member/api/organization-membership-hooks";
+import { UserSelectCombobox } from "@/users/components/UserSelectCombobox";
+import { OrgRoleEnum } from "@/lib/enums";
 
 export interface AddMemberDialogProps {
   orgId: number;
@@ -29,13 +25,10 @@ export function AddMemberDialog({
   open,
   onOpenChange,
 }: AddMemberDialogProps) {
-  const qc = useQueryClient();
-  const [search, setSearch] = React.useState("");
   const [selectedUserId, setSelectedUserId] = React.useState<number | null>(
     null
   );
   const [roles, setRoles] = React.useState<string[]>([]);
-  const usersQ = useUsers({ q: search, pageSize: 20 });
 
   const addMemberMut = useAddOrganizationMember(orgId);
 
@@ -45,17 +38,14 @@ export function AddMemberDialog({
       { userId: selectedUserId, roles: roles.length ? roles : undefined },
       {
         onSuccess: () => {
-          // reset local form state
           setSelectedUserId(null);
           setRoles([]);
-          setSearch("");
           onOpenChange(false);
         },
       }
     );
   }
 
-  // Localized options from enum translator
   const roleOptions = OrgRoleEnum.options();
 
   function toggleRole(r: string) {
@@ -77,17 +67,12 @@ export function AddMemberDialog({
             <Label className="text-xs" htmlFor="member-user-combobox">
               انتخاب کاربر
             </Label>
-            <Combobox<any>
-              searchable
-              items={usersQ.data?.data || []}
+            <UserSelectCombobox
               value={selectedUserId}
-              onChange={(v) => setSelectedUserId(v == null ? null : Number(v))}
-              searchValue={search}
-              onSearchChange={setSearch}
-              loading={usersQ.isLoading}
-              placeholder="جستجوی نام، ایمیل..."
-              getKey={(u) => u.id}
-              getLabel={(u) => u.fullName || u.email || `#${u.id}`}
+              onChange={(id) => setSelectedUserId(id)}
+              placeholder="جستجوی نام، ایمیل یا تلفن..."
+              pageSize={20}
+              className="text-xs"
             />
           </div>
           <div className="space-y-1">

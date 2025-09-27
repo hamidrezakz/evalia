@@ -16,22 +16,8 @@ import { ResponsePerspectiveEnum, SessionStateEnum } from "@/lib/enums";
 import { Badge } from "@/components/ui/badge";
 import { cn, formatIranPhone } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import {
-  Panel,
-  PanelHeader,
-  PanelContent,
-} from "@/components/ui/panel";
-// Replacing previous Select with dropdown menu for perspectives
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuLabel,
-} from "@/components/ui/dropdown-menu";
+import { Panel, PanelHeader, PanelContent } from "@/components/ui/panel";
 import { useUserDataContext } from "@/users/context";
-// no separators for ultra-simple look
 import type { AnswerMap, FlatQuestion, AnswerValue } from "./types";
 import { QuestionText } from "./components/QuestionText";
 import { QuestionBoolean } from "./components/QuestionBoolean";
@@ -49,21 +35,17 @@ import {
   Puzzle,
   ListChecks,
   Save,
-  UserCircle2,
-  Users2,
-  Eye,
   Target,
   MoreHorizontal,
-  ChevronDown,
-  UserCheck,
 } from "lucide-react";
-import { Combobox } from "@/components/ui/combobox";
-import { useUser, useUsers } from "@/users/api/users-hooks";
+import { useUser } from "@/users/api/users-hooks";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
 import { useAvatarImage } from "@/users/api/useAvatarImage";
+import { TakeHeader } from "@/app/dashboard/tests/take/components/TakeHeader";
+import { RestrictedSubjectSelector } from "@/app/dashboard/tests/take/components/RestrictedSubjectSelector";
 
-// Lightweight shared shape for user data we access here
+// Lightweight shared shape for user data we access (duplicated from previous inline interface)
 interface BasicUser {
   id: number;
   fullName?: string | null;
@@ -71,24 +53,7 @@ interface BasicUser {
   email?: string | null;
   phone?: string | null;
   avatarUrl?: string | null;
-  avatar?: string | null; // legacy / alternate field
-}
-
-// Map perspective code to an icon for dropdown (extend as needed)
-function iconForPerspective(p: string) {
-  const cls = "size-4 text-muted-foreground";
-  switch (p) {
-    case "SELF":
-      return <UserCheck className={cls} />;
-    case "PEER":
-      return <Users2 className={cls} />;
-    case "MANAGER":
-      return <Eye className={cls} />;
-    case "DIRECT":
-      return <Target className={cls} />;
-    default:
-      return <UserCircle2 className={cls} />;
-  }
+  avatar?: string | null;
 }
 
 export default function TakeAssessmentPage() {
@@ -182,6 +147,28 @@ export default function TakeAssessmentPage() {
   const assignmentsDetailed = useAssignmentsDetailed(
     previewMode ? null : activeSessionId ?? null
   );
+  // Derive allowed subject user IDs based on assignments for the active respondent & perspective
+  const allowedSubjectIds = React.useMemo(() => {
+    if (!assignmentsDetailed.data || !activePerspective || !userId)
+      return [] as number[];
+    const list = assignmentsDetailed.data as any[];
+    const mine = list.filter(
+      (a) =>
+        (a.respondentUserId ?? a.userId) === userId &&
+        a.perspective === activePerspective
+    );
+    const subjIds = mine
+      .map((a) => a.subjectUserId)
+      .filter((v) => typeof v === "number" && v > 0) as number[];
+    return Array.from(new Set(subjIds));
+  }, [assignmentsDetailed.data, activePerspective, userId]);
+
+  // Ensure currently selected subject remains valid
+  React.useEffect(() => {
+    if (subjectUserId && !allowedSubjectIds.includes(subjectUserId)) {
+      setSubjectUserId(null);
+    }
+  }, [allowedSubjectIds, subjectUserId]);
   // Auto pick subject if required perspective and exactly one candidate OR none chosen
   React.useEffect(() => {
     if (previewMode) return;
@@ -527,11 +514,12 @@ export default function TakeAssessmentPage() {
         <h1 className="text-xl font-semibold mb-3">ورود به آزمون</h1>
         <p className="text-muted-foreground">{reason}</p>
         {!previewMode && activePerspective && activePerspective !== "SELF" ? (
-          <div className="mt-3">
-            <SubjectSelector
-              organizationId={activeSession?.organizationId}
-              value={subjectUserId}
-              onChange={setSubjectUserId}
+          <div className="mt-3 max-w-xs">
+            <RestrictedSubjectSelector
+              allowedSubjectIds={allowedSubjectIds.map(String)}
+              value={subjectUserId ? String(subjectUserId) : null}
+              onChange={(id) => setSubjectUserId(id ? Number(id) : null)}
+              disabled={assignmentsDetailed.isLoading}
             />
           </div>
         ) : null}
@@ -621,59 +609,17 @@ export default function TakeAssessmentPage() {
             {/* Right cluster: actions & choosers */}
             {!previewMode && (
               <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-end w-full sm:w-auto">
-                {/* Perspective dropdown */}
-                <DropdownMenu dir="rtl">
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      aria-label="انتخاب پرسپکتیو"
-                      aria-haspopup="menu"
-                      title="انتخاب پرسپکتیو"
-                      className="inline-flex items-center gap-1 font-normal h-8">
-                      <UserCircle2 className="size-4" />
-                      <span className="text-xs">
-                        {activePerspective
-                          ? ResponsePerspectiveEnum.t(activePerspective as any)
-                          : "انتخاب پرسپکتیو"}
-                      </span>
-                      <ChevronDown className="size-3" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="end"
-                    className="min-w-48"
-                    sideOffset={6}>
-                    <DropdownMenuLabel className="text-[11px]">
-                      انتخاب پرسپکتیو
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    {availablePerspectives?.length ? (
-                      availablePerspectives.map((p) => (
-                        <DropdownMenuItem
-                          key={p as any}
-                          onClick={() => setActivePerspective(p as any)}
-                          className="text-[12px] flex items-center gap-2">
-                          {iconForPerspective(p as any)}
-                          <span>{ResponsePerspectiveEnum.t(p as any)}</span>
-                        </DropdownMenuItem>
-                      ))
-                    ) : (
-                      <div className="px-2 py-1 text-[11px] text-muted-foreground">
-                        پرسپکتیوی موجود نیست
-                      </div>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                {activePerspective && activePerspective !== "SELF" ? (
-                  <div className="sm:w-[220px]">
-                    <SubjectSelector
-                      organizationId={activeSession?.organizationId}
-                      value={subjectUserId}
-                      onChange={setSubjectUserId}
-                    />
-                  </div>
-                ) : null}
+                <TakeHeader
+                  perspectives={availablePerspectives}
+                  activePerspective={activePerspective as any}
+                  setActivePerspective={(p) => setActivePerspective(p as any)}
+                  allowedSubjectIds={allowedSubjectIds.map(String)}
+                  activeSubjectId={subjectUserId ? String(subjectUserId) : null}
+                  setActiveSubjectId={(id) =>
+                    setSubjectUserId(id ? Number(id) : null)
+                  }
+                  loadingSubjects={assignmentsDetailed.isLoading}
+                />
               </div>
             )}
           </div>
@@ -1107,38 +1053,4 @@ export default function TakeAssessmentPage() {
   );
 }
 
-function SubjectSelector({
-  organizationId,
-  value,
-  onChange,
-}: {
-  organizationId?: number | null;
-  value: number | null;
-  onChange: (v: number | null) => void;
-}) {
-  const [search, setSearch] = React.useState("");
-  const hasOrg = !!organizationId;
-  const { data, isLoading } = useUsers(
-    hasOrg
-      ? ({ orgId: organizationId, q: search, page: 1, pageSize: 50 } as any)
-      : ({} as any)
-  );
-  const list = (data?.data as any[]) || [];
-  return (
-    <div className="min-w-[180px]">
-      <Combobox<any>
-        items={list}
-        value={value}
-        onChange={(v) => onChange(v == null ? null : Number(v))}
-        searchable
-        searchValue={search}
-        onSearchChange={setSearch}
-        getKey={(u) => u.id}
-        getLabel={(u) => u.fullName || u.name || u.email || String(u.id)}
-        loading={isLoading}
-        placeholder={hasOrg ? "انتخاب شخص" : "سازمان نامشخص"}
-        disabled={!hasOrg}
-      />
-    </div>
-  );
-}
+// (SubjectSelector inlined previously has been replaced by modular RestrictedSubjectSelector)

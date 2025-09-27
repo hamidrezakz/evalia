@@ -40,6 +40,10 @@ export interface ComboboxProps<T> {
   // States
   emptyText?: string;
   loading?: boolean;
+  /** Custom renderer for each dropdown item (advanced). Responsible only for the main body – check icon is appended automatically. */
+  renderItem?: (ctx: { item: T; selected: boolean }) => React.ReactNode;
+  /** Custom renderer for the selected value (inside the trigger button). */
+  renderValue?: (ctx: { item: T }) => React.ReactNode;
 }
 
 function defaultKey<T extends Record<string, unknown>>(it: T): ComboboxKey {
@@ -77,6 +81,8 @@ export function Combobox<T>(props: ComboboxProps<T>) {
     trailingIcon: TrailingIcon = ChevronsUpDownIcon,
     emptyText = "موردی یافت نشد",
     loading,
+    renderItem,
+    renderValue,
   } = props;
 
   const [open, setOpen] = React.useState(false);
@@ -131,7 +137,11 @@ export function Combobox<T>(props: ComboboxProps<T>) {
               <LeadingIcon className="w-4 h-4 text-muted-foreground" />
             ) : null}
             {selectedItem ? (
-              <span suppressHydrationWarning>{labelOf(selectedItem)}</span>
+              <span suppressHydrationWarning>
+                {renderValue
+                  ? renderValue({ item: selectedItem })
+                  : labelOf(selectedItem)}
+              </span>
             ) : (
               <span suppressHydrationWarning>{placeholder}</span>
             )}
@@ -169,17 +179,33 @@ export function Combobox<T>(props: ComboboxProps<T>) {
                       onChange(next, selected ? undefined : it);
                       setOpen(false);
                     }}>
-                    <div className="flex w-full flex-row justify-between items-center">
-                      <span className="truncate flex-1">{labelOf(it)}</span>
-                      <span className="flex-shrink-0">
-                        <CheckIcon
-                          className={cn(
-                            "ml-2 h-4 w-4",
-                            selected ? "opacity-100" : "opacity-0"
-                          )}
-                        />
-                      </span>
-                    </div>
+                    {renderItem ? (
+                      <div className="flex w-full flex-row justify-between items-center">
+                        <div className="flex-1 min-w-0 truncate">
+                          {renderItem({ item: it, selected })}
+                        </div>
+                        <span className="flex-shrink-0">
+                          <CheckIcon
+                            className={cn(
+                              "ml-2 h-4 w-4",
+                              selected ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex w-full flex-row justify-between items-center">
+                        <span className="truncate flex-1">{labelOf(it)}</span>
+                        <span className="flex-shrink-0">
+                          <CheckIcon
+                            className={cn(
+                              "ml-2 h-4 w-4",
+                              selected ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                        </span>
+                      </div>
+                    )}
                   </CommandItem>
                 );
               })}
