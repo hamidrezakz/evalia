@@ -19,7 +19,13 @@ export class UsersController {
   // List users with filters. SUPER_ADMIN sees all; others can be restricted later (placeholder logic by guard).
 
   @Get()
-  @Roles('SUPER_ADMIN', 'ORG:OWNER')
+  @Roles(
+    'SUPER_ADMIN',
+    'ANALYSIS_MANAGER',
+    'SUPPORT',
+    'ORG:OWNER',
+    'ORG:MANAGER',
+  )
   list(@Query() query: ListUsersDto) {
     return this.service.list(query);
   }
@@ -36,13 +42,25 @@ export class UsersController {
   }
 
   @Post()
-  @Roles('SUPER_ADMIN', 'ORG:OWNER')
+  @Roles(
+    'SUPER_ADMIN',
+    'ANALYSIS_MANAGER',
+    'SUPPORT',
+    'ORG:OWNER',
+    'ORG:MANAGER',
+  )
   create(@Body() body: any) {
     return this.service.create(body);
   }
 
   @Delete(':id')
-  @Roles('SUPER_ADMIN', 'ORG:OWNER')
+  @Roles(
+    'SUPER_ADMIN',
+    'ANALYSIS_MANAGER',
+    'SUPPORT',
+    'ORG:OWNER',
+    'ORG:MANAGER',
+  )
   remove(@Param('id') id: string) {
     return this.service.remove(Number(id));
   }

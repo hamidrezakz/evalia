@@ -28,9 +28,19 @@ import { Reflector } from '@nestjs/core';
 import { IS_PUBLIC_KEY } from './public.decorator';
 import { ROLES_KEY, AdvancedRolesDescriptor } from './roles.decorator';
 
+interface JwtOrgMembershipLegacy {
+  orgId: string; // legacy shape with single role
+  role: string;
+}
+interface JwtOrgMembershipNew {
+  orgId: string; // new shape with multiple roles
+  roles: string[];
+}
+type JwtOrgMembership = JwtOrgMembershipLegacy | JwtOrgMembershipNew;
+
 interface JwtRolesPayload {
   global: string[];
-  org: { orgId: string; role: string }[];
+  org: JwtOrgMembership[];
 }
 
 @Injectable()
@@ -54,7 +64,7 @@ export class RolesGuard implements CanActivate {
     if (!user) throw new ForbiddenException('unauthorized');
     const roles = (user.roles || { global: [], org: [] }) as JwtRolesPayload;
 
-    // SUPER_ADMIN always allowed (global bypass) 
+    // SUPER_ADMIN always allowed (global bypass)
     if (roles.global.includes('SUPER_ADMIN')) return true;
 
     if (!meta) return true;
@@ -66,7 +76,20 @@ export class RolesGuard implements CanActivate {
       const orgPatternRoles = meta.filter((r) => r.startsWith('ORG:'));
       if (orgPatternRoles.length) {
         const needed = orgPatternRoles.map((r) => r.split(':')[1]);
-        if (roles.org.some((o) => needed.includes(o.role))) return true;
+        if (
+          roles.org.some((o: JwtOrgMembership) => {
+            if ((o as JwtOrgMembershipLegacy).role) {
+              return needed.includes((o as JwtOrgMembershipLegacy).role);
+            }
+            if ((o as JwtOrgMembershipNew).roles) {
+              return (o as JwtOrgMembershipNew).roles.some((rr) =>
+                needed.includes(rr),
+              );
+            }
+            return false;
+          })
+        )
+          return true;
       }
       throw new ForbiddenException('دسترسی کافی به این بخش ندارید');
     }
@@ -77,7 +100,17 @@ export class RolesGuard implements CanActivate {
 
     // Helper resolvers
     const hasGlobal = (r: string) => roles.global.includes(r);
-    const hasOrgRole = (r: string) => roles.org.some((o) => o.role === r);
+    // Support both legacy (o.role) and new (o.roles[]) membership shapes
+    const hasOrgRole = (r: string) =>
+      roles.org.some((o: JwtOrgMembership) => {
+        if ((o as JwtOrgMembershipLegacy).role) {
+          return (o as JwtOrgMembershipLegacy).role === r;
+        }
+        if ((o as JwtOrgMembershipNew).roles) {
+          return (o as JwtOrgMembershipNew).roles.includes(r);
+        }
+        return false;
+      });
     const matchToken = (token: string): boolean => {
       if (token.startsWith('ORG:')) {
         const role = token.split(':')[1];

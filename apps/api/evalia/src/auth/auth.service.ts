@@ -180,6 +180,21 @@ export class AuthService {
     return { ok: true };
   }
 
+  /**
+   * Increment target user's tokenVersion so that all previously issued access tokens
+   * (and refresh tokens tied to old version) become invalid. Use this after
+   * sensitive account changes (password reset by admin, force logout, role overhaul, etc).
+   * Returns the new tokenVersion.
+   */
+  async incrementUserTokenVersion(userId: number) {
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data: { tokenVersion: { increment: 1 } },
+      select: { id: true, tokenVersion: true },
+    });
+    return { userId: updated.id, tokenVersion: updated.tokenVersion };
+  }
+
   private async gatherRoles(userId: number) {
     const numericId = userId;
     const user = await this.prisma.user.findUnique({

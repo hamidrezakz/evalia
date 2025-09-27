@@ -4,13 +4,17 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
+import { AuthService } from '../auth/auth.service';
 import { AddMemberDto } from './dto/add-member.dto';
 import { UpdateMemberRoleDto } from './dto/update-member-role.dto';
 import { OrgRole } from '@prisma/client';
 
 @Injectable()
 export class MembershipService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private auth: AuthService,
+  ) {}
 
   async list(
     orgId: number,
@@ -54,7 +58,7 @@ export class MembershipService {
         code: 'ORG_NOT_FOUND',
       });
     try {
-      return await this.prisma.organizationMembership.create({
+      const created = await this.prisma.organizationMembership.create({
         data: {
           organizationId: orgId,
           userId: dto.userId,
@@ -66,6 +70,11 @@ export class MembershipService {
           ).filter(Boolean), // Support both roles array and legacy role, filter out undefined
         },
       });
+      // New membership with roles > 0 should cause token invalidation so new org roles reflect.
+      if (created.roles && created.roles.length) {
+        await this.auth.incrementUserTokenVersion(created.userId);
+      }
+      return created;
     } catch (e: any) {
       if (e.code === 'P2002') {
         throw new BadRequestException({
@@ -87,10 +96,12 @@ export class MembershipService {
         code: 'MEMBER_NOT_FOUND',
       });
     if (!dto.roles || dto.roles.length === 0) return membership;
-    return this.prisma.organizationMembership.update({
+    const updated = await this.prisma.organizationMembership.update({
       where: { id: membershipId },
       data: { roles: dto.roles },
     });
+    await this.auth.incrementUserTokenVersion(updated.userId);
+    return updated;
   }
 
   async remove(orgId: number, membershipId: number) {
@@ -102,9 +113,10 @@ export class MembershipService {
         message: 'Membership not found',
         code: 'MEMBER_NOT_FOUND',
       });
-    await this.prisma.organizationMembership.delete({
+    const deleted = await this.prisma.organizationMembership.delete({
       where: { id: membershipId },
     });
+    await this.auth.incrementUserTokenVersion(deleted.userId);
     return { success: true };
   }
 }

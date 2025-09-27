@@ -3,29 +3,10 @@
 import { ModeToggle } from "@/components/modetoggle";
 import { HeroSection } from "@/components/sections";
 import { useState } from "react";
-import { openPrismaStudio } from "@/lib/api.auth";
 import { siteConfig } from "./site-config";
 
 export default function Home() {
-  const [studioUrl, setStudioUrl] = useState<string>("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  const handlePrismaStudio = async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const res = await openPrismaStudio();
-      if (res.url) {
-        setStudioUrl(res.url);
-      } else {
-        setError("لینک دریافت نشد");
-      }
-    } catch {
-      setError("خطا در دریافت لینک");
-    }
-    setLoading(false);
-  };
+  // حذف قابلیت باز کردن Prisma Studio طبق درخواست
 
   return (
     <div className="flex flex-col gap-6">
@@ -55,24 +36,7 @@ export default function Home() {
         }
         headerLeft={<ModeToggle />}
       />
-      <div className="flex flex-col items-center gap-2">
-        <button
-          className="px-4 py-2 rounded-md bg-primary text-white hover:bg-primary/80 transition text-sm"
-          onClick={handlePrismaStudio}
-          disabled={loading}>
-          {loading ? "دریافت لینک استودیو..." : "باز کردن Prisma Studio (محلی)"}
-        </button>
-        {studioUrl && (
-          <a
-            href={studioUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary underline mt-2">
-            ورود به Prisma Studio
-          </a>
-        )}
-        {error && <div className="text-red-500 mt-2 text-sm">{error}</div>}
-      </div>
+      {/* ناحیه مربوط به Prisma Studio حذف شد */}
     </div>
   );
 }

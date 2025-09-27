@@ -183,9 +183,9 @@ export default function DashboardLandingPage() {
       e.target.value = "";
       return;
     }
-    const maxMB = 5;
-    if (file.size > maxMB * 1024 * 1024) {
-      toast.error(`حجم تصویر نباید بیشتر از ${maxMB} مگابایت باشد.`);
+    const MAX_AVATAR_BYTES = 512 * 1024; // 512KB
+    if (file.size > MAX_AVATAR_BYTES) {
+      toast.error("حجم تصویر آواتار نباید بیشتر از ۵۱۲ کیلوبایت باشد.");
       e.target.value = "";
       return;
     }
@@ -205,7 +205,15 @@ export default function DashboardLandingPage() {
           await qc.invalidateQueries({ queryKey: usersKeys.byId(userId) });
         }
       } catch (err: any) {
-        toast.error(err?.message || "خطا در آپلود تصویر");
+        const code = err?.code || "";
+        if (
+          code === "AVATAR_FILE_TOO_LARGE" ||
+          /AVATAR_FILE_TOO_LARGE/.test(err?.message || "")
+        ) {
+          toast.error("حجم تصویر آواتار نباید بیشتر از ۵۱۲ کیلوبایت باشد.");
+        } else {
+          toast.error(err?.message || "خطا در آپلود تصویر");
+        }
       } finally {
         e.target.value = "";
       }

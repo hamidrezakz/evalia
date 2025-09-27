@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { PasswordService } from '../auth/password.service';
+import { AuthService } from '../auth/auth.service';
 import { ListUsersDto } from './dto/list-users.dto';
 import { Prisma } from '@prisma/client';
 import * as fs from 'fs';
@@ -16,6 +17,7 @@ export class UsersService {
   constructor(
     private prisma: PrismaService,
     private password: PasswordService,
+    private auth: AuthService,
   ) {}
 
   async list(dto: ListUsersDto) {
@@ -227,6 +229,7 @@ export class UsersService {
   async update(id: number, body: any) {
     // Allow only a safe subset of fields
     const data: any = {};
+    let bumpTokenVersion = false;
     if (body.fullName !== undefined)
       data.fullName = String(body.fullName || '');
     if (body.status !== undefined) data.status = body.status;
@@ -248,6 +251,7 @@ export class UsersService {
         allowed.has(r as any),
       );
       data.globalRoles = filtered;
+      bumpTokenVersion = true; // role change should invalidate tokens
     }
     if (body.phone !== undefined || body.phoneNormalized !== undefined) {
       const norm = this.normalizePhone(
@@ -260,6 +264,14 @@ export class UsersService {
       });
       if (exists) throw new BadRequestException('Phone already in use');
       data.phoneNormalized = norm;
+    }
+    // Password change (admin-side) - if password provided
+    if (body.password !== undefined && body.password !== null) {
+      const pwd = String(body.password);
+      if (pwd.trim().length < 6)
+        throw new BadRequestException('Password too short');
+      data.passwordHash = await this.password.hash(pwd);
+      bumpTokenVersion = true; // credential change => force logout
     }
     if (body.avatarAssetId !== undefined) {
       const n = Number(body.avatarAssetId);
@@ -362,6 +374,10 @@ export class UsersService {
       return this.detail(updatedUser.id);
     }
     const updated = await this.prisma.user.update({ where: { id }, data });
+    if (bumpTokenVersion) {
+      // Fire and forget; but await to ensure consistency for tests / immediate checks
+      await this.auth.incrementUserTokenVersion(updated.id);
+    }
     return this.detail(updated.id);
   }
 

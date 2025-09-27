@@ -10,10 +10,4 @@ export async function checkAccessToken(accessToken: string): Promise<unknown> {
     refreshOn401: false,
   });
 }
-
-export async function openPrismaStudio(): Promise<{ url: string }> {
-  const res = await apiRequest("/prisma/studio", null, null, {
-    method: "POST",
-  });
-  return res.data.url ? { url: res.data.url } : { url: "" };
-}
+// تابع openPrismaStudio حذف شد (دیگر مورد استفاده نیست)

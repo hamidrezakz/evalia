@@ -70,6 +70,15 @@ export class AssetsController {
     @Body('userId') userIdRaw?: string,
   ) {
     if (!file) throw new BadRequestException('No file uploaded');
+    const assetType = (type as any) || 'AVATAR';
+    // Enforce 512KB max for avatar images (stricter than general file interceptor 5MB)
+    if (assetType === 'AVATAR' && file.size > 512 * 1024) {
+      try {
+        const p = `uploads/${file.filename}`;
+        if (fs.existsSync(p)) fs.unlinkSync(p);
+      } catch {}
+      throw new BadRequestException('AVATAR_FILE_TOO_LARGE');
+    }
     // If filename is deterministic for a user, remove any previous file with same name to ensure single image
     try {
       const dir = 'uploads';
@@ -78,7 +87,7 @@ export class AssetsController {
       // We don't handle DB cleanup here; user service update will soft-delete previous asset records.
     } catch {}
     const asset = await this.assets.createAsset({
-      type: (type as any) || 'AVATAR',
+      type: assetType,
       filename: file.filename,
       mimeType: file.mimetype,
       sizeBytes: file.size,

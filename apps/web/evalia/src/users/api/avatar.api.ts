@@ -22,14 +22,39 @@ const uploadedAssetSchema = z.object({
 });
 
 export async function uploadAvatar(file: File): Promise<UploadedAsset> {
+  const MAX_AVATAR_BYTES = 512 * 1024; // 512KB
+  if (file.size > MAX_AVATAR_BYTES) {
+    const err: any = new Error(
+      "حجم تصویر آواتار نباید بیشتر از ۵۱۲ کیلوبایت باشد"
+    );
+    err.code = "AVATAR_FILE_TOO_LARGE";
+    throw err;
+  }
   const fd = new FormData();
   fd.append("file", file);
   fd.append("type", "AVATAR");
-  const envelope = await apiRequestMultipart<UploadedAsset>(
-    "/assets",
-    fd,
-    uploadedAssetSchema
-  );
+  let envelope;
+  try {
+    envelope = await apiRequestMultipart<UploadedAsset>(
+      "/assets",
+      fd,
+      uploadedAssetSchema
+    );
+  } catch (e: any) {
+    // Map backend standardized error code to user-friendly message
+    const msg = (e?.message || "").toUpperCase();
+    if (
+      msg.includes("AVATAR_FILE_TOO_LARGE") ||
+      e?.code === "AVATAR_FILE_TOO_LARGE"
+    ) {
+      const err: any = new Error(
+        "حجم تصویر آواتار نباید بیشتر از ۵۱۲ کیلوبایت باشد"
+      );
+      err.code = "AVATAR_FILE_TOO_LARGE";
+      throw err;
+    }
+    throw e;
+  }
   return envelope.data;
 }
 

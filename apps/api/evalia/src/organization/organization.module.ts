@@ -8,9 +8,10 @@ import { MembershipService } from './membership.service';
 import { MembershipController } from './membership.controller';
 import { TeamMembershipService } from './team-membership.service';
 import { TeamMembershipController } from './team-membership.controller';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  imports: [],
+  imports: [AuthModule],
   controllers: [
     OrganizationController,
     MembershipController,
