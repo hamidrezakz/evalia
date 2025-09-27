@@ -32,6 +32,8 @@ export function SiteHeader() {
     organizations: "سازمان‌ها",
     users: "کاربران",
     sessions: "جلسات ارزیابی",
+    tests: "آزمون‌ها",
+    take: "اجرای ارزیابی",
     // sessions/my-org segment will be split: sessions + my-org (map second)
     "my-org": "جلسات سازمان من",
     testbuilder: "سازنده آزمون",

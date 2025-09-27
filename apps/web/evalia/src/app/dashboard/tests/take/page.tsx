@@ -27,6 +27,7 @@ import { QuestionScale } from "./components/QuestionScale";
 import { ProgressCircle } from "./components/ProgressCircle";
 import { SessionStateBadge } from "@/components/status-badges/SessionStateBadge";
 import { QuestionAnswerStatusBadge } from "@/components/status-badges/QuestionAnswerStatusBadge";
+import { SaveResponsesPanel } from "@/app/dashboard/tests/take/components/SaveResponsesPanel";
 import {
   AlertTriangle,
   Layers,
@@ -563,44 +564,17 @@ export default function TakeAssessmentPage() {
       </div>
       {!readOnly && canLoad && (
         <div
-          className="fixed sm:bottom-4 bottom-0 right-4 z-50 flex flex-col items-end gap-2"
+          className="hidden sm:flex fixed sm:bottom-4 right-4 z-50 flex-col items-end gap-2"
           dir="rtl">
-          <div className="rounded-xl shadow-lg border border-border/60 bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/70 p-3 flex flex-col gap-2 min-w-[220px]">
-            <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-              <span>ذخیره پاسخ‌ها</span>
-              <span className="flex items-center gap-1">
-                <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium">
-                  {answeredCount}/{flatQuestions.length}
-                </span>
-                {pendingCount > 0 && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 px-2 py-0.5 text-[10px] font-medium">
-                    تغییرات: {pendingCount}
-                  </span>
-                )}
-              </span>
-            </div>
-            <Button
-              onClick={handleSaveAll}
-              isLoading={saving}
-              icon={<Save className="size-4" />}
-              className="w-full"
-              disabled={
-                saving ||
-                pendingCount === 0 ||
-                (data ? data.session.state !== "IN_PROGRESS" : true)
-              }>
-              {saving
-                ? "در حال ذخیره…"
-                : pendingCount === 0
-                ? "چیزی برای ذخیره نیست"
-                : "ذخیره"}
-            </Button>
-            {error && (
-              <div className="text-[11px] text-rose-600 leading-relaxed">
-                {error}
-              </div>
-            )}
-          </div>
+          <SaveResponsesPanel
+            answeredCount={answeredCount}
+            totalCount={flatQuestions.length}
+            pendingCount={pendingCount}
+            saving={saving}
+            error={error}
+            sessionState={data ? (data.session.state as any) : null}
+            onSave={handleSaveAll}
+          />
         </div>
       )}
 
@@ -1102,8 +1076,21 @@ export default function TakeAssessmentPage() {
               </section>
             );
           })}
-
-          {/* Inline save bar removed; replaced by floating save panel */}
+          {/* Mobile inline save panel placed AFTER all questions (end of assessment) */}
+          {!readOnly && canLoad && (
+            <div className="my-10 mb-4 sm:hidden" dir="rtl">
+              <SaveResponsesPanel
+                answeredCount={answeredCount}
+                totalCount={flatQuestions.length}
+                pendingCount={pendingCount}
+                saving={saving}
+                error={error}
+                sessionState={data ? (data.session.state as any) : null}
+                onSave={handleSaveAll}
+                className="w-full"
+              />
+            </div>
+          )}
         </div>
       )}
     </div>
