@@ -37,7 +37,7 @@ export function ProgressCircle({
             data={data}
             dataKey="value"
             nameKey="name"
-            innerRadius={28}
+            innerRadius={30}
             outerRadius={40}
             startAngle={90}
             endAngle={-270}

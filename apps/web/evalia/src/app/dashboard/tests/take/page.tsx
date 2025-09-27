@@ -558,12 +558,12 @@ export default function TakeAssessmentPage() {
   return (
     <div className="space-y-6 text-right" dir="rtl">
       {/* Floating progress */}
-      <div className="fixed left-2 sm:left-3 bottom-2 z-40 pointer-events-none">
+      <div className="fixed left-2 sm:left-3 sm:bottom-2 bottom-[-1.2rem] z-40 pointer-events-none">
         <ProgressCircle value={answeredCount} total={flatQuestions.length} />
       </div>
       {!readOnly && canLoad && (
         <div
-          className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-2"
+          className="fixed sm:bottom-4 bottom-0 right-4 z-50 flex flex-col items-end gap-2"
           dir="rtl">
           <div className="rounded-xl shadow-lg border border-border/60 bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/70 p-3 flex flex-col gap-2 min-w-[220px]">
             <div className="flex items-center justify-between text-[11px] text-muted-foreground">
