@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 
-import { Folder, MoreHorizontal, Share, Trash2 } from "lucide-react";
+import { Folder, MoreHorizontal } from "lucide-react";
 import type { SidebarProjectItem } from "./sidebar-data/types";
 
 import {
@@ -21,7 +21,8 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useAssessmentUserSessions } from "@/assessment/context/assessment-user-sessions";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge"; // still used for placeholders
+import { SessionStateBadge } from "@/components/status-badges/SessionStateBadge";
 import { cn } from "@/lib/utils";
 import { SessionStateEnum, ResponsePerspectiveEnum } from "@/lib/enums";
 import { useRouter } from "next/navigation";
@@ -60,6 +61,20 @@ export function NavProjects(props: { projects?: SidebarProjectItem[] }) {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarGroup>
+    );
+  }
+
+  // Map session state -> badge variant + extra classes (centralized styling)
+  // Use shared SessionStateBadge component (tone soft, small size, with icon)
+  function renderStateBadge(state: string) {
+    return (
+      <SessionStateBadge
+        state={state as any}
+        tone="soft"
+        size="xs"
+        withIcon={true}
+        className="px-2"
+      />
     );
   }
 
@@ -102,24 +117,7 @@ export function NavProjects(props: { projects?: SidebarProjectItem[] }) {
                 </span>
                 <span className="ms-auto flex items-center gap-2 w-fit min-w-fit">
                   {/* Status badge */}
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      "text-[10px] font-medium",
-                      s.state === "IN_PROGRESS"
-                        ? "border-amber-500 text-amber-700"
-                        : s.state === "COMPLETED"
-                        ? "border-emerald-500 text-emerald-700"
-                        : s.state === "CANCELLED"
-                        ? "border-rose-500 text-rose-700"
-                        : s.state === "ANALYZING"
-                        ? "border-sky-500 text-sky-700"
-                        : "border-muted-foreground/40 text-muted-foreground"
-                    )}>
-                    {SessionStateEnum.t(
-                      s.state as any as (typeof SessionStateEnum.values)[number]
-                    )}
-                  </Badge>
+                  {renderStateBadge(s.state)}
                 </span>
               </SidebarMenuButton>
               {/* Actions: choose perspective */}

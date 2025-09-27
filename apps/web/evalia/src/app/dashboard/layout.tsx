@@ -11,6 +11,16 @@ import { NavigationProvider } from "@/navigation/context";
 
 import { ReactNode, Suspense } from "react";
 import { AssessmentUserSessionsProvider } from "@/assessment/context/assessment-user-sessions";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "داشبورد",
+  robots: {
+    index: false,
+    follow: false,
+  },
+  description: "ناحیه داخلی داشبورد دان‌پلی (ایندکس نشود)",
+};
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (

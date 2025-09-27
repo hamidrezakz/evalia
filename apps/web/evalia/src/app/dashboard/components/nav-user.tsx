@@ -4,7 +4,6 @@ import {
   BadgeCheck,
   Bell,
   ChevronsUpDown,
-  CreditCard,
   LogOut,
   Sparkles,
 } from "lucide-react";
@@ -29,6 +28,8 @@ import { useAuthSession } from "@/app/auth/event-context/session-context";
 import { formatIranPhone } from "@/lib/utils";
 import * as React from "react";
 import { useAvatarImage } from "@/users/api/useAvatarImage";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { resolveApiBase } from "@/lib/api/helpers";
 
 export function NavUser({
@@ -43,6 +44,7 @@ export function NavUser({
 }) {
   const { isMobile } = useSidebar();
   const { signOut } = useAuthSession();
+  const router = useRouter();
   const [loggingOut, setLoggingOut] = React.useState(false);
   const initials = React.useMemo(
     () =>
@@ -134,19 +136,31 @@ export function NavUser({
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={(e) => {
+                  e.preventDefault();
+                  router.push("/dashboard");
+                }}
+                className="cursor-pointer">
                 <BadgeCheck />
-                پروفایل سازمانی
+                پروفایل
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <CreditCard />
-                مدیریت اشتراک و صورتحساب
-              </DropdownMenuItem>
-              <DropdownMenuItem>
+              {/* Removed change password item per latest request */}
+              <DropdownMenuItem
+                onSelect={(e) => {
+                  e.preventDefault();
+                  router.push("/dashboard/support");
+                }}
+                className="cursor-pointer">
                 <Bell />
-                اعلان‌ها و پیام‌ها
+                پشتیبانی
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={(e) => {
+                  e.preventDefault();
+                  router.push("/dashboard/feedback");
+                }}
+                className="cursor-pointer">
                 <Sparkles />
                 ارسال بازخورد
               </DropdownMenuItem>
