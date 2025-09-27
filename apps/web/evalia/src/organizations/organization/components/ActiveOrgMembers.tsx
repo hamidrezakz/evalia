@@ -21,6 +21,7 @@ import {
 import { FiltersBar } from "./active-org-members/FiltersBar";
 import { MemberRow } from "./active-org-members/MemberRow";
 import { ResultsCount } from "./active-org-members/ResultsCount";
+import ActiveOrgMembersSkeleton from "./ActiveOrgMembersSkeleton";
 
 export default function ActiveOrgMembers() {
   const { activeOrganizationId } = useOrgState();
@@ -87,6 +88,10 @@ export default function ActiveOrgMembers() {
     id: number;
     name?: string;
   } | null>(null);
+
+  if (membersQ.isLoading) {
+    return <ActiveOrgMembersSkeleton />;
+  }
 
   return (
     <>

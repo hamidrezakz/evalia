@@ -470,7 +470,8 @@ export function useAssignmentsDetailed(sessionId: number | null) {
       });
     },
     enabled: !!sessionId && Number.isFinite(sessionId),
-    staleTime: 1000 * 60 * 5,
+    // We want newly added assignments to appear immediately; keep data always fresh
+    staleTime: 0,
     retry: 1,
     refetchOnWindowFocus: false,
   });
@@ -479,11 +480,46 @@ export function useAddAssignment() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: addAssignment,
-    onSuccess: (a: any) => {
-      qc.invalidateQueries({ queryKey: sessionsKeys.assignments(a.sessionId) });
+    onSuccess: (a: any, vars: any) => {
+      // Prefer returned assignment.sessionId; fallback to variables.sessionId (in case response shape changes)
+      const sessionId = (a && a.sessionId) || vars?.sessionId;
+      if (!sessionId) return; // safety guard
+      // Optimistically merge into detailed assignments cache
+      try {
+        const key = sessionsKeys.assignmentsDetailed(sessionId);
+        const existing =
+          qc.getQueryData<EnrichedAssignment[] | undefined>(key) || [];
+        const optimistic: EnrichedAssignment = {
+          id: a.id,
+          sessionId: sessionId,
+          userId: a.userId,
+          respondentUserId:
+            a.respondentUserId ||
+            a.userId ||
+            vars?.respondentUserId ||
+            vars?.userId,
+          subjectUserId:
+            a.subjectUserId || a.respondentUserId || a.userId || null,
+          perspective: a.perspective || vars?.perspective || "SELF",
+          createdAt: a.createdAt || new Date().toISOString(),
+          updatedAt: a.updatedAt || new Date().toISOString(),
+          user: null,
+          respondent: null,
+          subject: null,
+        };
+        const withoutDup = existing.filter((it) => it.id !== optimistic.id);
+        qc.setQueryData(key, [...withoutDup, optimistic]);
+      } catch {}
+      // Invalidate both base & detailed queries
+      qc.invalidateQueries({ queryKey: sessionsKeys.assignments(sessionId) });
       qc.invalidateQueries({
-        queryKey: sessionsKeys.assignmentsDetailed(a.sessionId),
+        queryKey: sessionsKeys.assignmentsDetailed(sessionId),
       });
+      // Force an immediate refetch so UI (SessionParticipantsMenu) reflects new assignment without waiting
+      qc.refetchQueries({
+        queryKey: sessionsKeys.assignmentsDetailed(sessionId),
+      });
+      // (Optional) Optimistic append could be added here if needed; current forced refetch keeps logic simple.
     },
   });
 }

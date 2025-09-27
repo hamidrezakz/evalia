@@ -28,6 +28,14 @@ export function SiteHeader() {
   const labels: Record<string, string> = {
     // لایه اصلی داشبورد
     dashboard: "داشبورد سازمانی",
+    myorg: "سازمان من",
+    organizations: "سازمان‌ها",
+    users: "کاربران",
+    sessions: "جلسات ارزیابی",
+    // sessions/my-org segment will be split: sessions + my-org (map second)
+    "my-org": "جلسات سازمان من",
+    testbuilder: "سازنده آزمون",
+    templates: "الگوها",
 
     // کارکنان
     employees: "کارکنان",
@@ -65,7 +73,10 @@ export function SiteHeader() {
           onClick={toggleSidebar}>
           <SidebarIcon />
         </Button>
-        <Separator orientation="vertical" className="md:ml-2 h-4 md:mr-1 ml-0.5" />
+        <Separator
+          orientation="vertical"
+          className="md:ml-2 h-4 md:mr-1 ml-0.5"
+        />
         <Breadcrumb className="text-xs mt-0.5">
           <BreadcrumbList>
             {segments.map((segment, idx) => {
@@ -96,9 +107,7 @@ export function SiteHeader() {
             })}
           </BreadcrumbList>
         </Breadcrumb>
-        <div className=" ml-auto w-auto rtl:mr-auto rtl:ml-0">
-          
-        </div>
+        <div className=" ml-auto w-auto rtl:mr-auto rtl:ml-0"></div>
         <div className="ml-auto rtl:ml-0">
           <ModeToggle />
         </div>

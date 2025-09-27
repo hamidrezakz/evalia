@@ -29,7 +29,8 @@ export function useOrganizationMembers(
   return useQuery<OrganizationMembershipArray>({
     queryKey: organizationMembershipKeys.list(orgId, params),
     queryFn: () => listOrganizationMembers(orgId, params),
-    staleTime: STALE,
+    // Keep data fresh immediately after mutations
+    staleTime: 0,
     enabled,
   });
 }
@@ -97,8 +98,11 @@ export function useAddOrganizationMember(orgId: number) {
         });
       }
     },
-    onSuccess: (_res) => {
-      // Invalidate membership list + organization detail + any user detail or lists
+    onSuccess: (_res, _vars) => {
+      // Invalidate precise list (with default params) plus base lists wildcard
+      qc.invalidateQueries({
+        queryKey: organizationMembershipKeys.list(orgId, {}),
+      });
       qc.invalidateQueries({
         queryKey: organizationMembershipKeys.lists(orgId),
       });

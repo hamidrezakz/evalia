@@ -44,6 +44,7 @@ import { Label } from "@/components/ui/label";
 import { useAvatarImage } from "@/users/api/useAvatarImage";
 import { TakeHeader } from "@/app/dashboard/tests/take/components/TakeHeader";
 import { RestrictedSubjectSelector } from "@/app/dashboard/tests/take/components/RestrictedSubjectSelector";
+import TakeSkeleton from "@/app/dashboard/tests/take/components/TakeSkeleton";
 
 // Lightweight shared shape for user data we access (duplicated from previous inline interface)
 interface BasicUser {
@@ -57,6 +58,9 @@ interface BasicUser {
 }
 
 export default function TakeAssessmentPage() {
+  // Hydration guard to avoid SSR/CSR mismatch (queries / contexts that only resolve client-side)
+  const [isHydrated, setIsHydrated] = React.useState(false);
+  React.useEffect(() => setIsHydrated(true), []);
   const sp = useSearchParams();
   const previewMode = (sp.get("mode") || "").toLowerCase() === "preview";
   const spSessionId = sp.get("sessionId");
@@ -353,6 +357,18 @@ export default function TakeAssessmentPage() {
     return Object.values(answers).filter(Boolean).length;
   }, [answers]);
 
+  // Pending (unsaved) answers count
+  const pendingCount = React.useMemo(() => {
+    let c = 0;
+    for (const k of Object.keys(answers)) {
+      const linkId = Number(k);
+      const curr = answers[linkId];
+      const saved = serverAnswers[linkId];
+      if (!answersEqual(curr, saved)) c++;
+    }
+    return c;
+  }, [answers, serverAnswers]);
+
   // Helper to compare two answers for equality
   function answersEqual(a?: AnswerMap[number], b?: AnswerMap[number]) {
     if (!a && !b) return true;
@@ -499,6 +515,18 @@ export default function TakeAssessmentPage() {
     }
   }
 
+  // Unified skeleton condition with hydration stabilization
+  const loadingHeader =
+    (!previewMode && assignmentsDetailed.isLoading) ||
+    respondentQ.isLoading ||
+    (needsSubject && subjectUserId && subjectQ.isLoading);
+  const loadingQuestions = uq.isLoading; // or (canLoad && !uq.data && uq.isFetching)
+  const showSkeleton =
+    !isHydrated || loadingHeader || (canLoad && loadingQuestions);
+  if (showSkeleton) {
+    return <TakeSkeleton questions={8} />;
+  }
+
   if (!canLoad) {
     const reason = previewMode
       ? "لینک پیش‌نمایش نامعتبر است."
@@ -533,6 +561,48 @@ export default function TakeAssessmentPage() {
       <div className="fixed left-2 sm:left-3 bottom-2 z-40 pointer-events-none">
         <ProgressCircle value={answeredCount} total={flatQuestions.length} />
       </div>
+      {!readOnly && canLoad && (
+        <div
+          className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-2"
+          dir="rtl">
+          <div className="rounded-xl shadow-lg border border-border/60 bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/70 p-3 flex flex-col gap-2 min-w-[220px]">
+            <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+              <span>ذخیره پاسخ‌ها</span>
+              <span className="flex items-center gap-1">
+                <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium">
+                  {answeredCount}/{flatQuestions.length}
+                </span>
+                {pendingCount > 0 && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 px-2 py-0.5 text-[10px] font-medium">
+                    تغییرات: {pendingCount}
+                  </span>
+                )}
+              </span>
+            </div>
+            <Button
+              onClick={handleSaveAll}
+              isLoading={saving}
+              icon={<Save className="size-4" />}
+              className="w-full"
+              disabled={
+                saving ||
+                pendingCount === 0 ||
+                (data ? data.session.state !== "IN_PROGRESS" : true)
+              }>
+              {saving
+                ? "در حال ذخیره…"
+                : pendingCount === 0
+                ? "چیزی برای ذخیره نیست"
+                : "ذخیره"}
+            </Button>
+            {error && (
+              <div className="text-[11px] text-rose-600 leading-relaxed">
+                {error}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Enhanced header card */}
       <Panel className="shadow-sm w-full overflow-hidden">
@@ -1033,20 +1103,7 @@ export default function TakeAssessmentPage() {
             );
           })}
 
-          {!readOnly && (
-            <div className="mt-8 flex items-center gap-3">
-              {error && <span className="text-rose-600 text-sm">{error}</span>}
-              <Button
-                onClick={handleSaveAll}
-                isLoading={saving}
-                icon={<Save className="size-4" />}
-                disabled={
-                  saving || (data ? data.session.state !== "IN_PROGRESS" : true)
-                }>
-                {saving ? "در حال ذخیره…" : "ذخیره پاسخ‌ها"}
-              </Button>
-            </div>
-          )}
+          {/* Inline save bar removed; replaced by floating save panel */}
         </div>
       )}
     </div>
