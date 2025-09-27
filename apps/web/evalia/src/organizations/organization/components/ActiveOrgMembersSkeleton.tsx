@@ -1,4 +1,3 @@
-"use client";
 import * as React from "react";
 import { Panel } from "@/components/ui/panel";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -9,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
  * - ساختار مشابه کامپوننت اصلی: فیلتر بار + پنل نتایج
  * - انیمیشن یکنواخت (animate-pulse) و ارتفاع‌های نزدیک به ردیف واقعی
  */
-export function ActiveOrgMembersSkeleton({ rows = 8 }: { rows?: number }) {
+export function ActiveOrgMembersSkeleton({ rows = 12 }: { rows?: number }) {
   return (
     <div className="space-y-3" dir="rtl">
       <Panel className="p-4">

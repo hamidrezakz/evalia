@@ -90,7 +90,7 @@ export function UsersList({
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                 <Input
-                  placeholder="جستجو کاربر…"
+                  placeholder="نام یا شماره تلفن کاربر..."
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
                   className="pl-9"
