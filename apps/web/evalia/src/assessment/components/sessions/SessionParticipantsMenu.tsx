@@ -37,8 +37,7 @@ import {
   useUserSessionProgress,
 } from "@/assessment/api/templates-hooks";
 import { useRouter } from "next/navigation";
-import UserUpsertDialog from "@/users/components/UserUpsertDialog";
-import { useAddAssignment } from "@/assessment/api/templates-hooks";
+// Removed inline user creation per design feedback
 
 /**
  * SessionParticipantsMenu
@@ -343,26 +342,7 @@ export function SessionParticipantsMenu({
     }
   }
   // Create-and-assign flow
-  const [createOpen, setCreateOpen] = React.useState(false);
-  const addAssign = useAddAssignment();
-  async function handleCreateAndAssign(userId: number) {
-    try {
-      await addAssign.mutateAsync({
-        sessionId: session.id,
-        respondentUserId: userId,
-        perspective: "SELF",
-      } as any);
-      // Refresh lists
-      await qc.invalidateQueries({
-        queryKey: sessionsKeys.assignmentsDetailed(session.id),
-      });
-      await qc.refetchQueries({
-        queryKey: sessionsKeys.assignmentsDetailed(session.id),
-      });
-    } finally {
-      setCreateOpen(false);
-    }
-  }
+  // Removed create-and-assign flow
   function ProgressPill({
     percent,
     status,
@@ -485,7 +465,7 @@ export function SessionParticipantsMenu({
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="center"
-        className="min-w-80 max-h-[440px] w-fit p-0 text-[11px] mr-2"
+        className="min-w-80 max-h-[440px] w-fit p-0 text-[11px] mx-2"
         onMouseEnter={clearCloseTimer}
         onMouseLeave={scheduleClose}>
         <DropdownMenuLabel className="flex items-center justify-between text-[12px] font-semibold mt-0.5">
@@ -497,21 +477,10 @@ export function SessionParticipantsMenu({
               e.preventDefault();
               onQuickAssign(session);
             }}>
-            + جدید
+            اختصاص جدید +
           </Button>
         </DropdownMenuLabel>
-        <div className="px-2 pt-1 pb-0.5">
-          <Button
-            variant="secondary"
-            size="sm"
-            className="h-6 text-[11px] px-2"
-            onClick={(e) => {
-              e.preventDefault();
-              setCreateOpen(true);
-            }}>
-            افزودن کاربر
-          </Button>
-        </div>
+        {/* Inline add user action removed */}
         <DropdownMenuSeparator />
         {assignments.length === 0 && (
           <DropdownMenuItem
@@ -892,13 +861,7 @@ export function SessionParticipantsMenu({
           </AlertDialogContent>
         </AlertDialog>
       </DropdownMenuContent>
-      <UserUpsertDialog
-        mode="create"
-        restrictToActiveOrg={true}
-        open={createOpen}
-        onOpenChange={setCreateOpen}
-        onSuccess={(id) => handleCreateAndAssign(id)}
-      />
+      {/* Inline user creation dialog removed */}
     </DropdownMenu>
   );
 }

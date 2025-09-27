@@ -165,7 +165,7 @@ export const OrgSwitcher = memo(function OrgSwitcher({
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex flex-col text-right leading-tight">
-                    <span className="text-[12px] font-medium flex items-center gap-1">
+                    <span className="text-[12px] font-medium flex items-center mt-0.5 gap-1">
                       {acc.name}
                       {acc.status && (
                         <OrganizationStatusBadge
@@ -181,7 +181,7 @@ export const OrgSwitcher = memo(function OrgSwitcher({
                         />
                       )}
                     </span>
-                    <span className="text-[10px] text-muted-foreground inline-flex items-center gap-1">
+                    <span className="text-[10px] mt-0.5 text-muted-foreground inline-flex items-center gap-1">
                       {acc.plan ? (
                         <OrgPlanBadge
                           plan={acc.plan as any}
