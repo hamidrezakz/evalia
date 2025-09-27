@@ -61,7 +61,8 @@ export class SessionController {
   }
 
   @Delete(':id')
-  @Roles({ any: ['ORG:OWNER', 'ORG:MANAGER', 'ANALYSIS_MANAGER'] })
+  // Only analysis manager can delete sessions (SUPER_ADMIN still bypasses via guard)
+  @Roles({ any: ['ANALYSIS_MANAGER'] })
   remove(@Param('id') id: string) {
     return this.service.softDelete(Number(id));
   }
