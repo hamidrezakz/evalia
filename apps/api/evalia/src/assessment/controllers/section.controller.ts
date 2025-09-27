@@ -13,12 +13,14 @@ import {
   ReorderSectionsDto,
   UpdateSectionDto,
 } from '../dto/template.dto';
+import { Roles } from '../../common/roles.decorator';
 
 @Controller('template-sections')
 export class SectionController {
   constructor(private readonly service: SectionService) {}
 
   @Post()
+  @Roles({ any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER'] })
   create(@Body() dto: CreateSectionDto) {
     return this.service.create(dto);
   }
@@ -29,11 +31,13 @@ export class SectionController {
   }
 
   @Patch(':id')
+  @Roles({ any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER'] })
   update(@Param('id') id: string, @Body() dto: UpdateSectionDto) {
     return this.service.update(Number(id), dto);
   }
 
   @Post(':templateId/reorder')
+  @Roles({ any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER'] })
   reorder(
     @Param('templateId') templateId: string,
     @Body() dto: ReorderSectionsDto,
@@ -42,6 +46,7 @@ export class SectionController {
   }
 
   @Delete(':id')
+  @Roles({ any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER'] })
   remove(@Param('id') id: string) {
     return this.service.softDelete(Number(id));
   }

@@ -16,17 +16,24 @@ import {
   ListUserSessionsQueryDto,
   UserQuestionsQueryDto,
 } from '../dto/session.dto';
+import { Roles } from '../../common/roles.decorator';
+import { Req, ForbiddenException } from '@nestjs/common';
+import { Request } from 'express';
 
 @Controller('sessions')
 export class SessionController {
   constructor(private readonly service: SessionService) {}
 
   @Post()
+  @Roles({ any: ['ORG:OWNER', 'ORG:MANAGER', 'ANALYSIS_MANAGER'] })
   create(@Body() dto: CreateSessionDto) {
     return this.service.create(dto);
   }
 
   @Get()
+  @Roles({
+    any: ['ORG:OWNER', 'ORG:MANAGER', 'ANALYSIS_MANAGER', 'ORG:MEMBER'],
+  })
   list(@Query() q: ListSessionQueryDto) {
     return this.service.list(q);
   }
@@ -48,11 +55,13 @@ export class SessionController {
   }
 
   @Patch(':id')
+  @Roles({ any: ['ORG:OWNER', 'ORG:MANAGER', 'ANALYSIS_MANAGER'] })
   update(@Param('id') id: string, @Body() dto: UpdateSessionDto) {
     return this.service.update(Number(id), dto);
   }
 
   @Delete(':id')
+  @Roles({ any: ['ORG:OWNER', 'ORG:MANAGER', 'ANALYSIS_MANAGER'] })
   remove(@Param('id') id: string) {
     return this.service.softDelete(Number(id));
   }
@@ -63,8 +72,40 @@ export class SessionController {
   listForUser(
     @Param('userId') userId: string,
     @Query() q: ListUserSessionsQueryDto,
+    @Req() req: Request,
   ) {
-    return this.service.listForUser(Number(userId), q);
+    const authUser: any = (req as any).user;
+    const targetId = Number(userId);
+    if (!Number.isFinite(targetId)) {
+      throw new ForbiddenException('invalid user id');
+    }
+    if (!authUser) throw new ForbiddenException('unauthorized');
+    // Support different JWT shapes (id | userId | sub)
+    const authIdRaw = authUser.id ?? authUser.userId ?? authUser.sub;
+    const authId = Number(authIdRaw);
+    // If cannot parse auth id -> deny
+    if (!Number.isFinite(authId)) throw new ForbiddenException('unauthorized');
+
+    // Self access always allowed
+    if (authId === targetId) {
+      return this.service.listForUser(targetId, q);
+    }
+
+    const globalRoles: string[] = authUser.roles?.global || [];
+    const orgMemberships: any[] = authUser.roles?.org || [];
+    const hasOrgRole = (r: string) =>
+      orgMemberships.some((m) =>
+        m?.role ? m.role === r : Array.isArray(m?.roles) && m.roles.includes(r),
+      );
+    const privileged =
+      globalRoles.includes('SUPER_ADMIN') ||
+      globalRoles.includes('ANALYSIS_MANAGER') ||
+      hasOrgRole('OWNER') ||
+      hasOrgRole('MANAGER');
+
+    if (!privileged) throw new ForbiddenException('دسترسی ندارید');
+
+    return this.service.listForUser(targetId, q);
   }
 
   // List available perspectives for a user in a specific session

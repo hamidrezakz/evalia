@@ -14,12 +14,14 @@ import {
   ListTemplateQueryDto,
   UpdateTemplateDto,
 } from '../dto/template.dto';
+import { Roles } from '../../common/roles.decorator';
 
 @Controller('templates')
 export class TemplateController {
   constructor(private readonly service: TemplateService) {}
 
   @Post()
+  @Roles({ any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER'] })
   create(@Body() dto: CreateTemplateDto) {
     return this.service.create(dto);
   }
@@ -40,11 +42,13 @@ export class TemplateController {
   }
 
   @Patch(':id')
+  @Roles({ any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER'] })
   update(@Param('id') id: string, @Body() dto: UpdateTemplateDto) {
     return this.service.update(Number(id), dto);
   }
 
   @Delete(':id')
+  @Roles({ any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER'] })
   remove(@Param('id') id: string) {
     return this.service.softDelete(Number(id));
   }

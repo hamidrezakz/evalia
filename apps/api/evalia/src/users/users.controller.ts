@@ -36,6 +36,7 @@ export class UsersController {
   }
 
   @Patch(':id')
+  @Roles('SUPER_ADMIN')
   update(@Param('id') id: string, @Body() body: any) {
     // Accept partial fields; service enforces allowed updates
     return this.service.update(Number(id), body);
@@ -54,13 +55,7 @@ export class UsersController {
   }
 
   @Delete(':id')
-  @Roles(
-    'SUPER_ADMIN',
-    'ANALYSIS_MANAGER',
-    'SUPPORT',
-    'ORG:OWNER',
-    'ORG:MANAGER',
-  )
+  @Roles('SUPER_ADMIN')
   remove(@Param('id') id: string) {
     return this.service.remove(Number(id));
   }
