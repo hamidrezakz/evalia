@@ -31,7 +31,7 @@ export class TokenVersionGuard implements CanActivate {
     // Load current tokenVersion
     const dbUser: any = await this.prisma.user.findUnique({
       where: { id: user.userId },
-      select: { id: true }, // after prisma generate include tokenVersion
+      select: { id: true, tokenVersion: true },
     });
     const currentVersion = dbUser?.tokenVersion ?? 1;
     if (currentVersion !== tokenVersionFromToken) {

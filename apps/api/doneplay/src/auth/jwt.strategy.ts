@@ -1,28 +1,39 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+import {
+  resolveAccessSecret,
+  DEFAULT_JWT_ACCESS_SECRET,
+} from './auth.constants';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor() {
+  constructor(private readonly cfg: ConfigService) {
+    const envSecret = cfg.get<string>('JWT_ACCESS_SECRET');
+    const finalSecret = envSecret || resolveAccessSecret();
+    if (!envSecret && process.env.NODE_ENV === 'production') {
+      throw new Error('JWT_ACCESS_SECRET not set in production');
+    }
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey:
-        process.env.JWT_ACCESS_SECRET || 'dev_jwt_secret_change_meee',
+      secretOrKey: finalSecret,
     });
   }
   async validate(payload: any) {
-    // Defensive: if payload is missing sub or roles, treat as invalid
-    if (!payload || typeof payload.sub === 'undefined' || !payload.roles) {
-      throw new UnauthorizedException('Invalid JWT payload');
+    // Minimal validation
+    if (!payload || typeof payload.sub === 'undefined') {
+      throw new UnauthorizedException('Invalid JWT payload (missing sub)');
     }
-    // You can add more checks here (e.g. type, tokenVersion, etc)
+    // Some older tokens might lack roles; normalize to empty structure instead of outright rejection
+    let roles = payload.roles;
+    if (!roles || typeof roles !== 'object') roles = { global: [], org: [] };
     return {
       userId: payload.sub,
       tenantId: payload.tid,
       phone: payload.phone,
-      roles: payload.roles || { global: [], org: [] },
+      roles,
       tokenVersion: payload.tokenVersion ?? 1,
     };
   }

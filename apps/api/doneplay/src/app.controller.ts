@@ -1,7 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
 import { AppService } from './app.service';
-import { Roles } from './common/roles.decorator';
-import { exec } from 'child_process';
 
 @Controller()
 export class AppController {

@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
+import { resolveAccessSecret } from './auth.constants';
 import { JwtModule } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import { PassportModule } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
@@ -16,9 +18,13 @@ import { OptionalJwtGuard } from '../common/optional-jwt.guard';
 @Module({
   imports: [
     PassportModule.register({ defaultStrategy: 'jwt' }),
-    JwtModule.register({
-      secret: process.env.JWT_ACCESS_SECRET || 'dev_jwt_secret_change_me',
-      signOptions: { expiresIn: '15m' },
+    // Use registerAsync so that .env is loaded by ConfigModule BEFORE we read secret
+    JwtModule.registerAsync({
+      inject: [ConfigService],
+      useFactory: (cfg: ConfigService) => ({
+        secret: cfg.get<string>('JWT_ACCESS_SECRET') || resolveAccessSecret(),
+        signOptions: { expiresIn: '15m' },
+      }),
     }),
   ],
   controllers: [AuthController],

@@ -12,12 +12,17 @@
     "api:deploy": "pnpm --filter @doneplay/api prisma:migrate:deploy && pnpm --filter @doneplay/api build",
     "api:start": "pnpm --filter @doneplay/api start:prod",
     "api:start:migrated": "pnpm --filter @doneplay/api start:prod:migrated",
+    "api:dev": "pnpm --filter @doneplay/api start:dev",
     "web:build": "pnpm --filter @doneplay/web build",
     "web:start": "pnpm --filter @doneplay/web start",
+    "web:dev": "pnpm --filter @doneplay/web dev",
     "deploy:all": "pnpm api:deploy && pnpm web:build",
     "start:all": "(start /b pnpm api:start) && pnpm web:start",
+    "dev:all": "(start /b pnpm api:dev) && pnpm web:dev",
     "typecheck": "pnpm --filter @doneplay/web typecheck",
     "lint": "pnpm --filter @doneplay/web lint && pnpm --filter @doneplay/api lint",
-    "doctor:prisma-status": "pnpm --filter @doneplay/api prisma:migrate:status"
+    "doctor:prisma-status": "pnpm --filter @doneplay/api prisma:migrate:status",
+    "db:init": "pnpm --filter @doneplay/database prisma:migrate:init && pnpm --filter @doneplay/api prisma:generate",
+    "db:studio": "pnpm --filter @doneplay/database prisma:studio"
   }
 }
