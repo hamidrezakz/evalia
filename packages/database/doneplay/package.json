@@ -1,5 +1,5 @@
 {
-  "name": "@evalia/database-evalia",
+  "name": "@doneplay/database",
   "version": "0.1.0",
   "private": true,
   "main": "generated/prisma/index.js",

@@ -1,5 +1,5 @@
 {
-  "name": "evalia-monorepo",
+  "name": "doneplay-monorepo",
   "private": true,
   "version": "0.1.0",
   "workspaces": [
@@ -8,16 +8,16 @@
   ],
   "scripts": {
     "// ---- Orchestrator / Convenience ----": "Root level aggregated commands",
-    "api:build": "pnpm --filter @evalia/api-evalia build",
-    "api:deploy": "pnpm --filter @evalia/api-evalia prisma:migrate:deploy && pnpm --filter @evalia/api-evalia build",
-    "api:start": "pnpm --filter @evalia/api-evalia start:prod",
-    "api:start:migrated": "pnpm --filter @evalia/api-evalia start:prod:migrated",
-    "web:build": "pnpm --filter @evalia/front-evalia build",
-    "web:start": "pnpm --filter @evalia/front-evalia start",
+    "api:build": "pnpm --filter @doneplay/api build",
+    "api:deploy": "pnpm --filter @doneplay/api prisma:migrate:deploy && pnpm --filter @doneplay/api build",
+    "api:start": "pnpm --filter @doneplay/api start:prod",
+    "api:start:migrated": "pnpm --filter @doneplay/api start:prod:migrated",
+    "web:build": "pnpm --filter @doneplay/web build",
+    "web:start": "pnpm --filter @doneplay/web start",
     "deploy:all": "pnpm api:deploy && pnpm web:build",
     "start:all": "(start /b pnpm api:start) && pnpm web:start",
-    "typecheck": "pnpm --filter @evalia/front-evalia typecheck",
-    "lint": "pnpm --filter @evalia/front-evalia lint && pnpm --filter @evalia/api-evalia lint",
-    "doctor:prisma-status": "pnpm --filter @evalia/api-evalia prisma:migrate:status"
+    "typecheck": "pnpm --filter @doneplay/web typecheck",
+    "lint": "pnpm --filter @doneplay/web lint && pnpm --filter @doneplay/api lint",
+    "doctor:prisma-status": "pnpm --filter @doneplay/api prisma:migrate:status"
   }
 }
