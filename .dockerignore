@@ -1,0 +1,33 @@
+# General
+.git
+.gitignore
+node_modules
+npm-debug.log
+yarn-error.log
+pnpm-debug.log
+.DS_Store
+*.swp
+
+# Build outputs
+**/dist
+.next
+**/.next
+coverage
+
+# Local env & secrets
+.env
+.env.*
+!.env.example
+!.env.db.example
+apps/api/doneplay/.env.local
+apps/web/doneplay/.env.local
+
+# Prisma generated (kept if needed at runtime)
+**/prisma/generated
+
+# Uploads (mounted at runtime if needed)
+apps/api/doneplay/uploads
+
+# Misc
+.vscode
+.idea

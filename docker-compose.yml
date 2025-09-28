@@ -17,8 +17,8 @@ services:
       - ./apps/api/doneplay/.env.production
     depends_on:
       - db
-    ports:
-      - "4000:4000"
+    # Auto-run migrations before starting prod server (idempotent)
+    command: ["pnpm", "--filter", "@doneplay/api", "start:prod:migrated"]
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:4000/health"]
@@ -35,8 +35,7 @@ services:
       - ./apps/web/doneplay/.env.production
     depends_on:
       - api
-    ports:
-      - "3001:3000"
+    # After DNS + nginx verified, you can remove the ports above to make web internal-only.
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:3000"]
