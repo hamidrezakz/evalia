@@ -1,18 +1,17 @@
-version: "3.8"
 services:
   db:
     image: postgres:16
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: Wq8$zLp3!vRt7
-      POSTGRES_DB: doneplay
+    env_file:
+      - ./.env.db
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
 
   api:
-    build: ./apps/api/doneplay
+    build:
+      context: .
+      target: api
     env_file:
       - ./apps/api/doneplay/.env.production
     depends_on:
@@ -21,7 +20,9 @@ services:
       - "4000:4000"
 
   web:
-    build: ./apps/web/doneplay
+    build:
+      context: .
+      target: web
     env_file:
       - ./apps/web/doneplay/.env.production
     depends_on:

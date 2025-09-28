@@ -1,3 +1,5 @@
+# Ignore DB env (real secrets)
+.env.db
 uploads/# Root .gitignore for monorepo
 node_modules/
 dist/
