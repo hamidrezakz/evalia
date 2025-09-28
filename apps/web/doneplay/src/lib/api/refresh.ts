@@ -107,7 +107,7 @@ export async function ensureRefreshed(base: string): Promise<boolean> {
 
 // Public helper so AuthContext (or other code) can proactively refresh tokens
 export async function refreshTokens(): Promise<boolean> {
-  let rawBase = process.env.NEXT_PUBLIC_API_BASE || "api.evalia.ir";
+  let rawBase = process.env.NEXT_PUBLIC_API_BASE || "api.doneplay.site";
   if (!/^https?:\/\//i.test(rawBase)) {
     rawBase = "https://" + rawBase.replace(/^\/+/, "");
   }

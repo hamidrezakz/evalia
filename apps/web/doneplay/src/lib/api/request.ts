@@ -18,7 +18,8 @@ export async function apiRequest<TData = unknown, TBody = unknown>(
   responseSchema: z.ZodTypeAny | null,
   options: RequestOptions<TBody> = {}
 ): Promise<ApiResponse<TData>> {
-  let rawBase = process.env.NEXT_PUBLIC_API_BASE || "api.evalia.ir";
+  // Default fallback domain adjusted to production API domain
+  let rawBase = process.env.NEXT_PUBLIC_API_BASE || "api.doneplay.site";
   if (!/^https?:\/\//i.test(rawBase)) {
     rawBase = "https://" + rawBase.replace(/^\/+/, "");
   }

@@ -60,7 +60,7 @@ async function attemptServerRefresh(
 ): Promise<{ accessToken?: string; refreshToken?: string } | null> {
   const refreshToken = req.cookies.get("refreshToken")?.value;
   if (!refreshToken) return null;
-  let rawBase = process.env.NEXT_PUBLIC_API_BASE || "api.evalia.ir";
+  let rawBase = process.env.NEXT_PUBLIC_API_BASE || "api.doneplay.site";
   if (!/^https?:\/\//i.test(rawBase))
     rawBase = "https://" + rawBase.replace(/^\/+/, "");
   const base = rawBase.replace(/\/$/, "");
