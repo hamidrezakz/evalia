@@ -13,6 +13,10 @@ type Action = {
   onClick?: () => void;
   variant?: React.ComponentProps<typeof Button>["variant"];
   size?: React.ComponentProps<typeof Button>["size"];
+  icon?: React.ReactNode; // آیکون اختیاری برای دکمه
+  iconPosition?: "start" | "end"; // موقعیت آیکون نسبت به متن
+  className?: string; // سفارشی‌سازی استایل دکمه
+  labelClassName?: string; // سفارشی‌سازی متن دکمه
 };
 
 export type HeroSectionProps = {
@@ -21,7 +25,8 @@ export type HeroSectionProps = {
   primaryAction?: Action;
   secondaryAction?: Action;
   className?: string;
-  highlight?: string; // متن کوچک بالای عنوان
+  highlight?: React.ReactNode; // متن کوچک بالای عنوان (قبلاً string بود)
+  highlightClassName?: string; // سفارشی‌سازی استایل هایلایت
   fullHeight?: boolean; // پر کردن ارتفاع ویوپرت
   headerLeft?: React.ReactNode; // محتوای سمت چپ هدر (مثلاً ModeToggle)
   headerRight?: React.ReactNode; // محتوای سمت راست هدر (مثلاً لوگو)
@@ -30,6 +35,7 @@ export type HeroSectionProps = {
   headerRightClassName?: string; // کلاس سفارشی برای کانتینر ناحیه راست
   headerCenterClassName?: string; // کلاس سفارشی برای کانتینر ناحیه وسط
   headerBarClassName?: string; // کلاس سفارشی برای wrapper اصلی هدر
+  background?: React.ReactNode; // دکورهای پس‌زمینه (shapes / gradients)
 };
 
 /**
@@ -49,6 +55,7 @@ export function HeroSection({
   secondaryAction = { label: "مشاهده مستندات", href: "/dashboard/ui/feedback" },
   className,
   highlight,
+  highlightClassName,
   fullHeight,
   headerLeft,
   headerRight,
@@ -57,6 +64,7 @@ export function HeroSection({
   headerRightClassName,
   headerCenterClassName,
   headerBarClassName,
+  background,
 }: HeroSectionProps) {
   return (
     <PageSection
@@ -65,6 +73,14 @@ export function HeroSection({
         fullHeight && "items-center py-0 px-2 min-h-[100svh]",
         className
       )}>
+      {/* پس‌زمینه تزئینی */}
+      {background ? (
+        <div
+          className="pointer-events-none absolute inset-0 overflow-hidden"
+          aria-hidden>
+          {background}
+        </div>
+      ) : null}
       <div className="mx-auto max-w-3xl space-y-4">
         {/* هدر شناور داخل هیرو: چپ/راست با فاصله 4 */}
         <div className={cn("absolute inset-x-0 top-0", headerBarClassName)}>
@@ -93,16 +109,20 @@ export function HeroSection({
           </div>
         </div>
         {highlight ? (
-          <div className="inline-flex items-center justify-center rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary ring-1 ring-primary/20">
+          <div
+            className={cn(
+              "inline-flex items-center justify-center rounded-full bg-primary/10 px-3 py-1 text-[10px] font-medium text-primary ring-1 ring-primary/20 gap-1",
+              highlightClassName
+            )}>
             {highlight}
           </div>
         ) : null}
 
-        <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight text-balance">
+        <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight ">
           {title}
         </h1>
         {description ? (
-          <p className="text-muted-foreground text-base md:text-lg leading-7 text-pretty">
+          <p className="text-muted-foreground text-[12px] md:text-sm leading-5 text-pretty">
             {description}
           </p>
         ) : null}
@@ -114,15 +134,45 @@ export function HeroSection({
                 <Button
                   asChild
                   variant={primaryAction.variant ?? "default"}
-                  size={primaryAction.size ?? "lg"}>
-                  <Link href={primaryAction.href}>{primaryAction.label}</Link>
+                  size={primaryAction.size ?? "default"}
+                  className={primaryAction.className}>
+                  <Link
+                    href={primaryAction.href}
+                    className="inline-flex items-center gap-1">
+                    {primaryAction.icon &&
+                      (primaryAction.iconPosition !== "end" ? (
+                        <span className="shrink-0">{primaryAction.icon}</span>
+                      ) : null)}
+                    <span className={primaryAction.labelClassName}>
+                      {primaryAction.label}
+                    </span>
+                    {primaryAction.icon &&
+                      primaryAction.iconPosition === "end" && (
+                        <span className="shrink-0">{primaryAction.icon}</span>
+                      )}
+                  </Link>
                 </Button>
               ) : (
                 <Button
                   onClick={primaryAction.onClick ?? (() => {})}
                   variant={primaryAction.variant ?? "default"}
-                  size={primaryAction.size ?? "lg"}>
-                  {primaryAction.label}
+                  size={primaryAction.size ?? "default"}  
+                  className={primaryAction.className}>
+                  {primaryAction.icon &&
+                    (primaryAction.iconPosition !== "end" ? (
+                      <span className="shrink-0 mr-1">
+                        {primaryAction.icon}
+                      </span>
+                    ) : null)}
+                  <span className={primaryAction.labelClassName}>
+                    {primaryAction.label}
+                  </span>
+                  {primaryAction.icon &&
+                    primaryAction.iconPosition === "end" && (
+                      <span className="shrink-0 ml-1">
+                        {primaryAction.icon}
+                      </span>
+                    )}
                 </Button>
               ))}
             {secondaryAction &&
@@ -130,17 +180,45 @@ export function HeroSection({
                 <Button
                   asChild
                   variant={secondaryAction.variant ?? "outline"}
-                  size={secondaryAction.size ?? "lg"}>
-                  <Link href={secondaryAction.href}>
-                    {secondaryAction.label}
+                  size={secondaryAction.size ?? "lg"}
+                  className={secondaryAction.className}>
+                  <Link
+                    href={secondaryAction.href}
+                    className="inline-flex items-center gap-1">
+                    {secondaryAction.icon &&
+                      (secondaryAction.iconPosition !== "end" ? (
+                        <span className="shrink-0">{secondaryAction.icon}</span>
+                      ) : null)}
+                    <span className={secondaryAction.labelClassName}>
+                      {secondaryAction.label}
+                    </span>
+                    {secondaryAction.icon &&
+                      secondaryAction.iconPosition === "end" && (
+                        <span className="shrink-0">{secondaryAction.icon}</span>
+                      )}
                   </Link>
                 </Button>
               ) : (
                 <Button
                   onClick={secondaryAction.onClick ?? (() => {})}
                   variant={secondaryAction.variant ?? "outline"}
-                  size={secondaryAction.size ?? "lg"}>
-                  {secondaryAction.label}
+                  size={secondaryAction.size ?? "lg"}
+                  className={secondaryAction.className}>
+                  {secondaryAction.icon &&
+                    (secondaryAction.iconPosition !== "end" ? (
+                      <span className="shrink-0 mr-1">
+                        {secondaryAction.icon}
+                      </span>
+                    ) : null)}
+                  <span className={secondaryAction.labelClassName}>
+                    {secondaryAction.label}
+                  </span>
+                  {secondaryAction.icon &&
+                    secondaryAction.iconPosition === "end" && (
+                      <span className="shrink-0 ml-1">
+                        {secondaryAction.icon}
+                      </span>
+                    )}
                 </Button>
               ))}
           </div>

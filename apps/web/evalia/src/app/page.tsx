@@ -2,8 +2,9 @@
 
 import { ModeToggle } from "@/components/modetoggle";
 import { HeroSection } from "@/components/sections";
-import { useState } from "react";
-import { siteConfig } from "./site-config";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Command, Sparkles, LogIn, Info } from "lucide-react";
+import { HeroBackground } from "@/components/sections/hero-backgrounds";
 
 export default function Home() {
   // حذف قابلیت باز کردن Prisma Studio طبق درخواست
@@ -11,26 +12,53 @@ export default function Home() {
   return (
     <div className="flex flex-col gap-6">
       <HeroSection
+        headerCenter={false}
         fullHeight
-        highlight="معرفی"
+        highlight={
+          <>
+            <Sparkles className="size-3.5 md:size-4 text-primary" />
+            <span>پلتفرم هوشمند ارزیابی و یادگیری</span>
+          </>
+        }
+        highlightClassName="px-4 py-1.5 bg-primary/10 text-primary/90"
         className="flex overflow-auto"
+        background={<HeroBackground variant="immersive" />}
         title={
-          <span className="leading-tight">
-            <span>سامانه ارزیابی و بهبود عملکرد </span>
-            <span className="text-primary font-semibold">
-              {siteConfig.name}
-            </span>
+          <span className="leading-tight font-bold">
+            <span>توانمندسازی سازمان‌ها، مدارس و </span>
+            <span className="text-primary">تیم‌های آموزشی</span>
           </span>
         }
-        description="پلتفرم یکپارچه برای ارزیابی ۳۶۰ درجه، تحلیل عملکرد و تصمیم‌گیری داده‌محور منابع انسانی"
-        primaryAction={{ label: "ورود به داشبورد", href: "/dashboard" }}
-        secondaryAction={{ label: "مرور رابط کاربری", href: "/dashboard/ui" }}
+        description={
+          "زیرساخت منعطف برای طراحی ارزیابی، دریافت بازخورد و رشد مستمر—مناسب مدیران، معلمان و رهبران یادگیری."
+        }
+        primaryAction={{
+          label: "ورود به داشبورد",
+          href: "/dashboard",
+          icon: <LogIn className="size-4" />,
+        }}
+        secondaryAction={{
+          label: "معرفی دآن‌",
+          href: "#intro",
+          variant: "secondary",
+          icon: <Info className="size-4" />,
+        }}
         headerRight={
-          <div className="flex flex-col items-center">
-            <div
-              className="size-12 md:size-14 rounded-2xl bg-[hsl(210,100%,30%)] flex items-center justify-center text-white text-lg font-bold tracking-tight shadow-inner shadow-black/20 mb-4"
-              aria-label="لوگو دان‌پلی">
-              ⌘
+          <div className="flex items-center gap-2 md:gap-2">
+            <Avatar className="size-10 md:size-12 rounded-2xl dark:border-2 border-border dark:shadow-sm">
+              <AvatarFallback className="dark:bg-primary/12 rounded-xl text-white bg-blue-900 flex items-center justify-center">
+                <Command className="size-5" />
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col justify-start text-start min-w-0">
+              <div className="text-sm font-extrabold md:text-md tracking-tight">
+                دآن‌پلی
+              </div>
+              <p
+                className="text-[9px] text-muted-foreground leading-relaxed"
+                title="ارزیابی ۳۶۰، یادگیری، بهبود مستمر">
+                ارزیابی • بازخورد • رشد
+              </p>
             </div>
           </div>
         }

@@ -24,6 +24,12 @@ import {
   ShieldCheck,
   UserPlus,
 } from "lucide-react";
+import {
+  HeroBackground,
+  RadialGlow,
+  BlurBlob,
+  FloatingSymbol,
+} from "@/components/sections/hero-backgrounds";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { LoadingDots } from "@/components/ui/loading-dots";
@@ -103,12 +109,28 @@ function LoginPage() {
 
   return (
     <div className="flex items-center min-h-[100svh] max-h-[100svh] p-4 relative overflow-hidden">
-      {/* Centered glowing light source */}
-      <div
-        className="pointer-events-none absolute left-1/2 top-1/2 z-0 w-[420px] h-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-0 blur-3xl bg-gradient-radial from-indigo-300 via-indigo-500/80 to-indigo-300/0 shadow-[0_0_120px_40px_#6366f1cc,0_0_320px_120px_#818cf855]"
-        aria-hidden
-      />
-      <div className="z-10 flex justify-center items-center w-full mt-[-8rem] sm:mt-[-8rem] md:mt-[-6rem] lg:mt-[-4rem] 2xl:mt-0">
+      {/* Unified decorative background */}
+      <div className="pointer-events-none absolute inset-0" aria-hidden>
+        <HeroBackground variant="minimal" />
+        {/* Auth specific center glow */}
+        <RadialGlow className="opacity-40 md:opacity-60" />
+        <BlurBlob
+          className="left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96"
+          colorClass="bg-primary/15"
+          sizeClass="w-96 h-96"
+        />
+        <FloatingSymbol
+          className="top-10 right-12 text-sm"
+          animation="float-medium">
+          ✦
+        </FloatingSymbol>
+        <FloatingSymbol
+          className="bottom-14 left-16 text-base"
+          animation="float-slow">
+          ★
+        </FloatingSymbol>
+      </div>
+      <div className="relative z-10 flex justify-center items-center w-full mt-[-8rem] sm:mt-[-8rem] md:mt-[-6rem] lg:mt-[-4rem] 2xl:mt-0">
         <form onSubmit={handleSubmit} noValidate aria-labelledby="login-title">
           <Card className="w-full max-w-sm transition-all py-8">
             <CardHeader className="space-y-3 justify-between flex items-top">

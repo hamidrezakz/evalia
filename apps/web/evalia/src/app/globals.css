@@ -203,7 +203,6 @@ body,
   --sidebar-ring: oklch(0.488 0.243 264.376);
 }
 
-
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -228,7 +227,7 @@ body,
 }
 
 .loading-dots-dot {
-  animation: loading-dots-fade 1.1s infinite ease-in-out both;
+  animation: loading-dots-fade 1.3s infinite ease-in-out both;
 }
 
 /* Provide staggered delays via data-index attribute */
@@ -240,4 +239,101 @@ body,
 }
 [data-loading-dot][data-index="3"] {
   animation-delay: 0s;
+}
+
+/* =========================
+   Floating subtle hero decorations
+   ========================= */
+@keyframes float-slow {
+  0% {
+    transform: translateY(0) translateX(0);
+    opacity: 0.55;
+  }
+  50% {
+    transform: translateY(-14px) translateX(6px);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateY(0) translateX(0);
+    opacity: 0.55;
+  }
+}
+@keyframes float-medium {
+  0% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  50% {
+    transform: translateY(-18px);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+}
+@keyframes float-fast {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-10px) scale(1.08);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-float-slow {
+  animation: float-slow 8s ease-in-out infinite;
+}
+.animate-float-medium {
+  animation: float-medium 6.5s ease-in-out infinite;
+}
+.animate-float-fast {
+  animation: float-fast 5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-float-slow,
+  .animate-float-medium,
+  .animate-float-fast {
+    animation: none !important;
+  }
+}
+
+/* =========================
+   Rotating decorative hero icons
+   ========================= */
+@keyframes rotate-slow {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+@keyframes rotate-reverse-slower {
+  0% {
+    transform: rotate(360deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+.animate-rotate-slow {
+  animation: rotate-slow 26s linear infinite;
+}
+.animate-rotate-slower {
+  animation: rotate-slow 42s linear infinite;
+}
+.animate-rotate-reverse-slower {
+  animation: rotate-reverse-slower 38s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-rotate-slow,
+  .animate-rotate-slower,
+  .animate-rotate-reverse-slower {
+    animation: none !important;
+  }
 }
