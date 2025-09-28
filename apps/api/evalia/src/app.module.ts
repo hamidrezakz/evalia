@@ -10,6 +10,7 @@ import { NavigationModule } from './navigation/navigation.module';
 import { UsersModule } from './users/users.module';
 import { AssessmentModule } from './assessment/assessment.module';
 import { AssetsModule } from './assets/assets.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { AssetsModule } from './assets/assets.module';
     UsersModule,
     AssessmentModule,
     AssetsModule,
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],

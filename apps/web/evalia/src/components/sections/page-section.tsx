@@ -18,7 +18,7 @@ export function PageSection({
 }: PageSectionProps) {
   return (
     <section
-      className={cn("py-8 md:py-12", container && "container", className)}
+      className={cn("py-8 min-w-full md:py-12", container && "container", className)}
       {...props}>
       {children ?? (
         <div className="text-muted-foreground text-sm">

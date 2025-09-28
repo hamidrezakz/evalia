@@ -69,7 +69,7 @@ export function HeroSection({
   return (
     <PageSection
       className={cn(
-        "flex text-center relative items-center align-middle",
+        "flex text-center w-full relative items-center align-middle",
         fullHeight && "items-center py-0 px-2 min-h-[100svh]",
         className
       )}>

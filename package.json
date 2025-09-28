@@ -5,5 +5,19 @@
   "workspaces": [
     "apps/*",
     "packages/*"
-  ]
+  ],
+  "scripts": {
+    "// ---- Orchestrator / Convenience ----": "Root level aggregated commands",
+    "api:build": "pnpm --filter @evalia/api-evalia build",
+    "api:deploy": "pnpm --filter @evalia/api-evalia prisma:migrate:deploy && pnpm --filter @evalia/api-evalia build",
+    "api:start": "pnpm --filter @evalia/api-evalia start:prod",
+    "api:start:migrated": "pnpm --filter @evalia/api-evalia start:prod:migrated",
+    "web:build": "pnpm --filter @evalia/front-evalia build",
+    "web:start": "pnpm --filter @evalia/front-evalia start",
+    "deploy:all": "pnpm api:deploy && pnpm web:build",
+    "start:all": "(start /b pnpm api:start) && pnpm web:start",
+    "typecheck": "pnpm --filter @evalia/front-evalia typecheck",
+    "lint": "pnpm --filter @evalia/front-evalia lint && pnpm --filter @evalia/api-evalia lint",
+    "doctor:prisma-status": "pnpm --filter @evalia/api-evalia prisma:migrate:status"
+  }
 }

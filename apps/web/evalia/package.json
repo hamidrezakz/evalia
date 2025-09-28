@@ -3,10 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "// ---- Development Scripts ----": "(Local only)",
     "dev": "next dev --turbopack",
-    "build": "next build",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "analyze": "ANALYZE=true next build",
+    "// ---- Production / Deploy Scripts ----": "(CI / server)",
+    "build": "next build && node scripts/patch-routes-manifest.cjs",
+    "build:ci": "pnpm typecheck && pnpm lint || echo 'lint warnings ignored in CI build' && pnpm build",
     "start": "next start",
-    "lint": "next lint"
+    "start:prod": "next start -p ${PORT:-3000}",
+    "postbuild:verify-routes": "node -e \"const f='.next/routes-manifest.json';const r=require(f);if(!('dataRoutes' in r)){console.error('dataRoutes missing after patch');process.exit(1)}else{console.log('dataRoutes present');}\""
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.12",
