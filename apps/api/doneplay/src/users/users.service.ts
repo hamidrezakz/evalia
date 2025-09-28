@@ -381,6 +381,94 @@ export class UsersService {
     return this.detail(updated.id);
   }
 
+  /**
+   * Self-service avatar setter (no role requirement). Called internally after upload.
+   * Ensures a single canonical avatar asset per user with filename <userId>.<ext>.
+   * Returns the updated asset record.
+   */
+  async setAvatarSelf(userId: number, assetId: number) {
+    // Fetch asset and user
+    const asset = await this.prisma.asset.findFirst({
+      where: { id: assetId, deletedAt: null },
+    });
+    if (!asset) throw new NotFoundException('Asset not found');
+
+    const userCurrent = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { avatarAssetId: true },
+    });
+    if (!userCurrent) throw new NotFoundException('User not found');
+
+    // Canonical filename
+    const uploadsDir = path.resolve(process.cwd(), 'uploads');
+    const currentFilename =
+      asset.filename || (asset.url ? asset.url.split('/').pop()! : null);
+    const currentExt = currentFilename ? extname(currentFilename) : '';
+    const targetFilename = `${userId}${currentExt || ''}`;
+    const srcPath = currentFilename
+      ? path.join(uploadsDir, currentFilename)
+      : null;
+    const destPath = path.join(uploadsDir, targetFilename);
+
+    try {
+      if (!fs.existsSync(uploadsDir))
+        fs.mkdirSync(uploadsDir, { recursive: true });
+    } catch {}
+
+    if (srcPath && currentFilename && currentFilename !== targetFilename) {
+      try {
+        if (fs.existsSync(srcPath)) {
+          if (fs.existsSync(destPath)) {
+            try {
+              fs.unlinkSync(destPath);
+            } catch {}
+          }
+          fs.renameSync(srcPath, destPath);
+        }
+      } catch {}
+    }
+
+    const oldAssetId = userCurrent.avatarAssetId;
+    let oldFilename: string | null = null;
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.asset.update({
+        where: { id: asset.id },
+        data: {
+          type: 'AVATAR' as any,
+          filename: targetFilename,
+          url: `/uploads/${targetFilename}`,
+        },
+      });
+      await tx.user.update({
+        where: { id: userId },
+        data: { avatarAssetId: asset.id },
+      });
+      if (oldAssetId && oldAssetId !== asset.id) {
+        try {
+          const prev = await tx.asset.findUnique({ where: { id: oldAssetId } });
+          if (prev) {
+            oldFilename =
+              prev.filename || (prev.url ? prev.url.split('/').pop()! : null);
+          }
+        } catch {}
+        try {
+          await tx.asset.delete({ where: { id: oldAssetId } });
+        } catch {}
+      }
+    });
+
+    if (oldFilename && oldFilename !== targetFilename) {
+      try {
+        const oldPath = path.join(uploadsDir, oldFilename);
+        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+      } catch {}
+    }
+
+    // Return fresh asset record
+    return this.prisma.asset.findUnique({ where: { id: asset.id } });
+  }
+
   private normalizePhone(raw: string): string {
     const trimmed = (raw || '').trim();
     if (!trimmed) throw new BadRequestException('Phone is required');

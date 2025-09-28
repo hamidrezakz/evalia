@@ -169,6 +169,7 @@ export default function DashboardLandingPage() {
   }
   const [localAvatar, setLocalAvatar] = React.useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+  const [avatarError, setAvatarError] = React.useState<string | null>(null);
 
   function onAvatarClick() {
     fileInputRef.current?.click();
@@ -181,14 +182,18 @@ export default function DashboardLandingPage() {
     if (!file.type.startsWith("image/")) {
       toast.error("فقط فایل تصویری مجاز است.");
       e.target.value = "";
+      setAvatarError("فرمت فایل نامعتبر است");
       return;
     }
-    const MAX_AVATAR_BYTES = 512 * 1024; // 512KB
+    const MAX_AVATAR_BYTES = 100 * 1024; // 100KB (client limit)
     if (file.size > MAX_AVATAR_BYTES) {
-      toast.error("حجم تصویر آواتار نباید بیشتر از ۵۱۲ کیلوبایت باشد.");
+      // هم toast و هم پیام inline
+      toast.error("حجم تصویر آواتار نباید بیشتر از ۱۰۰ کیلوبایت باشد.");
+      setAvatarError("حجم فایل انتخابی بیشتر از ۱۰۰ کیلوبایت است");
       e.target.value = "";
       return;
     }
+    setAvatarError(null);
     // Preview locally
     const url = URL.createObjectURL(file);
     setLocalAvatar(url);
@@ -210,9 +215,11 @@ export default function DashboardLandingPage() {
           code === "AVATAR_FILE_TOO_LARGE" ||
           /AVATAR_FILE_TOO_LARGE/.test(err?.message || "")
         ) {
-          toast.error("حجم تصویر آواتار نباید بیشتر از ۵۱۲ کیلوبایت باشد.");
+          toast.error("حجم تصویر آواتار نباید بیشتر از ۱۰۰ کیلوبایت باشد.");
+          setAvatarError("حجم فایل انتخابی بیشتر از ۱۰۰ کیلوبایت است");
         } else {
           toast.error(err?.message || "خطا در آپلود تصویر");
+          setAvatarError("خطا در آپلود تصویر");
         }
       } finally {
         e.target.value = "";
@@ -272,6 +279,13 @@ export default function DashboardLandingPage() {
                 className="hidden"
                 onChange={handleAvatarFileChange}
               />
+              {avatarError && (
+                <p
+                  className="mt-1 text-[10px] text-destructive/80 max-w-[160px] leading-4"
+                  dir="rtl">
+                  {avatarError}
+                </p>
+              )}
             </div>
             <div className="flex flex-col gap-2 text-right">
               <PanelTitle className="flex items-center flex-wrap gap-3 text-lg font-semibold leading-6">

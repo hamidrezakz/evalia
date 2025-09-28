@@ -22,10 +22,10 @@ const uploadedAssetSchema = z.object({
 });
 
 export async function uploadAvatar(file: File): Promise<UploadedAsset> {
-  const MAX_AVATAR_BYTES = 512 * 1024; // 512KB
+  const MAX_AVATAR_BYTES = 100 * 1024; // 100KB (client-side constraint)
   if (file.size > MAX_AVATAR_BYTES) {
     const err: any = new Error(
-      "حجم تصویر آواتار نباید بیشتر از ۵۱۲ کیلوبایت باشد"
+      "حجم تصویر آواتار نباید بیشتر از ۱۰۰ کیلوبایت باشد"
     );
     err.code = "AVATAR_FILE_TOO_LARGE";
     throw err;
@@ -48,7 +48,7 @@ export async function uploadAvatar(file: File): Promise<UploadedAsset> {
       e?.code === "AVATAR_FILE_TOO_LARGE"
     ) {
       const err: any = new Error(
-        "حجم تصویر آواتار نباید بیشتر از ۵۱۲ کیلوبایت باشد"
+        "حجم تصویر آواتار نباید بیشتر از ۱۰۰ کیلوبایت باشد"
       );
       err.code = "AVATAR_FILE_TOO_LARGE";
       throw err;

@@ -2,9 +2,11 @@ import { Module } from '@nestjs/common';
 import { AssetsService } from './assets.service';
 import { AssetsController } from './assets.controller';
 import { PrismaService } from '../prisma.service';
+import { UsersModule } from '../users/users.module';
 
 @Module({
   controllers: [AssetsController],
+  imports: [UsersModule],
   providers: [AssetsService, PrismaService],
   exports: [AssetsService],
 })
