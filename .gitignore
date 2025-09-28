@@ -24,3 +24,6 @@ out/
 build/
 # Ignore OS junk
 Thumbs.db
+\n# SSL certificates (never commit private keys)
+nginx/ssl/
+*.pem
