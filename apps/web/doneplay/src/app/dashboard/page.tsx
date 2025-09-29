@@ -31,8 +31,7 @@ import {
   Clock,
   Hash,
   Briefcase,
-  CheckCircle2,
-  HelpCircle,
+  PlayCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -54,6 +53,10 @@ import { uploadAvatar, updateUserAvatar } from "@/users/api/avatar.api";
 import { useQueryClient } from "@tanstack/react-query";
 import { usersKeys } from "@/users/api/users-query-keys";
 import { Progress } from "@/components/ui/progress";
+import {
+  DashboardHeaderSkeleton,
+  SessionsPanelSkeleton,
+} from "./components/dashboard-skeletons";
 import { resolveApiBase } from "@/lib/api/helpers";
 
 function StatItem({
@@ -249,165 +252,161 @@ export default function DashboardLandingPage() {
   return (
     <div className=" pb-10 flex flex-col gap-6" dir="rtl">
       {/* Header */}
-      <Panel>
-        <PanelHeader className="flex flex-col md:flex-row md:items-center gap-6 md:gap-8">
-          <div className="flex items-center gap-4 md:gap-6">
-            <div className="relative">
-              <Avatar
-                onClick={onAvatarClick}
-                className="h-20 w-20 rounded-2xl border shadow-sm cursor-pointer hover:ring-2 hover:ring-primary/40 transition">
-                {(localAvatar || avatarUrl) && (
-                  <AvatarImage src={localAvatar || avatarUrl} alt={fullName} />
+      {loading ? (
+        <DashboardHeaderSkeleton />
+      ) : (
+        <Panel>
+          <PanelHeader className="flex flex-col md:flex-row md:items-center gap-6 md:gap-8">
+            <div className="flex items-center gap-4 md:gap-6">
+              <div className="relative">
+                <Avatar
+                  onClick={onAvatarClick}
+                  className="h-20 w-20 rounded-2xl border shadow-sm cursor-pointer hover:ring-2 hover:ring-primary/40 transition">
+                  {(localAvatar || avatarUrl) && (
+                    <AvatarImage
+                      src={localAvatar || avatarUrl}
+                      alt={fullName}
+                    />
+                  )}
+                  <AvatarFallback className="rounded-2xl text-xs font-medium">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
+                {/* Subtle camera hint */}
+                <button
+                  type="button"
+                  onClick={onAvatarClick}
+                  title="تغییر تصویر پروفایل"
+                  className="absolute -bottom-1 -left-1 h-7 w-7 rounded-full bg-background/90 border border-border/60 shadow-sm flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary/50 hover:bg-background/100 transition">
+                  <Camera className="h-4 w-4" />
+                  <span className="sr-only">آپلود آواتار</span>
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleAvatarFileChange}
+                />
+                {avatarError && (
+                  <p
+                    className="mt-1 text-[10px] text-destructive/80 max-w-[160px] leading-4"
+                    dir="rtl">
+                    {avatarError}
+                  </p>
                 )}
-                <AvatarFallback className="rounded-2xl text-xs font-medium">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-              {/* Subtle camera hint */}
-              <button
-                type="button"
-                onClick={onAvatarClick}
-                title="تغییر تصویر پروفایل"
-                className="absolute -bottom-1 -left-1 h-7 w-7 rounded-full bg-background/90 border border-border/60 shadow-sm flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary/50 hover:bg-background/100 transition">
-                <Camera className="h-4 w-4" />
-                <span className="sr-only">آپلود آواتار</span>
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleAvatarFileChange}
+              </div>
+              <div className="flex flex-col gap-2 text-right">
+                <PanelTitle className="flex items-center flex-wrap gap-3 text-lg font-semibold leading-6">
+                  <span>{fullName}</span>
+                  <UserStatusBadge status={user?.status} />
+                  {mounted && activeOrg && (
+                    <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                      {activeOrg.name}
+                    </span>
+                  )}
+                  {mounted && orgCtx.activeRole && (
+                    <span className="inline-flex items-center gap-1 rounded-md bg-muted/60 px-1.5 py-0.5 text-[10px] text-muted-foreground border border-border/60">
+                      {orgCtx.activeRoleSource === "platform" ? (
+                        <Crown className="h-3 w-3" />
+                      ) : (
+                        <Building2 className="h-3 w-3" />
+                      )}
+                      {orgCtx.activeRoleSource === "platform"
+                        ? PlatformRoleEnum.t(orgCtx.activeRole as any)
+                        : OrgRoleEnum.t(orgCtx.activeRole as any)}
+                    </span>
+                  )}
+                </PanelTitle>
+                <PanelDescription className="text-[11px] flex flex-wrap gap-4 items-center">
+                  {createdAtPretty && (
+                    <span className="inline-flex items-center gap-1">
+                      <span className="opacity-60">ایجاد:</span>
+                      <span className="font-medium">{createdAtPretty}</span>
+                    </span>
+                  )}
+                  {updatedAtPretty && (
+                    <span className="inline-flex items-center gap-1">
+                      <RefreshCcw className="h-3 w-3 opacity-60" />
+                      <span className="opacity-60">آپدیت:</span>
+                      <span className="font-medium">{updatedAtPretty}</span>
+                    </span>
+                  )}
+                  {user?.email && (
+                    <span className="inline-flex items-center gap-1 ltr:font-mono">
+                      <span className="opacity-60">ایمیل:</span>
+                      <span>{user.email}</span>
+                    </span>
+                  )}
+                  {/* Removed roles list UI per request */}
+                </PanelDescription>
+              </div>
+            </div>
+          </PanelHeader>
+          <PanelContent className="flex flex-col gap-6">
+            <div className="grid gap-4 md:grid-cols-4 sm:grid-cols-2">
+              <StatItem
+                icon={Building2}
+                label="تعداد سازمان‌ها"
+                value={totalOrgs}
+                loading={!mounted || orgCtx.loading}
               />
-              {avatarError && (
-                <p
-                  className="mt-1 text-[10px] text-destructive/80 max-w-[160px] leading-4"
-                  dir="rtl">
-                  {avatarError}
-                </p>
+              <StatItem
+                icon={Layers}
+                label="نقش‌های متمایز"
+                value={rolesCount}
+                loading={!mounted || orgCtx.loading}
+              />
+              <StatItem
+                icon={Users2}
+                label="آزمون‌های من"
+                value={totalUserSessions}
+                loading={!mounted || userSessionsQ.isLoading}
+              />
+              <StatItem
+                icon={Crown}
+                label="تکمیل شده / درصد"
+                value={`${completedByProgress} (${avgPercent}%)`}
+                loading={!mounted || userSessionsQ.isLoading}
+              />
+            </div>
+          </PanelContent>
+        </Panel>
+      )}
+      {/* My Sessions Panel */}
+      {(!mounted || userSessionsQ.isLoading) && !loading ? (
+        <SessionsPanelSkeleton />
+      ) : (
+        <Panel>
+          <PanelHeader>
+            <PanelTitle className="text-sm inline-flex items-center gap-2">
+              <Layers className="h-4 w-4 text-muted-foreground" />
+              آزمون‌های من
+            </PanelTitle>
+            <PanelDescription>
+              جلسات ارزیابی اختصاص داده شده به شما
+            </PanelDescription>
+          </PanelHeader>
+          <PanelContent className="flex flex-col gap-4 text-[12px] leading-5">
+            <div className="grid gap-2 grid-cols-1">
+              {sessions.length === 0 ? (
+                <div className="col-span-full text-center text-sm text-muted-foreground border border-dashed border-border/60 rounded-lg p-8">
+                  فعلاً آزمونی برای شما ثبت نشده است.
+                </div>
+              ) : (
+                sessions.map((s: any, i: number) => (
+                  <SessionMiniCard
+                    key={s.id}
+                    s={s}
+                    progress={progressById[s.id]}
+                    progressLoading={anyProgressLoading}
+                  />
+                ))
               )}
             </div>
-            <div className="flex flex-col gap-2 text-right">
-              <PanelTitle className="flex items-center flex-wrap gap-3 text-lg font-semibold leading-6">
-                <span>{fullName}</span>
-                <UserStatusBadge status={user?.status} />
-                {mounted && activeOrg && (
-                  <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
-                    {activeOrg.name}
-                  </span>
-                )}
-                {mounted && orgCtx.activeRole && (
-                  <span className="inline-flex items-center gap-1 rounded-md bg-muted/60 px-1.5 py-0.5 text-[10px] text-muted-foreground border border-border/60">
-                    {orgCtx.activeRoleSource === "platform" ? (
-                      <Crown className="h-3 w-3" />
-                    ) : (
-                      <Building2 className="h-3 w-3" />
-                    )}
-                    {orgCtx.activeRoleSource === "platform"
-                      ? PlatformRoleEnum.t(orgCtx.activeRole as any)
-                      : OrgRoleEnum.t(orgCtx.activeRole as any)}
-                  </span>
-                )}
-              </PanelTitle>
-              <PanelDescription className="text-[11px] flex flex-wrap gap-4 items-center">
-                {createdAtPretty && (
-                  <span className="inline-flex items-center gap-1">
-                    <span className="opacity-60">ایجاد:</span>
-                    <span className="font-medium">{createdAtPretty}</span>
-                  </span>
-                )}
-                {updatedAtPretty && (
-                  <span className="inline-flex items-center gap-1">
-                    <RefreshCcw className="h-3 w-3 opacity-60" />
-                    <span className="opacity-60">آپدیت:</span>
-                    <span className="font-medium">{updatedAtPretty}</span>
-                  </span>
-                )}
-                {user?.email && (
-                  <span className="inline-flex items-center gap-1 ltr:font-mono">
-                    <span className="opacity-60">ایمیل:</span>
-                    <span>{user.email}</span>
-                  </span>
-                )}
-                {/* Removed roles list UI per request */}
-              </PanelDescription>
-            </div>
-          </div>
-        </PanelHeader>
-        <PanelContent className="flex flex-col gap-6">
-          <div className="grid gap-4 md:grid-cols-4 sm:grid-cols-2">
-            <StatItem
-              icon={Building2}
-              label="تعداد سازمان‌ها"
-              value={totalOrgs}
-              loading={!mounted || orgCtx.loading}
-            />
-            <StatItem
-              icon={Layers}
-              label="نقش‌های متمایز"
-              value={rolesCount}
-              loading={!mounted || orgCtx.loading}
-            />
-            <StatItem
-              icon={Users2}
-              label="آزمون‌های من"
-              value={totalUserSessions}
-              loading={!mounted || userSessionsQ.isLoading}
-            />
-            <StatItem
-              icon={Crown}
-              label="تکمیل شده / درصد"
-              value={`${completedByProgress} (${avgPercent}%)`}
-              loading={!mounted || userSessionsQ.isLoading}
-            />
-          </div>
-        </PanelContent>
-      </Panel>
-      {/* My Sessions Panel */}
-      <Panel>
-        <PanelHeader>
-          <PanelTitle className="text-sm inline-flex items-center gap-2">
-            <Layers className="h-4 w-4 text-muted-foreground" />
-            آزمون‌های من
-          </PanelTitle>
-          <PanelDescription>
-            جلسات ارزیابی اختصاص داده شده به شما
-          </PanelDescription>
-        </PanelHeader>
-        <PanelContent className="flex flex-col gap-4 text-[12px] leading-5">
-          <div className="grid gap-2 grid-cols-1">
-            {!mounted || userSessionsQ.isLoading ? (
-              [0, 1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className="rounded-lg border border-border/60 bg-background/40 p-3">
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <Skeleton className="h-4 w-28" />
-                    <Skeleton className="h-4 w-20" />
-                    <Skeleton className="h-4 w-40" />
-                    <div className="ms-auto">
-                      <Skeleton className="h-8 w-24 rounded" />
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : sessions.length === 0 ? (
-              <div className="col-span-full text-center text-sm text-muted-foreground border border-dashed border-border/60 rounded-lg p-8">
-                فعلاً آزمونی برای شما ثبت نشده است.
-              </div>
-            ) : (
-              sessions.map((s: any, i: number) => (
-                <SessionMiniCard
-                  key={s.id}
-                  s={s}
-                  progress={progressById[s.id]}
-                  progressLoading={anyProgressLoading}
-                />
-              ))
-            )}
-          </div>
-        </PanelContent>
-      </Panel>
+          </PanelContent>
+        </Panel>
+      )}
     </div>
   );
 }
@@ -436,9 +435,11 @@ function SessionMiniCard({
   } catch {}
   const rel = formatJalaliRelative(s.startAt, { futureMode: "relative" });
   const totalQ = qc.data?.total ?? null;
+  const [joining, setJoining] = React.useState(false);
   const go = () => {
+    if (joining) return;
+    setJoining(true);
     setActiveSessionId(s.id);
-    // Pick a default perspective if provider has none yet
     if ((availablePerspectives?.length ?? 0) > 0) {
       setActivePerspective(availablePerspectives![0] as any);
     }
@@ -460,7 +461,13 @@ function SessionMiniCard({
             {s.name}
           </span>
           <div className="flex justify-end lg:hidden w-fit">
-            <Button size="sm" className="h-8 text-[11px]" onClick={go}>
+            <Button
+              size="sm"
+              className="h-8 text-[11px]"
+              onClick={go}
+              isLoading={joining}
+              icon={<PlayCircle className="h-3.5 w-3.5" />}
+              iconPosition="right">
               ورود به آزمون
             </Button>
           </div>
@@ -509,7 +516,13 @@ function SessionMiniCard({
         </div>
         {/* CTA (desktop) */}
         <div className="ms-auto hidden lg:block">
-          <Button size="sm" className="h-8 text-[11px]" onClick={go}>
+          <Button
+            size="sm"
+            className="h-8 text-[11px]"
+            onClick={go}
+            isLoading={joining}
+            icon={<PlayCircle className="h-3.5 w-3.5" />}
+            iconPosition="right">
             ورود به آزمون
           </Button>
         </div>

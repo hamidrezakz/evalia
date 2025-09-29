@@ -43,7 +43,7 @@ export class QuestionBankController {
   }
 
   @Delete(':id')
-  @Roles({ any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER'] })
+  @Roles({ any: ['SUPER_ADMIN'] })
   remove(@Param('id') id: string) {
     return this.service.softDelete(Number(id));
   }

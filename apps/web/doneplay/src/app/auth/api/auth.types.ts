@@ -102,6 +102,14 @@ export const loginPasswordDataSchema = z.object({
 });
 export type LoginPasswordData = z.infer<typeof loginPasswordDataSchema>;
 
+// Reset password (forced OTP login flow)
+export const resetPasswordDataSchema = z.object({
+  user: authUserSchema,
+  tokens: tokensSchema,
+  mode: z.literal("PASSWORD_RESET"),
+});
+export type ResetPasswordData = z.infer<typeof resetPasswordDataSchema>;
+
 // Aggregated types for convenience
 export interface AuthApiSchemas {
   checkIdentifier: typeof checkIdentifierDataSchema;
@@ -109,4 +117,5 @@ export interface AuthApiSchemas {
   verifyOtp: typeof verifyOtpDataSchema;
   completeRegistration: typeof completeRegistrationDataSchema;
   loginPassword: typeof loginPasswordDataSchema;
+  resetPassword: typeof resetPasswordDataSchema;
 }

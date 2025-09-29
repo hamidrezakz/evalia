@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { SiteHeaderSkeleton } from "./sidebar-skeletons";
 import { SidebarIcon } from "lucide-react";
 import { usePathname } from "next/navigation";
 // جایگزینی سرچ ساده با کامند پالت حرفه ای
@@ -19,10 +20,13 @@ import { Separator } from "@/components/ui/separator";
 import { ModeToggle } from "@/components/modetoggle";
 import { useSidebar } from "@/components/ui/sidebar";
 
-export function SiteHeader() {
+export function SiteHeader({ loading }: { loading?: boolean }) {
   const { toggleSidebar } = useSidebar();
   const pathname = usePathname();
   const segments = pathname.split("/").filter(Boolean);
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => setMounted(true), []);
+  if (loading || !mounted) return <SiteHeaderSkeleton />;
 
   // مپ فارسی برای نمایش breadcrumb
   const labels: Record<string, string> = {

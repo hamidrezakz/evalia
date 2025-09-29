@@ -45,8 +45,6 @@ export const QuestionCreateForm: React.FC<QuestionCreateFormProps> = ({
   const [submitting, setSubmitting] = React.useState(false);
 
   const typeDef = qType ? QuestionTypeEnum.option(qType as any) : null;
-
-  // Dynamic field logic – could be expanded per type
   const needsOptionSet = qType === "MULTI_CHOICE" || qType === "SINGLE_CHOICE";
   const needsScaleConfig = qType === "SCALE";
 
@@ -99,7 +97,6 @@ export const QuestionCreateForm: React.FC<QuestionCreateFormProps> = ({
     try {
       setSubmitting(true);
       await onSubmit?.(payload);
-      // reset minimal (keep bank to allow fast adding)
       setQType(null);
       setOptionSetId(null);
       setText("");
@@ -113,69 +110,135 @@ export const QuestionCreateForm: React.FC<QuestionCreateFormProps> = ({
   }
 
   return (
-    <form onSubmit={handleSubmit} className={className}>
-      <Card className="p-4 space-y-4">
-        <div className="grid md:grid-cols-3 gap-4">
-          <div className="space-y-1">
-            <label className="text-xs font-medium">بانک سوال</label>
+    <form onSubmit={handleSubmit} className={className} dir="rtl">
+      <Card className="p-4 md:p-5 space-y-5">
+        {/* Header / status bar */}
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <span
+              className={
+                isValid
+                  ? "text-green-600 dark:text-green-400"
+                  : "text-amber-600 dark:text-amber-400"
+              }>
+              {isValid ? "آماده ذخیره" : "ناقص"}
+            </span>
+            {qType && (
+              <span className="inline-flex items-center gap-1">
+                <strong className="font-medium">نوع:</strong>
+                <span>{QuestionTypeEnum.t(qType as any)}</span>
+              </span>
+            )}
+            {needsOptionSet && !optionSetId && (
+              <span className="text-destructive">گزینه‌ها انتخاب نشده</span>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              icon={<PlusCircle className="w-4 h-4" />}
+              onClick={() => {
+                setQType(null);
+                setOptionSetId(null);
+                setText("");
+                setDescription("");
+                setMeta({});
+                setMinScale(undefined);
+                setMaxScale(undefined);
+              }}>
+              سوال جدید
+            </Button>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={!isValid}
+              isLoading={submitting}
+              icon={<Save className="w-4 h-4" />}
+              iconPosition="left">
+              ذخیره
+            </Button>
+          </div>
+        </div>
+
+        {/* Config row */}
+        <fieldset className="grid gap-4 md:grid-cols-3">
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-medium tracking-tight">
+              بانک سوال
+            </label>
             <QuestionBankCombobox
               value={bankId}
               onChange={(id) => setBankId(id)}
               placeholder="انتخاب بانک..."
             />
           </div>
-          <div className="space-y-1">
-            <label className="text-xs font-medium">نوع سوال</label>
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-medium tracking-tight">
+              نوع سوال
+            </label>
             <QuestionTypeCombobox
               value={qType}
               onChange={(val) =>
                 setQType(val as CreateQuestionBody["type"] | null)
               }
-              placeholder="انتخاب نوع..."
+              placeholder="نوع..."
             />
           </div>
           <AnimatePresence initial={false}>
             {needsOptionSet && (
-              <motion.div key="optset" {...fadeSlideUp} className="space-y-1">
-                <label className="text-xs font-medium">دسته گزینه‌ها</label>
+              <motion.div key="optset" {...fadeSlideUp} className="space-y-1.5">
+                <label className="text-[11px] font-medium tracking-tight">
+                  دسته گزینه‌ها
+                </label>
                 <OptionSetCombobox
                   value={optionSetId}
                   onChange={(id) => setOptionSetId(id)}
-                  placeholder="انتخاب دسته..."
+                  placeholder="دسته..."
                 />
               </motion.div>
             )}
           </AnimatePresence>
-        </div>
+        </fieldset>
 
-        <div className="grid md:grid-row-2 gap-4">
-          <div className="space-y-1">
-            <label className="text-xs font-medium">متن سوال</label>
-            <Input
+        {/* Question text & description */}
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-1.5 col-span-2">
+            <label className="text-[11px] font-medium tracking-tight">
+              صورت سوال
+            </label>
+            <Textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder="مثال: میزان رضایت شما..."
+              placeholder="متن سوال را بنویسید..."
+              className="min-h-[90px] resize-y text-sm leading-relaxed"
             />
           </div>
-          <div className="space-y-1">
-            <label className="text-xs font-medium">توضیح (اختیاری)</label>
+          <div className="space-y-1.5 col-span-2">
+            <label className="text-[11px] font-medium tracking-tight">
+              توضیح (اختیاری)
+            </label>
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="توضیح تکمیلی برای پاسخ‌دهنده"
-              className="min-h-[80px]"
+              placeholder="توضیح تکمیلی برای راهنمایی پاسخ‌دهنده"
+              className="min-h-[70px] resize-y text-xs"
             />
           </div>
         </div>
 
+        {/* Scale config */}
         <AnimatePresence initial={false}>
           {needsScaleConfig && (
-            <motion.div
+            <motion.fieldset
               key="scale"
               {...fadeSlideUp}
-              className="grid md:grid-cols-3 gap-4">
-              <div className="space-y-1">
-                <label className="text-xs font-medium">حداقل (Min)</label>
+              className="grid md:grid-cols-4 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-medium tracking-tight">
+                  حداقل
+                </label>
                 <Input
                   type="number"
                   inputMode="numeric"
@@ -185,10 +248,13 @@ export const QuestionCreateForm: React.FC<QuestionCreateFormProps> = ({
                     setMinScale(v === "" ? undefined : parseInt(v, 10));
                   }}
                   placeholder="0"
+                  className="h-8 text-xs"
                 />
               </div>
-              <div className="space-y-1">
-                <label className="text-xs font-medium">حداکثر (Max)</label>
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-medium tracking-tight">
+                  حداکثر
+                </label>
                 <Input
                   type="number"
                   inputMode="numeric"
@@ -198,10 +264,13 @@ export const QuestionCreateForm: React.FC<QuestionCreateFormProps> = ({
                     setMaxScale(v === "" ? undefined : parseInt(v, 10));
                   }}
                   placeholder="5"
+                  className="h-8 text-xs"
                 />
               </div>
-              <div className="space-y-1">
-                <label className="text-xs font-medium">مرحله (Step)</label>
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-medium tracking-tight">
+                  گام (Step)
+                </label>
                 <Input
                   type="number"
                   inputMode="numeric"
@@ -209,35 +278,26 @@ export const QuestionCreateForm: React.FC<QuestionCreateFormProps> = ({
                     updateMeta({ step: parseInt(e.target.value || "1", 10) })
                   }
                   placeholder="1"
+                  className="h-8 text-xs"
                 />
               </div>
-            </motion.div>
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-medium tracking-tight">
+                  پیش‌نمایش محدوده
+                </label>
+                <div className="text-[11px] text-muted-foreground border rounded-md px-2 py-1 h-8 flex items-center">
+                  {minScale ?? "?"} - {maxScale ?? "?"}
+                </div>
+              </div>
+            </motion.fieldset>
           )}
         </AnimatePresence>
 
-        <div className="flex gap-2">
-          <Button
-            type="submit"
-            disabled={!isValid}
-            isLoading={submitting}
-            icon={<Save className="w-4 h-4" />}>
-            ذخیره سوال
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              setQType(null);
-              setOptionSetId(null);
-              setText("");
-              setDescription("");
-              setMeta({});
-              setMinScale(undefined);
-              setMaxScale(undefined);
-            }}
-            icon={<PlusCircle className="w-4 h-4" />}>
-            سوال جدید
-          </Button>
+        {/* Keyboard hint */}
+        <div className="flex items-center justify-end">
+          <span className="text-[10px] text-muted-foreground">
+            (Ctrl+Enter) برای ذخیره سریع
+          </span>
         </div>
       </Card>
     </form>

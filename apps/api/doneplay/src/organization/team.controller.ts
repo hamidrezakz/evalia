@@ -18,7 +18,10 @@ export class TeamController {
   constructor(private service: TeamService) {}
 
   @Post()
-  @Roles('ORG:OWNER', 'ORG:MANAGER')
+  @Roles({
+    any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER'],
+    orgAny: ['OWNER', 'MANAGER'],
+  })
   create(@Param('orgId') orgId: string, @Body() dto: AddTeamDto) {
     return this.service.create(Number(orgId), dto);
   }
@@ -46,7 +49,10 @@ export class TeamController {
   }
 
   @Patch(':teamId')
-  @Roles('ORG:OWNER', 'ORG:MANAGER')
+  @Roles({
+    any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER'],
+    orgAny: ['OWNER', 'MANAGER'],
+  })
   update(
     @Param('orgId') orgId: string,
     @Param('teamId') teamId: string,
@@ -56,13 +62,19 @@ export class TeamController {
   }
 
   @Delete(':teamId')
-  @Roles('ORG:OWNER', 'ORG:MANAGER')
+  @Roles({
+    any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER'],
+    orgAny: ['OWNER', 'MANAGER'],
+  })
   remove(@Param('orgId') orgId: string, @Param('teamId') teamId: string) {
     return this.service.softDelete(Number(orgId), Number(teamId));
   }
 
   @Post(':teamId/restore')
-  @Roles('ORG:OWNER', 'ORG:MANAGER')
+  @Roles({
+    any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER'],
+    orgAny: ['OWNER', 'MANAGER'],
+  })
   restore(@Param('orgId') orgId: string, @Param('teamId') teamId: string) {
     return this.service.restore(Number(orgId), Number(teamId));
   }

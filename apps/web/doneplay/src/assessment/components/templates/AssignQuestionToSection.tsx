@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import { useForm } from "react-hook-form";
-import { Plus, Edit2 } from "lucide-react";
+import { Plus, Edit2, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -83,6 +83,7 @@ export default function AssignQuestionToSection({
   );
 
   const addMut = useAddTemplateQuestion();
+  const [justAdded, setJustAdded] = React.useState(false);
   const updateQuestion = useUpdateQuestion();
   const { handleSubmit, setValue, watch, reset } = useForm<FormVals>({
     defaultValues: {
@@ -128,6 +129,8 @@ export default function AssignQuestionToSection({
       order:
         typeof vals.order === "number" ? Math.max(0, vals.order) : undefined,
     });
+    setJustAdded(true);
+    setTimeout(() => setJustAdded(false), 2500);
     reset({
       sectionId: vals.sectionId,
       questionId: null,
@@ -144,33 +147,31 @@ export default function AssignQuestionToSection({
       <PanelHeader
         className="flex-row items-center justify-between gap-2"
         dir="rtl">
-        <div>
-          <PanelTitle className="text-base flex items-center gap-2">
-            اختصاص سوال به بخش قالب
+        <div className="space-y-1">
+          <PanelTitle className="text-sm font-semibold flex items-center gap-2 tracking-tight">
+            اختصاص سوال به سکشن
           </PanelTitle>
-          <PanelDescription>
-            سوال را انتخاب کنید، پرسپکتیوهای پاسخ‌دهی و الزامی بودن را مشخص
-            کنید، سپس افزودن را بزنید.
+          <PanelDescription className="text-[11px] leading-relaxed">
+            یک سکشن، سوال بانک (اختیاری) و سوال را انتخاب کنید. سپس نقش‌های
+            پاسخ‌دهی، الزامی بودن و ترتیب را تنظیم کنید.
           </PanelDescription>
         </div>
         <PanelAction>
           <Button
             size="sm"
             onClick={onSubmit}
-            disabled={
-              addMut.isPending ||
-              !sectionId ||
-              !questionId ||
-              perspectives.length === 0
-            }>
-            <Plus className="h-4 w-4 ms-1" /> افزودن سوال
+            isLoading={addMut.isPending}
+            disabled={!sectionId || !questionId || perspectives.length === 0}
+            icon={<Plus className="h-4 w-4" />}>
+            افزودن
           </Button>
         </PanelAction>
       </PanelHeader>
-      <PanelContent className="flex-col gap-4 text-right" dir="rtl">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div className="lg:col-span-1 space-y-2">
-            <Label className="flex items-center gap-2">بخش قالب (سکشن)</Label>
+      <PanelContent className="flex-col gap-5 text-right text-xs" dir="rtl">
+        {/* Top selectors */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="space-y-1.5">
+            <Label className="text-[11px] font-medium">سکشن</Label>
             <SectionCombobox
               items={sectionList}
               value={sectionId}
@@ -179,36 +180,43 @@ export default function AssignQuestionToSection({
               disabled={!templateId}
             />
           </div>
-          <div className="lg:col-span-2 space-y-2">
-            <Label className="flex items-center gap-2">
-              بانک سوال برای فیلتر
+          <div className="space-y-1.5 md:col-span-2">
+            <Label className="text-[11px] font-medium">
+              بانک سوال (اختیاری)
             </Label>
             <QuestionBankCombobox
               value={bankId}
               onChange={(id) => setBankId(id)}
-              placeholder="انتخاب بانک سوال (اختیاری)"
+              placeholder="انتخاب بانک سوال"
             />
-            <Label className="flex items-center gap-2">سوال</Label>
+            <Label className="text-[11px] font-medium mt-2">سوال</Label>
             <QuestionSearchCombobox
               value={questionId}
               onChange={(id) => setValue("questionId", id)}
-              placeholder="انتخاب سوال"
+              placeholder="جستجو و انتخاب سوال"
               bankId={bankId}
             />
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-10">
-          <div className="md:col-span-2">
-            <div className="mb-2 flex flex-col md:flex-row md:items-center md:gap-4 gap-2">
-              <Label className="flex items-center gap-2 mb-1 md:mb-0">
-                پرسپکتیوها (نقش پاسخ‌دهی)
+        {justAdded && (
+          <div className="flex items-center gap-2 text-[11px] text-green-600 dark:text-green-400">
+            <CheckCircle2 className="h-4 w-4" /> سوال با موفقیت افزوده شد.
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {/* Perspectives */}
+          <div className="md:col-span-2 space-y-3">
+            <div className="flex flex-col md:flex-row md:items-center md:gap-4 gap-2">
+              <Label className="text-[11px] font-medium mb-1 md:mb-0">
+                نقش‌های پاسخ‌دهی
               </Label>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-7 px-2 text-xs"
+                  className="h-7 px-2 text-[11px]"
                   onClick={() => setValue("perspectives", perspectiveOptions)}
                   disabled={perspectiveOptions.length === 0}>
                   انتخاب همه
@@ -216,21 +224,23 @@ export default function AssignQuestionToSection({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-7 px-2 text-xs"
+                  className="h-7 px-2 text-[11px]"
                   onClick={() => setValue("perspectives", [])}>
                   پاک‌سازی
                 </Button>
               </div>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5">
               {perspectiveOptions.map((p) => {
                 const checked = perspectives.includes(p);
                 return (
                   <label
                     key={p}
                     className={cn(
-                      "flex items-center gap-2 rounded-md border px-3 py-2 text-xs cursor-pointer",
-                      checked ? "border-primary/50 bg-primary/5" : ""
+                      "flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-[11px] cursor-pointer transition-colors",
+                      checked
+                        ? "border-primary/50 bg-primary/5"
+                        : "hover:bg-muted/40"
                     )}>
                     <Checkbox
                       checked={checked}
@@ -241,6 +251,7 @@ export default function AssignQuestionToSection({
                           : perspectives.filter((x) => x !== p);
                         setValue("perspectives", next);
                       }}
+                      className="h-4 w-4"
                     />
                     <span>{ResponsePerspectiveEnum.t(p as any)}</span>
                   </label>
@@ -248,38 +259,43 @@ export default function AssignQuestionToSection({
               })}
             </div>
           </div>
-          <div className="lg:col-span-1 space-y-4">
-            <Label className="flex items-center gap-2">الزامی بودن</Label>
-            <div className="flex items-center gap-2">
-              <Switch
-                checked={required}
-                onCheckedChange={(v) => setValue("required", Boolean(v))}
-              />
-              <span className="text-xs text-muted-foreground">
-                در صورت فعال بودن، پاسخ به سوال ضروری است.
-              </span>
-            </div>
 
+          {/* Meta & ordering */}
+          <div className="space-y-5">
             <div className="space-y-2">
-              <Label className="flex items-center gap-2">ترتیب سوال</Label>
+              <Label className="text-[11px] font-medium">الزامی بودن</Label>
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={required}
+                  onCheckedChange={(v) => setValue("required", Boolean(v))}
+                />
+                <span className="text-[10px] text-muted-foreground">
+                  اگر فعال باشد پاسخ ضروری است.
+                </span>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[11px] font-medium">ترتیب نمایش</Label>
               <Input
                 type="number"
                 inputMode="numeric"
+                className="h-8 text-xs"
                 value={order ?? ""}
                 onChange={(e) => {
                   const n = Number(e.target.value);
                   setValue("order", Number.isFinite(n) ? n : null);
                 }}
-                placeholder="مثلا 0، 1، 2 ..."
+                placeholder="مثلا 0 یا 1"
               />
-              <p className="text-xs text-muted-foreground">
-                در صورت خالی بودن، به صورت پیش‌فرض در انتهای لیست قرار می‌گیرد.
+              <p className="text-[10px] text-muted-foreground leading-snug">
+                خالی = افزودن در انتهای لیست
               </p>
             </div>
           </div>
         </div>
+
         {bankId ? (
-          <div className="mt-6">
+          <div className="mt-4">
             <BankQuestionsPreview
               bankId={bankId}
               editable

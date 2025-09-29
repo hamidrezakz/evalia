@@ -14,6 +14,7 @@ import { TokenVersionGuard } from '../common/token-version.guard';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { OptionalJwtGuard } from '../common/optional-jwt.guard';
+import { SmsService } from '../common/sms/sms.service';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { OptionalJwtGuard } from '../common/optional-jwt.guard';
     AuthService,
     PrismaService,
     VerificationService,
+    SmsService,
     PasswordService,
     JwtStrategy,
     { provide: APP_GUARD, useClass: JwtAuthGuard },

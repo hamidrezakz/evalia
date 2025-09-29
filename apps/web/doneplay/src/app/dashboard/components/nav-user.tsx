@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { NavUserSkeleton } from "./sidebar-skeletons";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,7 +29,7 @@ import { useAuthSession } from "@/app/auth/event-context/session-context";
 import { formatIranPhone } from "@/lib/utils";
 import * as React from "react";
 import { useAvatarImage } from "@/users/api/useAvatarImage";
-import Link from "next/link";
+// import Link from "next/link"; // not needed currently
 import { useRouter } from "next/navigation";
 import { resolveApiBase } from "@/lib/api/helpers";
 
@@ -42,6 +43,9 @@ export function NavUser({
     phoneNumber?: string;
   };
 }) {
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => setMounted(true), []);
+  // Always call hooks every render to preserve order
   const { isMobile } = useSidebar();
   const { signOut } = useAuthSession();
   const router = useRouter();
@@ -87,39 +91,14 @@ export function NavUser({
   return (
     <SidebarMenu>
       <SidebarMenuItem>
-        <DropdownMenu dir="rtl">
-          <DropdownMenuTrigger asChild>
-            <SidebarMenuButton
-              size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
-              <Avatar className="h-8 w-8 rounded-lg">
-                {avatarUrl ? (
-                  <AvatarImage src={avatarUrl} alt={user.name} />
-                ) : null}
-                <AvatarFallback className="rounded-lg">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-              <div className="grid flex-1 text-right text-sm leading-tight">
-                <span className="truncate font-medium">{user.name}</span>
-                <span className="truncate text-xs">{user.email}</span>
-                {user.phoneNumber && (
-                  <span className="truncate text-xs text-muted-foreground">
-                    {formatIranPhone(user.phoneNumber)}
-                  </span>
-                )}
-              </div>
-              <ChevronsUpDown className="ml-auto size-4" />
-            </SidebarMenuButton>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
-            side={isMobile ? "bottom" : "right"}
-            align="end"
-            sideOffset={4}>
-            {" "}
-            <DropdownMenuLabel className="p-0 font-normal flex">
-              <div className="flex items-center gap-2 px-1 py-1.5 text-right text-sm">
+        {!mounted ? (
+          <NavUserSkeleton />
+        ) : (
+          <DropdownMenu dir="rtl">
+            <DropdownMenuTrigger asChild>
+              <SidebarMenuButton
+                size="lg"
+                className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
                 <Avatar className="h-8 w-8 rounded-lg">
                   {avatarUrl ? (
                     <AvatarImage src={avatarUrl} alt={user.name} />
@@ -128,56 +107,85 @@ export function NavUser({
                     {initials}
                   </AvatarFallback>
                 </Avatar>
-                <div className="grid flex-1 text-[12px] leading-tight">
+                <div className="grid flex-1 text-right text-sm leading-tight">
                   <span className="truncate font-medium">{user.name}</span>
                   <span className="truncate text-xs">{user.email}</span>
+                  {user.phoneNumber && (
+                    <span className="truncate text-xs text-muted-foreground">
+                      {formatIranPhone(user.phoneNumber)}
+                    </span>
+                  )}
                 </div>
-              </div>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
+                <ChevronsUpDown className="ml-auto size-4" />
+              </SidebarMenuButton>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+              side={isMobile ? "bottom" : "right"}
+              align="end"
+              sideOffset={4}>
+              {" "}
+              <DropdownMenuLabel className="p-0 font-normal flex">
+                <div className="flex items-center gap-2 px-1 py-1.5 text-right text-sm">
+                  <Avatar className="h-8 w-8 rounded-lg">
+                    {avatarUrl ? (
+                      <AvatarImage src={avatarUrl} alt={user.name} />
+                    ) : null}
+                    <AvatarFallback className="rounded-lg">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="grid flex-1 text-[12px] leading-tight">
+                    <span className="truncate font-medium">{user.name}</span>
+                    <span className="truncate text-xs">{user.email}</span>
+                  </div>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuGroup>
+                <DropdownMenuItem
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    router.push("/dashboard");
+                  }}
+                  className="cursor-pointer">
+                  <BadgeCheck />
+                  پروفایل
+                </DropdownMenuItem>
+                {/* Removed change password item per latest request */}
+                <DropdownMenuItem
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    router.push("/dashboard/support");
+                  }}
+                  className="cursor-pointer">
+                  <Bell />
+                  پشتیبانی
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    router.push("/dashboard/feedback");
+                  }}
+                  className="cursor-pointer">
+                  <Sparkles />
+                  ارسال بازخورد
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+              <DropdownMenuSeparator />
               <DropdownMenuItem
                 onSelect={(e) => {
                   e.preventDefault();
-                  router.push("/dashboard");
+                  handleLogout();
                 }}
-                className="cursor-pointer">
-                <BadgeCheck />
-                پروفایل
+                className="cursor-pointer text-red-600 focus:text-red-700"
+                disabled={loggingOut}>
+                <LogOut className={loggingOut ? "animate-pulse" : ""} />
+                {loggingOut ? "در حال خروج…" : "خروج از حساب کاربری"}
               </DropdownMenuItem>
-              {/* Removed change password item per latest request */}
-              <DropdownMenuItem
-                onSelect={(e) => {
-                  e.preventDefault();
-                  router.push("/dashboard/support");
-                }}
-                className="cursor-pointer">
-                <Bell />
-                پشتیبانی
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onSelect={(e) => {
-                  e.preventDefault();
-                  router.push("/dashboard/feedback");
-                }}
-                className="cursor-pointer">
-                <Sparkles />
-                ارسال بازخورد
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onSelect={(e) => {
-                e.preventDefault();
-                handleLogout();
-              }}
-              className="cursor-pointer text-red-600 focus:text-red-700"
-              disabled={loggingOut}>
-              <LogOut className={loggingOut ? "animate-pulse" : ""} />
-              {loggingOut ? "در حال خروج…" : "خروج از حساب کاربری"}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </SidebarMenuItem>
     </SidebarMenu>
   );

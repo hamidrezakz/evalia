@@ -6,13 +6,15 @@ import {
   useVerifyOtpMutation,
   useCompleteRegistrationMutation,
   useCheckIdentifierMutation,
+  useResetPasswordMutation,
 } from "./useAuth";
 import { useQueryClient } from "@tanstack/react-query";
 
 export type LoginPhase =
   | "IDENTIFIER"
   | "PASSWORD"
-  | "OTP"
+  | "OTP" // for signup (new user) verification
+  | "OTP_RESET" // combined code + new password forced reset flow
   | "COMPLETE_REGISTRATION"; // after signupToken
 
 interface State {
@@ -20,6 +22,7 @@ interface State {
   phone: string;
   password: string;
   otp: string;
+  newPassword: string; // for OTP_RESET
   firstName: string;
   lastName: string;
   loading: boolean;
@@ -35,6 +38,7 @@ const initial: State = {
   phone: "",
   password: "",
   otp: "",
+  newPassword: "",
   firstName: "",
   lastName: "",
   loading: false,
@@ -111,7 +115,12 @@ export function useLoginMachine(onSuccess: () => void) {
   const requestOtpMutation = useRequestOtpMutation({
     onSuccess: (data) => {
       dispatch({ type: "DEV_CODE", code: data.data.devCode || null });
-      dispatch({ type: "SET_PHASE", phase: "OTP" });
+      // Phase depends on purpose we requested
+      if (purposeRef.current === "PASSWORD_RESET") {
+        dispatch({ type: "SET_PHASE", phase: "OTP_RESET" });
+      } else {
+        dispatch({ type: "SET_PHASE", phase: "OTP" });
+      }
     },
     onError: (err: Error) => dispatch({ type: "ERROR", error: err.message }),
   });
@@ -146,13 +155,31 @@ export function useLoginMachine(onSuccess: () => void) {
     onError: (err: Error) => dispatch({ type: "ERROR", error: err.message }),
   });
 
+  const resetPasswordMutation = useResetPasswordMutation({
+    onSuccess: () => {
+      dispatch({ type: "MODE", mode: "LOGIN" });
+      if (state.phone) {
+        queryClient.invalidateQueries({
+          queryKey: ["auth", "identifier", state.phone],
+        });
+      }
+      onSuccess();
+    },
+    onError: (err: Error) => dispatch({ type: "ERROR", error: err.message }),
+  });
+
+  // Keep last requested purpose
+  const purposeRef = (globalThis as any)._authPurposeRef || { current: "" };
+  (globalThis as any)._authPurposeRef = purposeRef;
+
   useEffect(() => {
     const loading =
       checkIdentifierMutation.isPending ||
       loginMutation.isPending ||
       requestOtpMutation.isPending ||
       verifyOtpMutation.isPending ||
-      completeRegistrationMutation.isPending;
+      completeRegistrationMutation.isPending ||
+      resetPasswordMutation.isPending;
     dispatch({ type: "LOADING", value: loading });
   }, [
     checkIdentifierMutation.isPending,
@@ -180,7 +207,12 @@ export function useLoginMachine(onSuccess: () => void) {
   }, [state.phone, state.password, loginMutation]);
 
   const requestLoginOtp = useCallback(() => {
-    requestOtpMutation.mutate({ identifier: state.phone, purpose: "LOGIN" });
+    // Force password reset flow for existing users via OTP
+    purposeRef.current = "PASSWORD_RESET";
+    requestOtpMutation.mutate({
+      identifier: state.phone,
+      purpose: "PASSWORD_RESET",
+    });
   }, [state.phone, requestOtpMutation]);
 
   const verifyLoginOtp = useCallback(() => {
@@ -190,6 +222,14 @@ export function useLoginMachine(onSuccess: () => void) {
       code: state.otp,
     });
   }, [state.phone, state.otp, verifyOtpMutation]);
+
+  const submitResetOtp = useCallback(() => {
+    resetPasswordMutation.mutate({
+      identifier: state.phone,
+      code: state.otp,
+      newPassword: state.newPassword,
+    });
+  }, [state.phone, state.otp, state.newPassword, resetPasswordMutation]);
 
   const finishRegistration = useCallback(() => {
     if (!state.signupToken) return;
@@ -214,6 +254,7 @@ export function useLoginMachine(onSuccess: () => void) {
     doPasswordLogin,
     requestLoginOtp,
     verifyLoginOtp,
+    submitResetOtp,
     finishRegistration,
     goToPhase: (p: LoginPhase) => dispatch({ type: "SET_PHASE", phase: p }),
     mutations: {
@@ -222,6 +263,7 @@ export function useLoginMachine(onSuccess: () => void) {
       requestOtp: requestOtpMutation,
       verifyOtp: verifyOtpMutation,
       completeRegistration: completeRegistrationMutation,
+      resetPassword: resetPasswordMutation,
     },
   };
 }

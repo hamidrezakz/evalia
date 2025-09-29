@@ -8,6 +8,7 @@ import {
   requestOtp,
   verifyOtp,
   completeRegistration,
+  resetPassword,
 } from "../api/auth.api";
 import type {
   CheckIdentifierData,
@@ -15,6 +16,7 @@ import type {
   VerifyOtpData,
   LoginPasswordData,
   CompleteRegistrationData,
+  ResetPasswordData,
 } from "../api/auth.types";
 
 /**
@@ -96,6 +98,21 @@ export function useCompleteRegistrationMutation(
     mutationKey: authKeys.mCompleteRegistration(),
     mutationFn: ({ signupToken, firstName, lastName, password }) =>
       completeRegistration(signupToken, firstName, lastName, password),
+    ...options,
+  });
+}
+
+export function useResetPasswordMutation(
+  options?: UseMutationOptions<
+    ApiResponse<ResetPasswordData>,
+    Error,
+    { identifier: string; code: string; newPassword: string }
+  >
+) {
+  return useMutation({
+    mutationKey: authKeys.mResetPassword(),
+    mutationFn: ({ identifier, code, newPassword }) =>
+      resetPassword(identifier, code, newPassword),
     ...options,
   });
 }

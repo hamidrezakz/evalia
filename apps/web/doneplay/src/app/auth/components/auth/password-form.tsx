@@ -54,7 +54,7 @@ export function PasswordForm({
           className="min-w-[100px]"
           icon={<KeyRound className="size-4" />}
           iconPosition="right">
-          <span className="text-[12px] mt-0.5"> ورود با کد</span>
+          <span className="text-[12px] mt-0.5"> کد و تنظیم رمز</span>
         </Button>
       </div>
       <Button

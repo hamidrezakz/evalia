@@ -19,7 +19,10 @@ export class MembershipController {
   constructor(private service: MembershipService) {}
 
   @Get()
-  @Roles('ORG:OWNER', 'ORG:MANAGER')
+  @Roles({
+    any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER'],
+    orgAny: ['OWNER', 'MANAGER'],
+  })
   list(
     @Param('orgId') orgId: string,
     @Query('page') page?: string,
@@ -37,13 +40,16 @@ export class MembershipController {
   }
 
   @Post()
-  @Roles('ORG:OWNER', 'ORG:MANAGER')
+  @Roles({
+    any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER'],
+    orgAny: ['OWNER', 'MANAGER'],
+  })
   add(@Param('orgId') orgId: string, @Body() dto: AddMemberDto) {
     return this.service.add(Number(orgId), dto);
   }
 
   @Patch(':membershipId')
-  @Roles('ORG:OWNER', 'ORG:MANAGER')
+  @Roles({ any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER'] })
   update(
     @Param('orgId') orgId: string,
     @Param('membershipId') membershipId: string,
@@ -53,7 +59,7 @@ export class MembershipController {
   }
 
   @Delete(':membershipId')
-  @Roles('ORG:OWNER', 'ORG:MANAGER')
+  @Roles({ any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER'] })
   remove(
     @Param('orgId') orgId: string,
     @Param('membershipId') membershipId: string,

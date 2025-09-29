@@ -147,6 +147,11 @@ export function useTemplates(params?: any) {
   return useQuery({
     queryKey: templatesKeys.list(params),
     queryFn: () => listTemplates(params),
+    // Keep list data warm for short period to avoid flicker when navigating back
+    staleTime: 60 * 1000,
+    // Avoid aggressive refetch on window focus while building templates
+    refetchOnWindowFocus: false,
+    // NOTE: keepPreviousData removed (older @tanstack/react-query version) – emulate manually in consumer if needed
   });
 }
 export function useTemplate(id: number | null) {
@@ -212,10 +217,44 @@ export function useCreateTemplateSection() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: createTemplateSection,
-    onSuccess: (sec: any) =>
+    // Optimistically add new section to current cache for its template
+    onMutate: async (vars: any) => {
+      await qc.cancelQueries({
+        queryKey: templatesKeys.sections(vars.templateId),
+      });
+      const previous = qc.getQueryData<any>(
+        templatesKeys.sections(vars.templateId)
+      );
+      if (previous && Array.isArray(previous)) {
+        const optimistic = {
+          id: Math.random() * -1000000, // temp negative-ish id
+          name: vars.name || "بخش جدید",
+          templateId: vars.templateId,
+          description: vars.description || null,
+          order: previous.length,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        qc.setQueryData(templatesKeys.sections(vars.templateId), [
+          ...previous,
+          optimistic,
+        ]);
+      }
+      return { previous };
+    },
+    onError: (_err, vars: any, ctx: any) => {
+      if (ctx?.previous) {
+        qc.setQueryData(templatesKeys.sections(vars.templateId), ctx.previous);
+      }
+    },
+    onSuccess: (sec: any) => {
+      // Replace optimistic list with authoritative data
       qc.invalidateQueries({
         queryKey: templatesKeys.sections(sec.templateId),
-      }),
+      });
+      // Also refresh any full template detail queries (nested structure consumers)
+      qc.invalidateQueries({ queryKey: templatesKeys.full(sec.templateId) });
+    },
   });
 }
 export function useUpdateTemplateSection() {
@@ -234,17 +273,76 @@ export function useReorderTemplateSections() {
   return useMutation({
     mutationFn: ({ templateId, body }: { templateId: number; body: any }) =>
       reorderTemplateSections(templateId, body),
-    onSuccess: (_r, vars) =>
+    onMutate: async (vars) => {
+      await qc.cancelQueries({
+        queryKey: templatesKeys.sections(vars.templateId),
+      });
+      const prev = qc.getQueryData<any>(
+        templatesKeys.sections(vars.templateId)
+      );
+      if (prev && Array.isArray(prev)) {
+        const idOrder: number[] = vars.body?.sectionIds || [];
+        const mapped = [...prev]
+          .slice()
+          .sort(
+            (a: any, b: any) => idOrder.indexOf(a.id) - idOrder.indexOf(b.id)
+          );
+        qc.setQueryData(templatesKeys.sections(vars.templateId), mapped);
+      }
+      return { prev };
+    },
+    onError: (_e, vars, ctx) => {
+      if (ctx?.prev)
+        qc.setQueryData(templatesKeys.sections(vars.templateId), ctx.prev);
+    },
+    onSuccess: (_r, vars) => {
       qc.invalidateQueries({
         queryKey: templatesKeys.sections(vars.templateId),
-      }),
+      });
+    },
   });
 }
+
 export function useDeleteTemplateSection() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: deleteTemplateSection,
-    onSuccess: () => qc.invalidateQueries({ queryKey: templatesKeys.all }),
+    onSuccess: async (res: { id: number }) => {
+      // Try to find which template this section belonged to by scanning cached section lists
+      const sectionQueries = qc
+        .getQueryCache()
+        .findAll({
+          predicate: (q) =>
+            Array.isArray(q.queryKey) && q.queryKey.includes("sections"),
+        });
+      let foundTemplateId: number | null = null;
+      for (const q of sectionQueries) {
+        const data: any = q.state.data;
+        if (Array.isArray(data) && data.some((s: any) => s.id === res.id)) {
+          const key = q.queryKey as any[];
+          // key structure: ['templates','detail', templateId,'sections']
+          const tid = key.find((k) => typeof k === "number");
+          if (typeof tid === "number") {
+            foundTemplateId = tid;
+            // remove it optimistically
+            qc.setQueryData(
+              q.queryKey,
+              data.filter((s: any) => s.id !== res.id)
+            );
+            break;
+          }
+        }
+      }
+      if (foundTemplateId) {
+        qc.invalidateQueries({
+          queryKey: templatesKeys.sections(foundTemplateId),
+        });
+        qc.invalidateQueries({ queryKey: templatesKeys.full(foundTemplateId) });
+      } else {
+        // fallback
+        qc.invalidateQueries({ queryKey: templatesKeys.all });
+      }
+    },
   });
 }
 

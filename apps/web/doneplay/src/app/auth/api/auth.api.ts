@@ -12,11 +12,13 @@ import {
   verifyOtpDataSchema,
   loginPasswordDataSchema,
   completeRegistrationDataSchema,
+  resetPasswordDataSchema,
   type CheckIdentifierData,
   type OtpRequestData,
   type VerifyOtpData,
   type LoginPasswordData,
   type CompleteRegistrationData,
+  type ResetPasswordData,
 } from "./auth.types";
 // import { z } from "zod"; // Removed unused import
 
@@ -47,6 +49,7 @@ export const authKeys = {
   mOtpRequest: () => ["auth", "m", "otpRequest"] as const,
   mOtpVerify: () => ["auth", "m", "otpVerify"] as const,
   mCompleteRegistration: () => ["auth", "m", "completeRegistration"] as const,
+  mResetPassword: () => ["auth", "m", "resetPassword"] as const,
 };
 
 // Core API functions --------------------------------------------------
@@ -131,6 +134,29 @@ export async function completeRegistration(
   return res;
 }
 
+export async function resetPassword(
+  identifierRaw: string,
+  code: string,
+  newPassword: string
+) {
+  const phone = toPhone(identifierRaw);
+  const res = await apiRequest<
+    ResetPasswordData,
+    { phone: string; code: string; newPassword: string }
+  >(
+    "/auth/reset-password",
+    // Basic validation: reuse phone & compose fields inline
+    phoneSchema.extend({
+      code: otpVerifySchema.shape.code,
+      newPassword: passwordSchema.shape.password,
+    }),
+    resetPasswordDataSchema,
+    { body: { phone, code, newPassword }, auth: false }
+  );
+  tokenStorage.set(res.data.tokens);
+  return res;
+}
+
 // Facade / OO style (optional) ---------------------------------------
 export class AuthApiClient {
   checkIdentifier = checkIdentifier;
@@ -138,6 +164,7 @@ export class AuthApiClient {
   requestOtp = requestOtp;
   verifyOtp = verifyOtp;
   completeRegistration = completeRegistration;
+  resetPassword = resetPassword;
 }
 
 /**

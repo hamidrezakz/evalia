@@ -19,7 +19,10 @@ export class TeamMembershipController {
   constructor(private service: TeamMembershipService) {}
 
   @Get()
-  @Roles('ORG:OWNER', 'ORG:MANAGER')
+  @Roles({
+    any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER'],
+    orgAny: ['OWNER', 'MANAGER'],
+  })
   list(
     @Param('orgId') orgId: string,
     @Param('teamId') teamId: string,
@@ -35,7 +38,10 @@ export class TeamMembershipController {
   }
 
   @Post()
-  @Roles('ORG:OWNER', 'ORG:MANAGER')
+  @Roles({
+    any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER'],
+    orgAny: ['OWNER', 'MANAGER'],
+  })
   add(
     @Param('orgId') orgId: string,
     @Param('teamId') teamId: string,
@@ -45,7 +51,10 @@ export class TeamMembershipController {
   }
 
   @Delete(':membershipId')
-  @Roles('ORG:OWNER', 'ORG:MANAGER')
+  @Roles({
+    any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER'],
+    orgAny: ['OWNER', 'MANAGER'],
+  })
   remove(
     @Param('orgId') orgId: string,
     @Param('teamId') teamId: string,

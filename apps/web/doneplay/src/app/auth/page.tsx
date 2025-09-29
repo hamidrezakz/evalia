@@ -12,6 +12,7 @@ import {
 import { IdentifierForm } from "./components/auth/identifier-form";
 import { PasswordForm } from "./components/auth/password-form";
 import { OtpForm } from "./components/auth/otp-form";
+import { OtpResetForm } from "./components/auth/otp-reset-form";
 import { useLoginMachine } from "./hooks/useLoginMachine";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -59,6 +60,9 @@ function LoginPage() {
       case "OTP":
         machine.verifyLoginOtp();
         break;
+      case "OTP_RESET":
+        machine.submitResetOtp();
+        break;
       case "COMPLETE_REGISTRATION":
         machine.finishRegistration();
         break;
@@ -90,10 +94,17 @@ function LoginPage() {
         };
       case "OTP":
         return {
-          label: "کد تایید",
+          label: "کد تایید (ثبت‌نام)",
           Icon: ShieldCheck,
           classes:
             "border-amber-300 text-amber-700 bg-amber-50 dark:border-amber-600/60 dark:text-amber-300 dark:bg-amber-950/30",
+        };
+      case "OTP_RESET":
+        return {
+          label: "کد + رمز جدید",
+          Icon: ShieldCheck,
+          classes:
+            "border-rose-300 text-rose-700 bg-rose-50 dark:border-rose-600/60 dark:text-rose-300 dark:bg-rose-950/30",
         };
       case "COMPLETE_REGISTRATION":
         return {
@@ -199,6 +210,20 @@ function LoginPage() {
                   devCode={state.devCode}
                   onOtpChange={(v) => machine.set("otp", v)}
                   onResend={machine.requestLoginOtp}
+                />
+              )}
+
+              {state.phase === "OTP_RESET" && (
+                <OtpResetForm
+                  phone={state.phone}
+                  code={state.otp}
+                  password={state.newPassword || state.password}
+                  loading={state.loading}
+                  devCode={state.devCode}
+                  onCodeChange={(v) => machine.set("otp", v)}
+                  onPasswordChange={(v) => machine.set("newPassword", v)}
+                  onResend={machine.requestLoginOtp}
+                  onSubmit={machine.submitResetOtp}
                 />
               )}
 

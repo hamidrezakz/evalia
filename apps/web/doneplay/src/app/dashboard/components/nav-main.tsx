@@ -1,12 +1,10 @@
 "use client";
 
 import React from "react";
+import { NavMainSkeleton } from "./sidebar-skeletons";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
-import type {
-  SidebarNavItem,
-  SidebarNavItemChild,
-} from "./sidebar-data/types";
+import type { SidebarNavItem, SidebarNavItemChild } from "./sidebar-data/types";
 
 import {
   Collapsible,
@@ -25,8 +23,9 @@ import {
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
 
-export function NavMain(props: { items: SidebarNavItem[] }) {
-  const { items } = props;
+export function NavMain(props: { items: SidebarNavItem[]; loading?: boolean }) {
+  const { items, loading } = props;
+  if (loading) return <NavMainSkeleton />;
   return (
     <SidebarGroup>
       <SidebarGroupLabel>Platform</SidebarGroupLabel>

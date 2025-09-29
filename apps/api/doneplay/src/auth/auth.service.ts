@@ -122,12 +122,12 @@ export class AuthService {
 
   async requestOtp(dto: RequestOtpDto) {
     const phoneNormalized = normalizePhone(dto.phone);
-    await this.verification.createAndSend({
+    const result = await this.verification.createAndSend({
       identifier: phoneNormalized,
       identifierType: 'PHONE',
       purpose: dto.purpose,
     });
-    return { ok: true };
+    return { ok: true, smsStatus: result.smsStatus };
   }
 
   async verifyOtp(dto: VerifyOtpDto) {
@@ -177,7 +177,14 @@ export class AuthService {
       where: { id: user.id },
       data: { passwordHash },
     });
-    return { ok: true };
+    // Invalidate previous tokens (force re-login elsewhere)
+    await this.incrementUserTokenVersion(user.id);
+    const tokens = await this.issueTokens(user.id);
+    return {
+      user: this.toPublicUser({ ...user, passwordHash }),
+      tokens,
+      mode: 'PASSWORD_RESET',
+    };
   }
 
   /**

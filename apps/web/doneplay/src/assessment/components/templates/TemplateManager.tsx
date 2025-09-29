@@ -4,13 +4,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import {
   Plus,
-  Search,
   Edit2,
   Trash2,
   CheckCircle2,
   X,
   MoreVertical,
-  FileText,
   Copy,
   Lock,
   Archive,
@@ -51,6 +49,7 @@ import {
   useUpdateTemplate,
   useDeleteTemplate,
 } from "@/assessment/api/templates-hooks";
+import TemplateCombobox from "./TemplateCombobox";
 import type {
   Template,
   TemplateState,
@@ -80,7 +79,7 @@ export default function TemplateManager({ onSelect }: TemplateManagerProps) {
   const updateMut = useUpdateTemplate();
   const deleteMut = useDeleteTemplate();
 
-  const list = data?.data || [];
+  const list: Template[] = (data as any)?.data || [];
 
   const { register, handleSubmit, reset } = useForm<{
     name: string;
@@ -136,174 +135,141 @@ export default function TemplateManager({ onSelect }: TemplateManagerProps) {
     <>
       <Panel>
         <PanelHeader className="flex-row items-center justify-between gap-2">
-          <PanelTitle className="text-base flex items-center gap-2">
-            <FileText className="h-4 w-4 text-muted-foreground" />
+          <PanelTitle className="text-sm flex items-center gap-2 font-semibold">
             قالب‌های آزمون
           </PanelTitle>
           <PanelAction>
             <Button
               size="sm"
               onClick={openCreate}
-              disabled={createMut.isPending}>
-              <Plus className="h-4 w-4 ms-1" /> جدید
+              isLoading={createMut.isPending}
+              icon={<Plus className="h-4 w-4" />}
+              iconPosition="left">
+              جدید
             </Button>
           </PanelAction>
         </PanelHeader>
         <PanelContent className="flex-col gap-3">
-          <div className="mb-3 flex items-center gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute right-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="جستجو..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pr-8"
-              />
-            </div>
-          </div>
-          <div className="flex max-h-[480px] flex-col gap-2 overflow-y-auto pe-1">
-            {isLoading && (
-              <div className="text-sm text-muted-foreground">
-                در حال بارگذاری...
+          <div className="flex flex-col gap-2">
+            <Input
+              placeholder="جستجو..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-8 text-xs"
+            />
+            <TemplateCombobox
+              items={list}
+              value={selected?.id ?? null}
+              onChange={(tpl) => {
+                setSelected(tpl);
+                onSelect?.(tpl);
+              }}
+              disabled={isLoading}
+              loading={isLoading}
+              placeholder={isLoading ? "در حال بارگذاری..." : "انتخاب قالب"}
+            />
+            {selected && (
+              <div className="flex items-center justify-end">
+                <DropdownMenu dir="rtl">
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      icon={<MoreVertical className="h-4 w-4" />}
+                      iconPosition="left">
+                      اقدامات
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="min-w-52">
+                    <DropdownMenuLabel>اقدامات</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => openEdit(selected)}>
+                      <Edit2 className="h-4 w-4" /> ویرایش
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel>تغییر وضعیت</DropdownMenuLabel>
+                    <DropdownMenuItem
+                      onClick={() =>
+                        updateMut.mutate({
+                          id: selected.id,
+                          body: { state: "ACTIVE" },
+                        })
+                      }>
+                      <PlayCircle className="h-4 w-4" /> فعال
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() =>
+                        updateMut.mutate({
+                          id: selected.id,
+                          body: { state: "DRAFT" },
+                        })
+                      }>
+                      <Pencil className="h-4 w-4" /> پیش‌نویس
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() =>
+                        updateMut.mutate({
+                          id: selected.id,
+                          body: { state: "CLOSED" },
+                        })
+                      }>
+                      <Lock className="h-4 w-4" /> بسته‌شده
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() =>
+                        updateMut.mutate({
+                          id: selected.id,
+                          body: { state: "ARCHIVED" },
+                        })
+                      }>
+                      <Archive className="h-4 w-4" /> آرشیو
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() =>
+                        createMut.mutate(
+                          {
+                            name: `${selected.name} - کپی`,
+                            description: selected.description ?? undefined,
+                          },
+                          {
+                            onSuccess: (created) => {
+                              try {
+                                qc.setQueriesData(
+                                  { queryKey: ["templates", "list"] },
+                                  (old: any) => {
+                                    if (!old || !Array.isArray(old?.data))
+                                      return old;
+                                    if (
+                                      old.data.some(
+                                        (t: Template) => t.id === created.id
+                                      )
+                                    )
+                                      return old;
+                                    return {
+                                      ...old,
+                                      data: [created, ...old.data],
+                                    };
+                                  }
+                                );
+                              } catch {}
+                              setSelected(created);
+                              onSelect?.(created);
+                            },
+                          }
+                        )
+                      }>
+                      <Copy className="h-4 w-4" /> کپی از قالب
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      variant="destructive"
+                      onClick={() => selected && onDelete(selected)}
+                      disabled={deleteMut.isPending}>
+                      <Trash2 className="h-4 w-4" /> حذف
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             )}
-            {!isLoading && list.length === 0 && (
-              <div className="text-sm text-muted-foreground">
-                موردی یافت نشد
-              </div>
-            )}
-            {list.map((tpl) => {
-              const active = selected?.id === tpl.id;
-              return (
-                <div
-                  key={tpl.id}
-                  className={cn(
-                    "group flex items-center justify-between gap-3 rounded-md border p-3 transition-colors",
-                    active
-                      ? "border-primary/50 bg-primary/5"
-                      : "hover:bg-muted/40"
-                  )}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelected(tpl);
-                      onSelect?.(tpl);
-                    }}
-                    className="flex flex-1 flex-col items-start text-right">
-                    <div className="flex items-center gap-2">
-                      <div className="text-sm font-medium">{tpl.name}</div>
-                      <Badge
-                        variant={
-                          tpl.state === "ACTIVE" ? "default" : "secondary"
-                        }
-                        className="text-[10px]">
-                        {stateLabels[tpl.state]}
-                      </Badge>
-                    </div>
-                    <div className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
-                      {tpl.description}
-                    </div>
-                  </button>
-                  <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100">
-                    <DropdownMenu dir="rtl">
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent className="min-w-48">
-                        <DropdownMenuLabel>اقدامات</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => openEdit(tpl)}>
-                          <Edit2 className="h-4 w-4" /> ویرایش
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuLabel>تغییر وضعیت</DropdownMenuLabel>
-                        <DropdownMenuItem
-                          onClick={() =>
-                            updateMut.mutate({
-                              id: tpl.id,
-                              body: { state: "ACTIVE" },
-                            })
-                          }>
-                          <PlayCircle className="h-4 w-4" /> فعال
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() =>
-                            updateMut.mutate({
-                              id: tpl.id,
-                              body: { state: "DRAFT" },
-                            })
-                          }>
-                          <Pencil className="h-4 w-4" /> پیش‌نویس
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() =>
-                            updateMut.mutate({
-                              id: tpl.id,
-                              body: { state: "CLOSED" },
-                            })
-                          }>
-                          <Lock className="h-4 w-4" /> بسته‌شده
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() =>
-                            updateMut.mutate({
-                              id: tpl.id,
-                              body: { state: "ARCHIVED" },
-                            })
-                          }>
-                          <Archive className="h-4 w-4" /> آرشیو
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={() =>
-                            createMut.mutate(
-                              {
-                                name: `${tpl.name} - کپی`,
-                                description: tpl.description ?? undefined,
-                              },
-                              {
-                                onSuccess: (created) => {
-                                  // Merge into list cache and select the clone
-                                  try {
-                                    qc.setQueriesData(
-                                      { queryKey: ["templates", "list"] },
-                                      (old: any) => {
-                                        if (!old || !Array.isArray(old?.data))
-                                          return old;
-                                        if (
-                                          old.data.some(
-                                            (t: Template) => t.id === created.id
-                                          )
-                                        )
-                                          return old;
-                                        return {
-                                          ...old,
-                                          data: [created, ...old.data],
-                                        };
-                                      }
-                                    );
-                                  } catch {}
-                                  setSelected(created);
-                                  onSelect?.(created);
-                                },
-                              }
-                            )
-                          }>
-                          <Copy className="h-4 w-4" /> کپی از قالب
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          variant="destructive"
-                          onClick={() => onDelete(tpl)}
-                          disabled={deleteMut.isPending}>
-                          <Trash2 className="h-4 w-4" /> حذف
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-              );
-            })}
           </div>
         </PanelContent>
       </Panel>

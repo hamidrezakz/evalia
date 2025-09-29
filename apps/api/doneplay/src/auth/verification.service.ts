@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import * as crypto from 'crypto';
+import { SmsService } from '../common/sms/sms.service';
 
 interface CreateAndSendArgs {
   identifier: string;
@@ -20,7 +21,10 @@ export class VerificationService {
   private ttlMinutes = 5;
   private resendWindowMs = 30_000; // 30s throttle
   private maxDailyPerIdentifier = 30; // daily cap per identifier & purpose
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly sms: SmsService,
+  ) {}
   private hash(raw: string) {
     return crypto.createHash('sha256').update(raw).digest('hex');
   }
@@ -71,16 +75,37 @@ export class VerificationService {
       data: { expiresAt: now },
     });
 
-    /* const code = Math.floor(Math.random() * 10 ** this.codeLength)
-      .toString()
-      .padStart(this.codeLength, '0'); */
-
-    const code = Math.floor(0.123456 * 10 ** this.codeLength)
+    // Generate OTP code locally (shared template mode)
+    let code = Math.floor(Math.random() * 10 ** this.codeLength)
       .toString()
       .padStart(this.codeLength, '0');
-
-    const codeHash = this.hash(code);
+    let codeHash = this.hash(code);
     const expiresAt = new Date(Date.now() + this.ttlMinutes * 60 * 1000);
+    let providerMeta: any = {};
+    if (args.identifierType === 'PHONE') {
+      try {
+        const sendRes = await this.sms.sendSharedOtp(args.identifier, code);
+        providerMeta = {
+          provider: 'melipayamak',
+          status: sendRes.status,
+          recId: sendRes.recId,
+          sharedTemplate: true,
+        };
+        if (!sendRes.ok) {
+          throw new BadRequestException({
+            message:
+              'ارسال پیامک با خطا مواجه شد (status=' + sendRes.status + ')',
+            smsStatus: providerMeta,
+          });
+        }
+      } catch (e: any) {
+        if (!(e instanceof BadRequestException)) {
+          throw new BadRequestException('ارسال پیامک انجام نشد');
+        }
+        throw e;
+      }
+    }
+
     await this.prisma.verificationCode.create({
       data: {
         identifierType: args.identifierType as any,
@@ -89,10 +114,15 @@ export class VerificationService {
         codeHash,
         expiresAt,
         maxAttempts: 5,
-        meta: {},
+        meta: providerMeta,
       },
     });
-    return { ok: true, devCode: code };
+    const isDev = process.env.NODE_ENV !== 'production';
+    return {
+      ok: true,
+      devCode: isDev ? code : undefined,
+      smsStatus: providerMeta,
+    };
   }
 
   async verify(args: VerifyArgs) {

@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import { NavProjectsSkeleton } from "./sidebar-skeletons";
 
 import { Folder, MoreHorizontal } from "lucide-react";
 import type { SidebarProjectItem } from "./sidebar-data/types";
@@ -21,14 +22,15 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useAssessmentUserSessions } from "@/assessment/context/assessment-user-sessions";
-import { Badge } from "@/components/ui/badge"; // still used for placeholders
 import { SessionStateBadge } from "@/components/status-badges/SessionStateBadge";
-import { cn } from "@/lib/utils";
-import { SessionStateEnum, ResponsePerspectiveEnum } from "@/lib/enums";
+import { ResponsePerspectiveEnum } from "@/lib/enums";
 import { useRouter } from "next/navigation";
 
-export function NavProjects(props: { projects?: SidebarProjectItem[] }) {
-  const { projects = [] } = props;
+export function NavProjects(props: {
+  projects?: SidebarProjectItem[];
+  loading?: boolean;
+}) {
+  const { projects = [], loading: forcedLoading } = props;
   const { isMobile } = useSidebar();
   const router = useRouter();
   const {
@@ -48,21 +50,7 @@ export function NavProjects(props: { projects?: SidebarProjectItem[] }) {
     setMounted(true);
   }, []);
 
-  if (!mounted) {
-    return (
-      <SidebarGroup className="group-data-[collapsible=icon]:hidden">
-        <SidebarGroupLabel>آزمون‌های من</SidebarGroupLabel>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton disabled>
-              <span className="w-3 h-3 rounded-full bg-muted-foreground/40 animate-pulse" />
-              <span>در حال بارگذاری…</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarGroup>
-    );
-  }
+  if (!mounted) return <NavProjectsSkeleton />;
 
   // Map session state -> badge variant + extra classes (centralized styling)
   // Use shared SessionStateBadge component (tone soft, small size, with icon)
@@ -83,13 +71,8 @@ export function NavProjects(props: { projects?: SidebarProjectItem[] }) {
       <SidebarGroupLabel>آزمون‌های من</SidebarGroupLabel>
       <SidebarMenu>
         {/* User sessions list */}
-        {loading ? (
-          <SidebarMenuItem>
-            <SidebarMenuButton disabled>
-              <span className="w-3 h-3 rounded-full bg-muted-foreground/40 animate-pulse" />
-              <span>در حال بارگذاری…</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
+        {loading || forcedLoading ? (
+          <NavProjectsSkeleton />
         ) : error ? (
           <SidebarMenuItem>
             <SidebarMenuButton disabled>

@@ -140,15 +140,14 @@ export default function TemplateSectionsPanel({
   return (
     <Panel>
       <PanelHeader className="flex-row items-center justify-between">
-        <PanelTitle className="text-base flex items-center gap-2">
+        <PanelTitle className="text-sm flex items-center gap-2 font-semibold tracking-tight">
           <LayoutList className="h-4 w-4 text-muted-foreground" />
           بخش‌های قالب (سکشن‌ها)
         </PanelTitle>
         <PanelAction>
           {templateId && (
-            <DropdownMenu  dir="rtl">
-              <DropdownMenuTrigger asChild>
-              </DropdownMenuTrigger>
+            <DropdownMenu dir="rtl">
+              <DropdownMenuTrigger asChild></DropdownMenuTrigger>
               <DropdownMenuContent className="min-w-48">
                 <DropdownMenuLabel>وضعیت قالب</DropdownMenuLabel>
                 <DropdownMenuItem
@@ -207,21 +206,21 @@ export default function TemplateSectionsPanel({
           </Button>
         </PanelAction>
       </PanelHeader>
-      <PanelContent className="flex-col gap-3 w-full">
+      <PanelContent className="flex-col gap-3 w-full text-xs">
         {!templateId && (
-          <div className="text-sm text-muted-foreground">
+          <div className="text-xs text-muted-foreground">
             ابتدا یک تمپلیت انتخاب کنید.
           </div>
         )}
         {templateId && (
           <div className="space-y-3 w-full">
             {isLoading && (
-              <div className="text-sm text-muted-foreground">
+              <div className="text-xs text-muted-foreground">
                 در حال بارگذاری...
               </div>
             )}
             {!isLoading && ordered.length === 0 && (
-              <div className="text-sm text-muted-foreground">
+              <div className="text-xs text-muted-foreground">
                 سکشنی یافت نشد
               </div>
             )}
@@ -229,10 +228,14 @@ export default function TemplateSectionsPanel({
               {ordered.map((sec: TemplateSection, idx: number) => (
                 <div
                   key={sec.id}
-                  className="group flex items-center justify-between gap-3 rounded-md border p-2">
-                  <div className="flex flex-col text-right">
-                    <div className="text-sm font-medium">{sec.title}</div>
-                    <div className="text-xs text-muted-foreground">
+                  className="group flex items-center justify-between gap-3 rounded-md border p-2 hover:bg-muted/40 transition-colors">
+                  <div className="flex flex-col text-right leading-tight">
+                    <div
+                      className="text-xs font-medium line-clamp-1"
+                      title={sec.title}>
+                      {sec.title}
+                    </div>
+                    <div className="text-[10px] text-muted-foreground">
                       ترتیب: {sec.order}
                     </div>
                   </div>
@@ -279,16 +282,19 @@ export default function TemplateSectionsPanel({
         onOpenChange={(o) => setDialogOpen(o ? dialogOpen : null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-sm">
               {dialogOpen?.mode === "create" ? "ایجاد سکشن" : "ویرایش سکشن"}
             </DialogTitle>
           </DialogHeader>
-          <form onSubmit={onSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="sec-title">عنوان سکشن</Label>
+          <form onSubmit={onSubmit} className="space-y-3 text-xs" dir="rtl">
+            <div className="space-y-1.5">
+              <Label htmlFor="sec-title" className="text-[11px] font-medium">
+                عنوان سکشن
+              </Label>
               <Input
                 id="sec-title"
                 {...register("title", { required: true })}
+                className="h-8 text-xs"
               />
             </div>
             <DialogFooter className="gap-2">

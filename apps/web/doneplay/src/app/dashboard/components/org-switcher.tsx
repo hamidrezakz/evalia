@@ -1,6 +1,7 @@
 "use client";
 
-import { memo, useCallback, useMemo } from "react";
+import { memo, useCallback, useMemo, useState, useEffect } from "react";
+import { OrgSwitcherSkeleton } from "./sidebar-skeletons";
 import { useOrgState } from "@/organizations/organization/context/org-context";
 import type { OrgAccount as SidebarOrgAccount } from "./sidebar-data/types";
 // Removed unused enums (PlatformRoleEnum, OrgRoleEnum) for cleanliness
@@ -25,10 +26,13 @@ import {
   ChevronDown,
   Plus,
   Star,
-  Settings2,
   Check,
   Command,
+  LogOut,
+  Home,
 } from "lucide-react";
+import { useAuthSession } from "@/app/auth/event-context/session-context";
+import { useRouter } from "next/navigation";
 
 // Re-export OrgAccount type (subset from use-app-sidebar-data)
 export type OrgAccount = SidebarOrgAccount;
@@ -50,6 +54,9 @@ export const OrgSwitcher = memo(function OrgSwitcher({
   onSelect,
   className = "",
 }: OrgSwitcherProps) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  // Always call hooks (including context) regardless of mount state to keep hook order stable
   const {
     platformRoles,
     organizationRoles,
@@ -59,6 +66,8 @@ export const OrgSwitcher = memo(function OrgSwitcher({
     setOrganizationActiveRole,
     activeOrganizationId,
   } = useOrgState();
+  const { signOut } = useAuthSession();
+  const router = useRouter();
 
   const orgRoles = useMemo(
     () =>
@@ -152,7 +161,9 @@ export const OrgSwitcher = memo(function OrgSwitcher({
           aria-label="تغییر سازمان فعال"
           className={`group flex w-full items-center gap-2 rounded-md text-right focus:outline-none px-2 py-1.5 transition border border-transparent hover:border-border/60 hover:bg-muted/40 data-[state=open]:bg-muted/50 data-[state=open]:border-border/60 ${className}`}>
           <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg border border-border/40 shadow-sm group-data-[state=open]:ring-2 group-data-[state=open]:ring-primary/30">
-            {activeOrg?.logo ? (
+            {!mounted ? (
+              <span className="inline-block w-full h-full animate-pulse rounded-md bg-muted" />
+            ) : activeOrg?.logo ? (
               <Avatar className="size-8 rounded-md">
                 <AvatarImage src={activeOrg.logo} alt={activeOrg.name} />
                 <AvatarFallback className="rounded-md text-xs font-medium text-primary/80">
@@ -167,9 +178,11 @@ export const OrgSwitcher = memo(function OrgSwitcher({
           </div>
           <div className="grid flex-1 text-right leading-tight min-w-0">
             <span className="truncate font-semibold text-[13px] flex items-center gap-1">
-              {activeOrg?.name ||
-                (accounts.length === 0 ? "بدون سازمان" : "انتخاب سازمان")}
-              {activeOrg?.status && (
+              {!mounted
+                ? "..."
+                : activeOrg?.name ||
+                  (accounts.length === 0 ? "بدون سازمان" : "انتخاب سازمان")}
+              {mounted && activeOrg?.status && (
                 <span className="mt-[2px] inline-flex">
                   <OrganizationStatusBadge
                     status={activeOrg.status as OrgAccount["status"]}
@@ -180,7 +193,9 @@ export const OrgSwitcher = memo(function OrgSwitcher({
               )}
             </span>
             <span className="truncate text-[0.60rem] text-muted-foreground flex items-center gap-1 justify-start">
-              {activeOrg?.plan ? (
+              {!mounted ? (
+                <span className="inline-flex w-14 h-3 rounded bg-muted animate-pulse" />
+              ) : activeOrg?.plan ? (
                 <span className="inline-flex items-center gap-1">
                   {activeOrg.isPrimary && (
                     <Star
@@ -214,18 +229,26 @@ export const OrgSwitcher = memo(function OrgSwitcher({
         side={isMobile ? "bottom" : "right"}
         align="start"
         className="w-[320px] rounded-lg mr--2 sm:mr--4 p-0 overflow-hidden">
-        <DropdownMenuLabel className="text-xs tracking-wide text-muted-foreground flex items-center justify-between">
-          <span>سازمان‌های من</span>
-          <span className="text-[0.6rem] font-normal text-muted-foreground/70">
-            {accounts.length === 0
-              ? "بدون سازمان"
-              : `${accounts.length} سازمان`}
-          </span>
-        </DropdownMenuLabel>
-        <DropdownMenuGroup>
-          {orderedAccounts.map(renderOrgRow)}
-        </DropdownMenuGroup>
-        {(platformRoles.length > 0 || orgRoles.length > 0) && (
+        {!mounted ? (
+          <div className="p-3 text-[11px] text-muted-foreground">
+            در حال بارگذاری...
+          </div>
+        ) : (
+          <DropdownMenuLabel className="text-xs tracking-wide text-muted-foreground flex items-center justify-between">
+            <span>سازمان‌های من</span>
+            <span className="text-[0.6rem] font-normal text-muted-foreground/70">
+              {accounts.length === 0
+                ? "بدون سازمان"
+                : `${accounts.length} سازمان`}
+            </span>
+          </DropdownMenuLabel>
+        )}
+        {mounted && (
+          <DropdownMenuGroup>
+            {orderedAccounts.map(renderOrgRow)}
+          </DropdownMenuGroup>
+        )}
+        {mounted && (platformRoles.length > 0 || orgRoles.length > 0) && (
           <>
             <DropdownMenuSeparator />
             {platformRoles.length > 0 && (
@@ -289,14 +312,38 @@ export const OrgSwitcher = memo(function OrgSwitcher({
           </>
         )}
         <DropdownMenuSeparator />
-        <DropdownMenuItem className="gap-2 mt-0.5 text-[0.8rem] cursor-pointer">
-          <Plus className="size-4" />
-          افزودن حساب جدید
-        </DropdownMenuItem>
-        <DropdownMenuItem className="gap-2 text-[0.8rem] mb-0.5 cursor-pointer">
-          <Settings2 className="size-4" />
-          مدیریت حساب‌ها و تنظیمات
-        </DropdownMenuItem>
+        {mounted && (
+          <>
+            <DropdownMenuItem
+              className="gap-2 mt-0.5 text-[0.8rem] cursor-pointer"
+              onSelect={(e) => {
+                e.preventDefault();
+                router.push("/auth");
+              }}>
+              <Plus className="size-4" />
+              افزودن / اتصال حساب
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="gap-2 text-[0.8rem] cursor-pointer"
+              onSelect={(e) => {
+                e.preventDefault();
+                router.push("/");
+              }}>
+              <Home className="size-4" />
+              صفحه اصلی سایت
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="gap-2 text-[0.8rem] mb-0.5 cursor-pointer text-red-600 focus:text-red-700"
+              onSelect={(e) => {
+                e.preventDefault();
+                signOut();
+              }}>
+              <LogOut className="size-4" />
+              خروج از حساب کاربری
+            </DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
