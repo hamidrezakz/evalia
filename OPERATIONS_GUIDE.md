@@ -3,7 +3,7 @@
 این فایل خلاصه‌ی کارهای روزمره (بعد از pull/merge)، باز کردن امن Prisma Studio، بکاپ دیتابیس، ریستور، و نکات امنیتی/عیب‌یابی است.
 
 ---
-
+ssh -i "c:\ssh\serverone\ar-dimah-privatekey.pem" ubuntu@185.204.169.179
 ## 1. چرخه استقرار (Deploy Cycle)
 
 ### بعد از pull یا merge روی سرور

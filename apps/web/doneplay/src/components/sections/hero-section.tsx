@@ -36,6 +36,9 @@ export type HeroSectionProps = {
   headerCenterClassName?: string; // کلاس سفارشی برای کانتینر ناحیه وسط
   headerBarClassName?: string; // کلاس سفارشی برای wrapper اصلی هدر
   background?: React.ReactNode; // دکورهای پس‌زمینه (shapes / gradients)
+  showScrollCue?: boolean; // نمایش یا عدم نمایش نشانگر اسکرول پایین سکشن
+  scrollCueLabel?: string; // متن نشانگر اسکرول (پیش فرض: Scroll)
+  scrollCueClassName?: string; // کلاس سفارشی برای کانتینر نشانگر
 };
 
 /**
@@ -65,6 +68,9 @@ export function HeroSection({
   headerCenterClassName,
   headerBarClassName,
   background,
+  showScrollCue = true,
+  scrollCueLabel = "اسکرول کنید!",
+  scrollCueClassName,
 }: HeroSectionProps) {
   return (
     <PageSection
@@ -76,7 +82,7 @@ export function HeroSection({
       {/* پس‌زمینه تزئینی */}
       {background ? (
         <div
-          className="pointer-events-none absolute inset-0 overflow-hidden"
+          className="pointer-events-none absolute inset-0 overflow-hidden z-50"
           aria-hidden>
           {background}
         </div>
@@ -156,7 +162,7 @@ export function HeroSection({
                 <Button
                   onClick={primaryAction.onClick ?? (() => {})}
                   variant={primaryAction.variant ?? "default"}
-                  size={primaryAction.size ?? "default"}  
+                  size={primaryAction.size ?? "default"}
                   className={primaryAction.className}>
                   {primaryAction.icon &&
                     (primaryAction.iconPosition !== "end" ? (
@@ -224,6 +230,63 @@ export function HeroSection({
           </div>
         )}
       </div>
+      {/* Scroll Cue Indicator */}
+      {showScrollCue ? (
+        <div
+          className={cn(
+            "absolute bottom-3 inset-x-0 flex justify-center pointer-events-none select-none",
+            scrollCueClassName
+          )}
+          aria-hidden>
+          <div className="flex flex-col items-center gap-1 animate-bounce-slow">
+            {/* mouse shape */}
+            <div className="h-10 w-6 rounded-full border border-border/60 dark:border-border/70 flex items-start justify-center p-1 relative overflow-hidden bg-background/40 backdrop-blur-sm shadow-sm">
+              <span className="h-2 w-2 rounded-full bg-primary/80 animate-scroll-wheel" />
+              {/* subtle gradient fade */}
+              <span className="pointer-events-none absolute inset-x-0 bottom-0 h-4 bg-gradient-to-t from-background/80 to-transparent" />
+            </div>
+            <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/80">
+              {scrollCueLabel}
+            </span>
+          </div>
+          <style jsx>{`
+            @keyframes scrollWheel {
+              0% {
+                transform: translateY(0);
+                opacity: 1;
+              }
+              55% {
+                transform: translateY(8px);
+                opacity: 0;
+              }
+              56% {
+                transform: translateY(-2px);
+                opacity: 0;
+              }
+              100% {
+                transform: translateY(0);
+                opacity: 1;
+              }
+            }
+            .animate-scroll-wheel {
+              animation: scrollWheel 2.1s cubic-bezier(0.65, 0.05, 0.36, 1)
+                infinite;
+            }
+            @keyframes bounceSlow {
+              0%,
+              100% {
+                transform: translateY(0);
+              }
+              50% {
+                transform: translateY(-4px);
+              }
+            }
+            .animate-bounce-slow {
+              animation: bounceSlow 3.4s ease-in-out infinite;
+            }
+          `}</style>
+        </div>
+      ) : null}
     </PageSection>
   );
 }
