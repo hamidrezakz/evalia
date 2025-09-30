@@ -35,7 +35,9 @@ export default function Home() {
         background={
           <div>
             <HeroBackground variant="immersive" showMasks={false} />
-            <HeroBackground variant="signal" />
+            <div className="opacity-50 dark:opacity-94">
+              <HeroBackground variant="signal" />
+            </div>
           </div>
         }
         title={

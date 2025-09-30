@@ -516,8 +516,6 @@ export const HeroBackground: React.FC<{
   // immersive
   return (
     <>
-      <RadialGlow className={className} />
-      <SubtleGrid />
       <BlurBlob className="-left-28 top-1/3" />
       <BlurBlob
         className="-right-32 top-1/2"

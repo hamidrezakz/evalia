@@ -122,7 +122,7 @@ function LoginPage() {
     <div className="flex items-center min-h-[100svh] max-h-[100svh] p-4 relative overflow-hidden">
       {/* Unified decorative background */}
       <div className="pointer-events-none absolute inset-0" aria-hidden>
-        <HeroBackground variant="minimal" />
+         <HeroBackground variant="signal" showMasks={false} />
         {/* Auth specific center glow */}
         <RadialGlow className="opacity-40 md:opacity-60" />
         <BlurBlob
@@ -143,7 +143,7 @@ function LoginPage() {
       </div>
       <div className="relative z-10 flex justify-center items-center w-full mt-[-8rem] sm:mt-[-8rem] md:mt-[-6rem] lg:mt-[-4rem] 2xl:mt-0">
         <form onSubmit={handleSubmit} noValidate aria-labelledby="login-title">
-          <Card className="w-full max-w-sm transition-all py-8">
+          <Card className="w-full max-w-sm bg-accent/65 transition-all py-8">
             <CardHeader className="space-y-3 justify-between flex items-top">
               <div className="flex items-center justify-center p-0 m-0 mt-[-0.8rem] gap-2">
                 <Avatar className="size-12 rounded-sm">

@@ -29,7 +29,18 @@ import {
 import { useUpdateQuestion } from "@/assessment/api/question-hooks";
 import type { Question } from "@/assessment/types/question-banks.types";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, Save, XCircle, RefreshCw } from "lucide-react";
+import {
+  PlusCircle,
+  Save,
+  XCircle,
+  RefreshCw,
+  ListChecks,
+  Eye,
+  ArrowUp,
+  ArrowDown,
+  Trash2,
+  FilePlus2,
+} from "lucide-react";
 
 // Reuse existing preview components
 import { QuestionText } from "@/app/dashboard/tests/take/components/QuestionText";
@@ -48,6 +59,11 @@ type BuilderState = {
   draftOptionSetId: number | null;
   draftMinScale?: number;
   draftMaxScale?: number;
+  inlineOptions: {
+    id: string;
+    value: string; // machine / stored value
+    label: string; // display label
+  }[]; // local only
 };
 
 export function QuestionBuilder() {
@@ -60,6 +76,7 @@ export function QuestionBuilder() {
     draftOptionSetId: null,
     draftMinScale: 1,
     draftMaxScale: 5,
+    inlineOptions: [],
   });
 
   const banksQ = useQuestionBanks();
@@ -78,6 +95,8 @@ export function QuestionBuilder() {
     return arr.find((q) => q.id === state.selectedQuestionId) || null;
   }, [questionsQ.data, state.selectedQuestionId]);
 
+  const isEditing = !!selectedQuestion;
+
   // Populate form when selecting an existing question
   React.useEffect(() => {
     if (!selectedQuestion) return;
@@ -88,6 +107,16 @@ export function QuestionBuilder() {
       draftOptionSetId: (selectedQuestion as any).optionSetId ?? null,
       draftMinScale: (selectedQuestion as any).minScale ?? 1,
       draftMaxScale: (selectedQuestion as any).maxScale ?? 5,
+      inlineOptions: selectedQuestion.optionSetId
+        ? []
+        : (Array.isArray((selectedQuestion as any).options)
+            ? (selectedQuestion as any).options
+            : []
+          ).map((o: any) => ({
+            id: String(o.id),
+            value: String(o.value),
+            label: String(o.label),
+          })),
     }));
   }, [selectedQuestion?.id]);
 
@@ -96,18 +125,46 @@ export function QuestionBuilder() {
     selectedQuestion?.optionSetId ?? state.draftOptionSetId ?? null;
   const optionSetOptionsQ = useOptionSetOptions(selectedOptionSetId || null);
   const previewOptions = React.useMemo(() => {
-    const raw = optionSetOptionsQ.data as any;
-    const arr: any[] = Array.isArray(raw)
-      ? raw
-      : Array.isArray(raw?.data)
-      ? raw.data
-      : [];
-    return arr.map((o: any) => ({
-      id: o.id,
-      value: String(o.value),
-      label: String(o.label),
-    }));
-  }, [optionSetOptionsQ.data]);
+    // Priority: selected option set -> inline options (draft) -> selected question inline
+    if (selectedOptionSetId) {
+      const raw = optionSetOptionsQ.data as any;
+      const arr: any[] = Array.isArray(raw)
+        ? raw
+        : Array.isArray(raw?.data)
+        ? raw.data
+        : [];
+      return arr.map((o: any) => ({
+        id: o.id,
+        value: String(o.value),
+        label: String(o.label),
+      }));
+    }
+    // Inline draft options
+    if (state.inlineOptions.length) {
+      return state.inlineOptions
+        .filter((o) => o.value.trim() && o.label.trim())
+        .map((o, idx) => ({
+          id: idx,
+          value: o.value.trim(),
+          label: o.label.trim(),
+        }));
+    }
+    // Fallback to existing selected question inline options
+    if (selectedQuestion && !selectedQuestion.optionSetId) {
+      const opts: any[] = (selectedQuestion as any).options || [];
+      return opts.map((o: any) => ({
+        id: o.id,
+        value: o.value,
+        label: o.label,
+      }));
+    }
+    return [];
+  }, [
+    optionSetOptionsQ.data,
+    selectedOptionSetId,
+    state.inlineOptions,
+    selectedQuestion,
+  ]);
 
   function renderPreview() {
     const text = selectedQuestion?.text || state.draftText || "پیش‌نمایش سؤال";
@@ -180,7 +237,17 @@ export function QuestionBuilder() {
       state.draftType !== selectedQuestion.type ||
       (selectedQuestion.optionSetId || null) !== state.draftOptionSetId ||
       (selectedQuestion.minScale || 1) !== (state.draftMinScale || 1) ||
-      (selectedQuestion.maxScale || 5) !== (state.draftMaxScale || 5)
+      (selectedQuestion.maxScale || 5) !== (state.draftMaxScale || 5) ||
+      (!selectedQuestion.optionSetId &&
+        JSON.stringify(
+          (selectedQuestion as any).options?.map((o: any) => ({
+            value: o.value,
+            label: o.label,
+          })) || []
+        ) !==
+          JSON.stringify(
+            state.inlineOptions.map((o) => ({ value: o.value, label: o.label }))
+          ))
     );
   }, [
     selectedQuestion,
@@ -190,6 +257,7 @@ export function QuestionBuilder() {
     state.draftMinScale,
     state.draftMaxScale,
     state.bankId,
+    state.inlineOptions,
   ]);
 
   const resetDraft = () => {
@@ -200,11 +268,27 @@ export function QuestionBuilder() {
       draftOptionSetId: null,
       draftMinScale: 1,
       draftMaxScale: 5,
+      inlineOptions: [],
     }));
   };
 
   const handleCreate = async () => {
     if (!state.bankId) return;
+    // Validation: only require at least 2 filled options if inline used
+    if (
+      (state.draftType === "SINGLE_CHOICE" ||
+        state.draftType === "MULTI_CHOICE") &&
+      !state.draftOptionSetId
+    ) {
+      const validInline = state.inlineOptions.filter(
+        (o) => o.value.trim() && o.label.trim()
+      );
+      if (validInline.length < 2) {
+        setMessage("حداقل دو گزینه نیاز است");
+        setTimeout(() => setMessage(null), 2000);
+        return;
+      }
+    }
     const body: any = {
       bankId: state.bankId,
       text: state.draftText || "",
@@ -218,7 +302,22 @@ export function QuestionBuilder() {
       state.draftType === "SINGLE_CHOICE" ||
       state.draftType === "MULTI_CHOICE"
     ) {
-      if (state.draftOptionSetId) body.optionSetId = state.draftOptionSetId;
+      if (state.draftOptionSetId) {
+        body.optionSetId = state.draftOptionSetId;
+      } else {
+        body.optionSetId = null; // explicit detach / inline usage
+        if (state.inlineOptions.length) {
+          body.options = state.inlineOptions
+            .filter((o) => o.value.trim() && o.label.trim())
+            .map((o, idx) => ({
+              value: o.value.trim(),
+              label: o.label.trim(),
+              order: idx,
+            }));
+        } else {
+          body.options = [];
+        }
+      }
     }
     await createQuestion.mutateAsync(body);
     setMessage("سؤال ایجاد شد");
@@ -228,6 +327,21 @@ export function QuestionBuilder() {
 
   const handleUpdate = async () => {
     if (!selectedQuestion) return;
+    if (
+      (state.draftType === "SINGLE_CHOICE" ||
+        state.draftType === "MULTI_CHOICE") &&
+      !state.draftOptionSetId
+    ) {
+      const validInline = state.inlineOptions.filter(
+        (o) => o.value.trim() && o.label.trim()
+      );
+      // برای ویرایش بعد از detach حداقل یک گزینه کافی است
+      if (validInline.length < 1) {
+        setMessage("حداقل یک گزینه نیاز است");
+        setTimeout(() => setMessage(null), 2000);
+        return;
+      }
+    }
     const body: any = {
       text: state.draftText || "",
       type: state.draftType,
@@ -236,9 +350,25 @@ export function QuestionBuilder() {
       state.draftType === "SINGLE_CHOICE" ||
       state.draftType === "MULTI_CHOICE"
     ) {
-      body.optionSetId = state.draftOptionSetId ?? undefined;
+      if (state.draftOptionSetId) {
+        body.optionSetId = state.draftOptionSetId;
+        body.options = undefined; // ignore inline when set selected
+      } else {
+        body.optionSetId = null; // explicit detach
+        if (state.inlineOptions.length) {
+          body.options = state.inlineOptions
+            .filter((o) => o.value.trim() && o.label.trim())
+            .map((o, idx) => ({
+              value: o.value.trim(),
+              label: o.label.trim(),
+              order: idx,
+            }));
+        } else {
+          body.options = [];
+        }
+      }
     } else {
-      body.optionSetId = undefined;
+      body.optionSetId = null;
     }
     if (state.draftType === "SCALE") {
       body.minScale = state.draftMinScale ?? 1;
@@ -269,8 +399,9 @@ export function QuestionBuilder() {
       {/* Left: Pick bank and question from comboboxes */}
       <Panel>
         <PanelHeader className="flex-row items-center justify-between gap-2">
-          <PanelTitle className="text-sm font-semibold">
-            بانک سؤال و انتخاب سؤال
+          <PanelTitle className="text-sm font-semibold flex items-center gap-2">
+            <ListChecks className="size-4 text-primary" /> بانک سؤال و انتخاب
+            سؤال
           </PanelTitle>
           <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
             {banksQ.isLoading && <span>لود بانک‌ها...</span>}
@@ -351,8 +482,9 @@ export function QuestionBuilder() {
       {/* Right: Live preview and create new question */}
       <Panel>
         <PanelHeader className="flex-row items-center justify-between gap-2">
-          <PanelTitle className="text-sm font-semibold">
-            پیش‌نمایش و ساخت / ویرایش سؤال
+          <PanelTitle className="text-sm font-semibold flex items-center gap-2">
+            <Eye className="size-4 text-primary" /> پیش‌نمایش و ساخت / ویرایش
+            سؤال
           </PanelTitle>
           <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
             {selectedQuestion && (
@@ -401,49 +533,294 @@ export function QuestionBuilder() {
             </div>
             <div className="space-y-1.5">
               <Label className="text-[11px] font-medium">نوع</Label>
-              <Select
-                value={state.draftType}
-                onValueChange={(v) =>
-                  setState((s) => ({ ...s, draftType: v as any }))
-                }>
-                <SelectTrigger className="h-8 text-xs">
-                  <SelectValue placeholder="انتخاب نوع" />
-                </SelectTrigger>
-                <SelectContent className="text-xs">
-                  {(
-                    [
-                      "TEXT",
-                      "BOOLEAN",
-                      "SINGLE_CHOICE",
-                      "MULTI_CHOICE",
-                      "SCALE",
-                    ] as const
-                  ).map((t) => (
-                    <SelectItem key={t} value={t} className="text-xs py-1">
-                      {t}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {isEditing ? (
+                <div className="h-8 text-xs flex items-center rounded-md border px-2 bg-muted/40 select-none">
+                  <span>{state.draftType}</span>
+                </div>
+              ) : (
+                <Select
+                  value={state.draftType}
+                  onValueChange={(v) =>
+                    setState((s) => ({ ...s, draftType: v as any }))
+                  }>
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue placeholder="انتخاب نوع" />
+                  </SelectTrigger>
+                  <SelectContent className="text-xs">
+                    {(
+                      [
+                        "TEXT",
+                        "BOOLEAN",
+                        "SINGLE_CHOICE",
+                        "MULTI_CHOICE",
+                        "SCALE",
+                      ] as const
+                    ).map((t) => (
+                      <SelectItem key={t} value={t} className="text-xs py-1">
+                        {t}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             {(state.draftType === "SINGLE_CHOICE" ||
               state.draftType === "MULTI_CHOICE") && (
               <div className="space-y-1.5">
-                <Label className="text-[11px] font-medium">ست گزینه</Label>
-                <Combobox
-                  items={(optionSetsQ.data?.data as any[]) || []}
-                  value={state.draftOptionSetId}
-                  onChange={(v) =>
-                    setState((s) => ({
-                      ...s,
-                      draftOptionSetId: (v as number) || null,
-                    }))
-                  }
-                  getKey={(o: any) => o.id}
-                  getLabel={(o: any) => o.name}
-                  placeholder="انتخاب ست گزینه"
-                  loading={optionSetsQ.isLoading}
-                />
+                <Label className="text-[11px] font-medium flex items-center gap-2">
+                  ست گزینه
+                  {isEditing &&
+                    selectedQuestion &&
+                    !selectedQuestion.optionSetId &&
+                    (selectedQuestion as any).options?.length > 0 && (
+                      <span className="text-[9px] text-muted-foreground font-normal">
+                        (دستی)
+                      </span>
+                    )}
+                </Label>
+                {/* Edit mode logic: */}
+                {isEditing ? (
+                  selectedQuestion?.optionSetId ? (
+                    // Question originally uses option set: allow changing set but NOT converting to manual
+                    <Combobox
+                      items={(optionSetsQ.data?.data as any[]) || []}
+                      value={state.draftOptionSetId}
+                      onChange={(v) =>
+                        setState((s) => ({
+                          ...s,
+                          draftOptionSetId: (v as number) || null,
+                        }))
+                      }
+                      getKey={(o: any) => o.id}
+                      getLabel={(o: any) => o.name}
+                      placeholder="انتخاب / تغییر ست"
+                      loading={optionSetsQ.isLoading}
+                    />
+                  ) : null
+                ) : (
+                  // Create mode: free to choose set
+                  <Combobox
+                    items={(optionSetsQ.data?.data as any[]) || []}
+                    value={state.draftOptionSetId}
+                    onChange={(v) =>
+                      setState((s) => ({
+                        ...s,
+                        draftOptionSetId: (v as number) || null,
+                        inlineOptions: (v as number) ? [] : s.inlineOptions,
+                      }))
+                    }
+                    getKey={(o: any) => o.id}
+                    getLabel={(o: any) => o.name}
+                    placeholder="انتخاب ست گزینه"
+                    loading={optionSetsQ.isLoading}
+                  />
+                )}
+                {state.draftOptionSetId &&
+                  !(!selectedQuestion?.optionSetId && isEditing) && (
+                    <div className="mt-2 rounded-md border bg-muted/20 p-2 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-[10px] font-medium">
+                          گزینه‌های ست انتخاب‌شده
+                        </Label>
+                        {/* Buttons removed in edit mode to forbid convert/detach */}
+                      </div>
+                      <div className="max-h-48 overflow-auto pr-1 space-y-1">
+                        {(optionSetOptionsQ.data as any[])?.length ? (
+                          (optionSetOptionsQ.data as any[])!.map(
+                            (o: any, i: number) => (
+                              <div
+                                key={o.id || i}
+                                className="text-[10px] flex items-center gap-2 rounded border bg-background/60 px-2 py-1">
+                                <span className="font-mono text-[9px] opacity-60">
+                                  {i + 1}.
+                                </span>
+                                <span className="truncate flex-1">
+                                  {o.label}
+                                </span>
+                                <span className="text-[9px] text-muted-foreground ltr:font-mono direction-ltr">
+                                  {o.value}
+                                </span>
+                              </div>
+                            )
+                          )
+                        ) : (
+                          <div className="text-[10px] text-muted-foreground">
+                            در حال بارگذاری یا بدون گزینه
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                {/* Inline options builder (only when no option set selected) */}
+                {/* Inline builder only if (create mode with no set) OR (edit mode and original had manual options) */}
+                {!state.draftOptionSetId &&
+                  (!isEditing ||
+                    (isEditing && !selectedQuestion?.optionSetId)) && (
+                    <div className="mt-3 rounded-md border p-3 space-y-3 bg-muted/30">
+                      <div className="flex items-center justify-between gap-2">
+                        <Label className="text-[10px] font-medium">
+                          گزینه‌های دستی (Label و Value)
+                        </Label>
+                        <div className="flex gap-1">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2 text-[11px]"
+                            icon={<PlusCircle className="size-3" />}
+                            iconPosition="left"
+                            onClick={() =>
+                              setState((s) => ({
+                                ...s,
+                                inlineOptions: [
+                                  ...s.inlineOptions,
+                                  {
+                                    id: crypto.randomUUID(),
+                                    value: "",
+                                    label: "",
+                                  },
+                                ],
+                              }))
+                            }>
+                            افزودن
+                          </Button>
+                          {!isEditing && state.inlineOptions.length > 0 && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 px-2 text-[11px]"
+                              icon={<Trash2 className="size-3" />}
+                              iconPosition="left"
+                              onClick={() =>
+                                setState((s) => ({
+                                  ...s,
+                                  inlineOptions: [],
+                                }))
+                              }>
+                              پاک‌سازی
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                      {state.inlineOptions.length === 0 && (
+                        <div className="text-[10px] text-muted-foreground">
+                          {isEditing
+                            ? "این سوال دستی است. گزینه جدید اضافه کنید."
+                            : "حداقل دو گزینه (Label + Value) وارد کنید یا یک ست آماده انتخاب کنید."}
+                        </div>
+                      )}
+                      <div className="space-y-4">
+                        {state.inlineOptions.map((opt, idx) => (
+                          <div
+                            key={opt.id}
+                            className="rounded-md border bg-background/60 p-2 space-y-2 shadow-sm relative">
+                            <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                              <span>گزینه #{idx + 1}</span>
+                              <div className="flex gap-1">
+                                {idx > 0 && (
+                                  <Button
+                                    type="button"
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-6 w-6"
+                                    icon={<ArrowUp className="size-3" />}
+                                    onClick={() =>
+                                      setState((s) => {
+                                        const arr = [...s.inlineOptions];
+                                        const t = arr[idx];
+                                        arr[idx] = arr[idx - 1];
+                                        arr[idx - 1] = t;
+                                        return { ...s, inlineOptions: arr };
+                                      })
+                                    }
+                                  />
+                                )}
+                                {idx < state.inlineOptions.length - 1 && (
+                                  <Button
+                                    type="button"
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-6 w-6"
+                                    icon={<ArrowDown className="size-3" />}
+                                    onClick={() =>
+                                      setState((s) => {
+                                        const arr = [...s.inlineOptions];
+                                        const t = arr[idx];
+                                        arr[idx] = arr[idx + 1];
+                                        arr[idx + 1] = t;
+                                        return { ...s, inlineOptions: arr };
+                                      })
+                                    }
+                                  />
+                                )}
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-6 w-6 text-red-500 hover:text-red-600"
+                                  icon={<Trash2 className="size-3" />}
+                                  onClick={() =>
+                                    setState((s) => ({
+                                      ...s,
+                                      inlineOptions: s.inlineOptions.filter(
+                                        (o) => o.id !== opt.id
+                                      ),
+                                    }))
+                                  }
+                                />
+                              </div>
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-[10px]">
+                                Label (نمایش)
+                              </Label>
+                              <Input
+                                placeholder="مثلاً: بسیار خوب"
+                                className="h-8 text-[11px]"
+                                value={opt.label}
+                                onChange={(e) =>
+                                  setState((s) => ({
+                                    ...s,
+                                    inlineOptions: s.inlineOptions.map((o) =>
+                                      o.id === opt.id
+                                        ? { ...o, label: e.target.value }
+                                        : o
+                                    ),
+                                  }))
+                                }
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-[10px]">
+                                Value (ذخیره)
+                              </Label>
+                              <Textarea
+                                placeholder="value داخلی (مثلاً: excellent)"
+                                className="min-h-[60px] text-[11px]"
+                                value={opt.value}
+                                onChange={(e) =>
+                                  setState((s) => ({
+                                    ...s,
+                                    inlineOptions: s.inlineOptions.map((o) =>
+                                      o.id === opt.id
+                                        ? { ...o, value: e.target.value }
+                                        : o
+                                    ),
+                                  }))
+                                }
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      {state.inlineOptions.length >= 1 && (
+                        <div className="text-[10px] text-muted-foreground flex flex-wrap gap-2">
+                          <span>مجموع: {state.inlineOptions.length} گزینه</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
               </div>
             )}
             {state.draftType === "SCALE" && (
@@ -461,6 +838,9 @@ export function QuestionBuilder() {
                       }))
                     }
                   />
+                  <p className="text-[9px] text-muted-foreground pr-0.5">
+                    عدد شروع مقیاس (پیشفرض 1)
+                  </p>
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-[11px] font-medium">بیشینه</Label>
@@ -475,30 +855,52 @@ export function QuestionBuilder() {
                       }))
                     }
                   />
+                  <p className="text-[9px] text-muted-foreground pr-0.5">
+                    آخرین عدد (باید بزرگ‌تر یا مساوی کمینه باشد)
+                  </p>
                 </div>
               </>
             )}
           </div>
           <div className="flex flex-wrap items-center gap-2 pt-2 border-t">
-            <Button
-              onClick={handleCreate}
-              disabled={
-                !state.bankId || !state.draftText || createQuestion.isPending
-              }
-              isLoading={createQuestion.isPending}
-              size="sm"
-              icon={<PlusCircle className="h-4 w-4" />}>
-              ایجاد
-            </Button>
+            {!selectedQuestion && (
+              <Button
+                onClick={handleCreate}
+                disabled={
+                  !state.bankId ||
+                  !state.draftText ||
+                  createQuestion.isPending ||
+                  ((state.draftType === "SINGLE_CHOICE" ||
+                    state.draftType === "MULTI_CHOICE") &&
+                    !state.draftOptionSetId &&
+                    state.inlineOptions.filter(
+                      (o) => o.value.trim() && o.label.trim()
+                    ).length < 2)
+                }
+                isLoading={createQuestion.isPending}
+                size="sm"
+                icon={<PlusCircle className="size-4" />}
+                iconPosition="left">
+                ایجاد سؤال
+              </Button>
+            )}
             {selectedQuestion && (
               <Button
                 onClick={handleUpdate}
                 disabled={
-                  !state.draftText || updateQuestion.isPending || !isDirty
+                  !state.draftText ||
+                  updateQuestion.isPending ||
+                  !isDirty ||
+                  ((state.draftType === "SINGLE_CHOICE" ||
+                    state.draftType === "MULTI_CHOICE") &&
+                    !state.draftOptionSetId &&
+                    state.inlineOptions.filter(
+                      (o) => o.value.trim() && o.label.trim()
+                    ).length < 1)
                 }
                 isLoading={updateQuestion.isPending}
                 size="sm"
-                icon={<Save className="h-4 w-4" />}
+                icon={<Save className="size-4" />}
                 variant={isDirty ? "default" : "secondary"}>
                 ذخیره تغییرات
               </Button>
@@ -507,18 +909,32 @@ export function QuestionBuilder() {
               <Button
                 variant="ghost"
                 size="sm"
-                icon={<XCircle className="h-4 w-4" />}
+                icon={<XCircle className="size-4" />}
                 onClick={() =>
                   setState((s) => ({ ...s, selectedQuestionId: null }))
                 }>
                 لغو انتخاب
               </Button>
             )}
+            {selectedQuestion && (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                icon={<FilePlus2 className="size-4" />}
+                iconPosition="left"
+                onClick={() => {
+                  resetDraft();
+                  setState((s) => ({ ...s, selectedQuestionId: null }));
+                }}>
+                سؤال جدید
+              </Button>
+            )}
             <Button
               type="button"
               variant="outline"
               size="sm"
-              icon={<RefreshCw className="h-4 w-4" />}
+              icon={<RefreshCw className="size-4" />}
               onClick={resetDraft}
               disabled={createQuestion.isPending || updateQuestion.isPending}>
               ریست فرم

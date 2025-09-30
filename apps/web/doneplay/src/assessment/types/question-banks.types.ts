@@ -48,6 +48,20 @@ export const questionSchema = z.object({
   meta: z.any().optional(),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
+  // Inline options when question uses its own option list (no optionSetId)
+  options: z
+    .array(
+      z.object({
+        id: z.number().int().optional(),
+        value: z.string(),
+        label: z.string(),
+        order: z.number().int().optional().nullable(),
+        meta: z.any().optional().nullable(),
+        createdAt: z.string().optional().nullable(),
+      })
+    )
+    .optional()
+    .nullable(),
 });
 export type Question = z.infer<typeof questionSchema>;
 

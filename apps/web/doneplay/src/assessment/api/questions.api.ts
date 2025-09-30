@@ -44,25 +44,38 @@ export async function getQuestion(id: number): Promise<Question> {
 }
 
 // Creation / update
-export const createQuestionBody = z.object({
-  bankId: z.number().int().positive(),
-  text: z.string().min(2),
-  type: z.enum(["SCALE", "TEXT", "MULTI_CHOICE", "SINGLE_CHOICE", "BOOLEAN"]),
-  code: z.string().optional(),
-  optionSetId: z.number().int().positive().optional(),
-  options: z
-    .array(
-      z.object({
-        value: z.string(),
-        label: z.string(),
-        order: z.number().int().nonnegative().optional(),
-      })
-    )
-    .optional(),
-  minScale: z.number().int().optional(),
-  maxScale: z.number().int().optional(),
-  meta: z.any().optional(),
-});
+export const createQuestionBody = z
+  .object({
+    bankId: z.number().int().positive(),
+    text: z.string().min(2),
+    type: z.enum(["SCALE", "TEXT", "MULTI_CHOICE", "SINGLE_CHOICE", "BOOLEAN"]),
+    code: z.string().optional(),
+    // allow explicitly null to detach
+    optionSetId: z.number().int().positive().nullable().optional(),
+    options: z
+      .array(
+        z.object({
+          value: z.string(),
+          label: z.string(),
+          order: z.number().int().nonnegative().optional(),
+        })
+      )
+      .optional(),
+    minScale: z.number().int().optional(),
+    maxScale: z.number().int().optional(),
+    meta: z.any().optional(),
+  })
+  .refine(
+    (data) => {
+      // if optionSetId provided, do not send inline options (backend rejects both)
+      if (data.optionSetId && data.options) return false;
+      return true;
+    },
+    {
+      message: "ارسال همزمان optionSetId و options مجاز نیست",
+      path: ["options"],
+    }
+  );
 export type CreateQuestionBody = z.infer<typeof createQuestionBody>;
 export async function createQuestion(body: CreateQuestionBody) {
   const res = await apiRequest(
