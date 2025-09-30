@@ -1,11 +1,10 @@
-import { HeroSection } from "@/components/sections";
-import { ValuePropsSection } from "@/components/sections/landing/value-props-section";
-import { ProblemSolutionSection } from "@/components/sections/landing/problem-solution-section";
-import { WhyGameSection } from "@/components/sections/landing/why-game-section";
-import { PackageStructureSection } from "@/components/sections/landing/package-structure-section";
-import { PricingSection } from "@/components/sections/landing/pricing-section";
-import { ROISection } from "@/components/sections/landing/roi-section";
-import { CTASection } from "@/components/sections/landing/cta-section";
+import {
+  HeroSection,
+  ValuePropositionSection,
+  FeatureShowcaseSection,
+  PricingSection,
+  BrandIntroSection,
+} from "@/components/sections";
 import { ModeToggle } from "@/components/modetoggle";
 import { AppPageLayout } from "@/components/layout/app-page-layout";
 
@@ -44,14 +43,12 @@ export default function LandingPage() {
           </div>
         }
       />
-      <div className="w-[96%] sm:w-[90%] lg:w-[86%] mx-auto">
-        <ValuePropsSection />
-        <ProblemSolutionSection />
-        <WhyGameSection />
-        <PackageStructureSection />
+      <div className="w-[96%] sm:w-[90%] lg:w-[86%] mx-auto space-y-24">
+        <ValuePropositionSection />
+        <FeatureShowcaseSection />
+        <BrandIntroSection />
         <PricingSection />
-        <ROISection />
-        <CTASection />
+        {/* TODO: Add ProblemSolutionSection / WhyGameSection / ROISection / CTASection when implemented */}
       </div>
     </AppPageLayout>
   );
