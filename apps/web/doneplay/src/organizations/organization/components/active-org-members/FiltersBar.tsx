@@ -2,7 +2,6 @@
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,22 +36,24 @@ export function FiltersBar({
   return (
     <div className="flex flex-col md:flex-row gap-2 md:items-end">
       <div className="flex-1 min-w-0">
-        <Label className="mb-1 hidden sm:block">جستجو</Label>
         <div className="relative">
           <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="نام اعضای سازمان..."
-            className="pl-8"
+            placeholder="جستجو..."
+            aria-label="جستجوی عضو"
+            className="pl-8 rounded-lg h-9 sm:h-9 text-[13px]"
           />
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         </div>
       </div>
       <div className="min-w-40">
-        <Label className="mb-1 hidden sm:block">وضعیت</Label>
         <DropdownMenu dir="rtl">
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="w-full h-9 justify-between">
+            <Button
+              variant="outline"
+              aria-label="فیلتر وضعیت"
+              className="w-full h-8 sm:h-9 justify-between rounded-lg text-[12px] sm:text-[13px]">
               <span className="inline-flex items-center gap-1">
                 {status ? (
                   <UserStatusBadge
@@ -61,7 +62,7 @@ export function FiltersBar({
                     size="xs"
                   />
                 ) : (
-                  <span className="inline-flex items-center px-2 py-0.5 text-[12px]">
+                  <span className="inline-flex items-center px-2 py-0.5">
                     همه وضعیت‌ها
                   </span>
                 )}
@@ -101,11 +102,13 @@ export function FiltersBar({
         </DropdownMenu>
       </div>
       <div className="min-w-48">
-        <Label className="mb-1 hidden sm:block">نقش‌های سازمانی</Label>
         <DropdownMenu dir="rtl">
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="w-full h-9 justify-between">
-              <span className="text-sm">
+            <Button
+              variant="outline"
+              aria-label="فیلتر نقش‌ها"
+              className="w-full h-8 sm:h-9 justify-between rounded-lg text-[12px] sm:text-[13px]">
+              <span>
                 {roleFilter.length ? `${roleFilter.length} نقش` : "همه نقش‌ها"}
               </span>
               <ChevronDown className="h-3 w-3 opacity-60" />
@@ -147,7 +150,10 @@ export function FiltersBar({
           mode="create"
           restrictToActiveOrg
           trigger={
-            <Button className="h-9" icon={<Plus className="h-4 w-4" />}>
+            <Button
+              aria-label="افزودن کاربر جدید"
+              className="h-8 sm:h-9 rounded-lg text-[12px] sm:text-[13px]"
+              icon={<Plus className="h-4 w-4" />}>
               افزودن کاربر
             </Button>
           }

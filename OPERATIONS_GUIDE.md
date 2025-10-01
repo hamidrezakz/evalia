@@ -4,6 +4,7 @@
 
 ---
 ssh -i "c:\ssh\serverone\ar-dimah-privatekey.pem" ubuntu@185.204.169.179
+cd /home/ubuntu/evalia
 ## 1. چرخه استقرار (Deploy Cycle)
 
 ### بعد از pull یا merge روی سرور

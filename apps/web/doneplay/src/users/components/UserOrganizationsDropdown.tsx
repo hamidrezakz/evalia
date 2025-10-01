@@ -57,17 +57,17 @@ export function UserOrganizationsDropdown({
             size="sm"
             className={cn("inline-flex items-center gap-1", className)}
             aria-expanded={open}>
-            <Building2 className="h-4 w-4 ms-1" />
-            <span className="text-xs">عضویت در {count} سازمان</span>
+            <Building2 className="h-2 w-2 mt-[-2px]" />
+            <span className="text-xs">{count}</span>
             <ChevronDown
               className={cn(
-                "h-4 w-4 transition-transform duration-200",
+                "h-3 w-3 transition-transform duration-200",
                 open ? "rotate-180" : "rotate-0"
               )}
             />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="min-w-64" sideOffset={6}>
+        <DropdownMenuContent align="center" className="min-w-64 mx-2" sideOffset={6}>
           <DropdownMenuLabel>سازمان‌های عضو</DropdownMenuLabel>
           <DropdownMenuSeparator />
           {orgs.map((o) => (

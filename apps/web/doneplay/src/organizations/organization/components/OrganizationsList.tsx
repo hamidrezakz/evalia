@@ -11,18 +11,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
 import { Plus, Search, Filter } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuLabel,
-} from "@/components/ui/dropdown-menu";
-import { OrganizationStatusEnum } from "@/lib/enums";
 import AddOrganizationDialog from "./add-organization-dialog";
 import { useDeleteOrganizationAction } from "../api/organization-hooks";
 import EditOrganizationNameDialog from "./edit-organization-name-dialog";
+import { OrganizationsListHeader } from "./OrganizationsListHeader";
 
 export interface OrganizationsListProps {
   initialQuery?: Partial<{ q: string; page: number; pageSize: number }>;
@@ -62,73 +54,13 @@ export function OrganizationsList({
   return (
     <div className="w-full space-y-4">
       <Panel className="p-4" dir="rtl">
-        <div className="flex flex-col gap-3 lg:gap-2">
-          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
-            <div className="relative w-full sm:max-w-sm">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="جستجو سازمان…"
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                className="pl-8 text-sm"
-              />
-            </div>
-            {/* Status Filter */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="min-w-[9rem] justify-between"
-                  size="sm">
-                  <span className="flex items-center gap-1">
-                    <Filter className="h-4 w-4 text-muted-foreground" />
-                    {status
-                      ? OrganizationStatusEnum.t(status as any)
-                      : "همه وضعیت‌ها"}
-                  </span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-40">
-                <DropdownMenuLabel className="text-xs">
-                  فیلتر وضعیت
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => setStatus(null)}
-                  className="text-xs cursor-pointer">
-                  همه
-                </DropdownMenuItem>
-                {OrganizationStatusEnum.options().map((opt) => (
-                  <DropdownMenuItem
-                    key={opt.value}
-                    onClick={() => setStatus(opt.value)}
-                    className="text-xs cursor-pointer">
-                    {opt.label}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <div className="flex-1" />
-            <Button
-              size="sm"
-              onClick={() => setCreateOpen(true)}
-              className="gap-1">
-              <Plus className="h-4 w-4" /> افزودن سازمان
-            </Button>
-          </div>
-          {status && (
-            <div className="flex items-center gap-2 text-[11px] text-muted-foreground flex-wrap">
-              <span>
-                فیلتر فعال: وضعیت = {OrganizationStatusEnum.t(status as any)}
-              </span>
-              <button
-                onClick={() => setStatus(null)}
-                className="px-2 py-0.5 rounded border border-muted-foreground/30 hover:bg-muted text-[10px]">
-                حذف فیلتر
-              </button>
-            </div>
-          )}
-        </div>
+        <OrganizationsListHeader
+          q={q}
+          onSearch={setQ}
+          status={status}
+          onStatusChange={setStatus}
+          onAddClick={() => setCreateOpen(true)}
+        />
       </Panel>
 
       {isLoading ? (

@@ -11,11 +11,11 @@ import {
   TableRow,
   TableCell,
 } from "@/components/ui/table";
-import { cn } from "@/lib/utils";
-import { formatIranPhone } from "@/lib/utils";
+import { cn, formatIranPhone } from "@/lib/utils";
 import { useAvatarImage } from "@/users/api/useAvatarImage";
 import UserOrganizationsDropdown from "./UserOrganizationsDropdown";
 import UserPlatformRolesCell from "./UserPlatformRolesCell";
+import { Phone, Shield, Building2, Circle } from "lucide-react";
 
 export interface UsersTableProps {
   rows: UserListItem[];
@@ -32,60 +32,136 @@ export function UsersTable({
 }: UsersTableProps) {
   return (
     <div className={cn("w-full", className)}>
-      <Table className="border-separate border-spacing-y-2">
-        {/* Head: پنهان در موبایل برای ریسپانسیو بهتر */}
-        <TableHeader className="hidden md:table-header-group">
-          <TableRow className="text-sm text-muted-foreground">
-            <TableHead className="px-2">کاربر</TableHead>
-            <TableHead className="px-2">شماره تماس</TableHead>
-            <TableHead className="px-2">وضعیت</TableHead>
-            <TableHead className="px-2">نقش‌های پلتفرم</TableHead>
-            <TableHead className="px-2">سازمان‌ها</TableHead>
-            <TableHead className="px-2 w-0 text-left">عملیات</TableHead>
+      {/* Mobile card list (mirrors style of OrganizationsTable) */}
+      <ul className="space-y-4 md:hidden" dir="rtl">
+        {rows.map((u) => (
+          <li
+            key={u.id}
+            className="rounded-2xl border border-border/60 bg-gradient-to-br from-card/80 to-muted/50 backdrop-blur-sm shadow-sm hover:shadow-md transition-shadow px-4 pt-4 pb-3 focus-within:ring-2 ring-primary/40 flex flex-col gap-3">
+            <div className="flex items-start gap-4">
+              <UserAvatarCell user={u} />
+              <div className="flex flex-col flex-1 min-w-0 gap-1.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span
+                    className="text-[13px] font-semibold truncate max-w-[25ch] tracking-tight"
+                    title={u.fullName || undefined}>
+                    {u.fullName || "—"}
+                  </span>
+                  <UserStatusMenuBadge userId={u.id} status={u.status as any} />
+                </div>
+                {u.phone ? (
+                  <span
+                    className="inline-flex items-center w-fit gap-1.5 rounded-md bg-muted/40 px-2 py-1 text-[10px] font-medium text-muted-foreground/90 ring-1 ring-inset ring-border/40"
+                    dir="ltr">
+                    <Phone className="h-3 w-3" />
+                    {formatIranPhone(u.phone)}
+                  </span>
+                ) : null}
+              </div>
+
+              {rowActions
+                ? (() => {
+                    const props = rowActions(u);
+                    return props ? <UsersRowActions {...props} /> : null;
+                  })()
+                : null}
+            </div>
+            <div className="h-px bg-border/60" />
+            {(() => {
+              const statusColorMap: Record<string, string> = {
+                ACTIVE: "text-emerald-500",
+                SUSPENDED: "text-amber-500",
+                DISABLED: "text-rose-500",
+                PENDING: "text-sky-500",
+              };
+              const statusColor =
+                statusColorMap[u.status as string] || "text-muted-foreground";
+              return (
+                <div className="grid grid-cols-2 gap-x-6 gap-y-4 text-[10px]">
+                  <InfoField
+                    icon={
+                      <Shield className="h-3 w-3 text-muted-foreground/70" />
+                    }
+                    label="نقش‌ها">
+                    <UserPlatformRolesCell
+                      userId={u.id}
+                      roles={(u.globalRoles as any) || []}
+                    />
+                  </InfoField>
+                  <InfoField
+                    icon={
+                      <Building2 className="h-3 w-3 text-muted-foreground/70" />
+                    }
+                    label="سازمان‌ها">
+                    <UserOrganizationsDropdown
+                      className="test-[9px] py-0"
+                      orgs={u.organizations || []}
+                    />
+                  </InfoField>
+                </div>
+              );
+            })()}
+          </li>
+        ))}
+      </ul>
+
+      {/* Desktop table */}
+      <Table className="hidden md:table w-full text-sm" dir="rtl">
+        <TableHeader>
+          <TableRow className="text-xs uppercase tracking-wide text-muted-foreground/80 border-b">
+            <TableHead className="px-3 py-2 font-medium">کاربر</TableHead>
+            <TableHead className="px-3 py-2 font-medium">شماره تماس</TableHead>
+            <TableHead className="px-3 py-2 font-medium">وضعیت</TableHead>
+            <TableHead className="px-3 py-2 font-medium">
+              نقش‌های پلتفرم
+            </TableHead>
+            <TableHead className="px-3 py-2 font-medium hidden lg:table-cell">
+              سازمان‌ها
+            </TableHead>
+            <TableHead className="px-3 py-2 font-medium w-0 text-left">
+              عملیات
+            </TableHead>
           </TableRow>
         </TableHeader>
-
         <TableBody>
           {rows.map((u) => (
-            <TableRow key={u.id} className="bg-card hover:bg-accent text-sm">
-              {/* نام و شناسه */}
-              <TableCell className="px-2 py-3">
-                <div className="flex items-center gap-2">
+            <TableRow
+              key={u.id}
+              className="group hover:bg-accent/50 focus-visible:outline-none border-b last:border-b-0 transition-colors align-top">
+              <TableCell className="px-3 py-3 align-top">
+                <div className="flex items-start gap-3 min-w-0">
                   <UserAvatarCell user={u} />
-                  <div className="flex flex-col">
-                    <span className="font-medium">{u.fullName || "—"}</span>
+                  <div className="flex flex-col min-w-0">
+                    <span
+                      className="font-medium truncate max-w-[20ch]"
+                      title={u.fullName || undefined}>
+                      {u.fullName || "—"}
+                    </span>
                     <span className="text-[11px] text-muted-foreground">
-                      #{u.id}
+                      @{u.id}
                     </span>
                   </div>
                 </div>
               </TableCell>
-
-              {/* شماره تماس: پنهان در نمایش‌های خیلی کوچک */}
-              <TableCell className="px-2 py-3 hidden md:table-cell">
+              <TableCell className="px-3 py-3 align-top">
                 {u.phone ? formatIranPhone(u.phone) : "—"}
               </TableCell>
-
-              {/* وضعیت */}
-              <TableCell className="px-2 py-3">
+              <TableCell className="px-3 py-3 align-top">
                 <UserStatusMenuBadge userId={u.id} status={u.status as any} />
               </TableCell>
-
-              {/* نقش‌های پلتفرم */}
-              <TableCell className="px-2 py-3 hidden md:table-cell">
+              <TableCell className="px-3 py-3 align-top">
                 <UserPlatformRolesCell
                   userId={u.id}
                   roles={(u.globalRoles as any) || []}
                 />
               </TableCell>
-
-              {/* سازمان‌ها: نمایش منوی شمارش و لیست */}
-              <TableCell className="px-2 py-3 hidden xl:table-cell">
-                <UserOrganizationsDropdown orgs={u.organizations || []} />
+              <TableCell className="px-3 py-3 align-top hidden lg:table-cell">
+                <UserOrganizationsDropdown
+                  className="test-[9px] py-0.5"
+                  orgs={u.organizations || []}
+                />
               </TableCell>
-
-              {/* عملیات */}
-              <TableCell className="px-2 py-3 text-left w-0">
+              <TableCell className="px-3 py-3 align-top text-left w-0">
                 {rowActions
                   ? (() => {
                       const props = rowActions(u);
@@ -113,5 +189,25 @@ function UserAvatarCell({ user }: { user: UserListItem }) {
       {src ? <AvatarImage src={src} alt={alt} /> : null}
       <AvatarFallback>{initials}</AvatarFallback>
     </Avatar>
+  );
+}
+
+function InfoField({
+  icon,
+  label,
+  children,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex w-fit flex-col gap-1.5 min-w-0">
+      <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground/70 tracking-wide">
+        {icon}
+        <span>{label}</span>
+      </div>
+      <div className="flex flex-wrap gap-1.5 min-w-0">{children}</div>
+    </div>
   );
 }

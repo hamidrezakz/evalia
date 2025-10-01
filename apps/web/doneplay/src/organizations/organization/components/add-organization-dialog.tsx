@@ -10,7 +10,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCreateOrganization } from "../api/organization-hooks";
-import { OrgPlanEnum, LocaleEnum } from "@/lib/enums";
+import { OrgPlanEnum, LocaleEnum, OrganizationStatusEnum } from "@/lib/enums";
+import {
+  OrgPlanBadge,
+  OrganizationStatusBadge,
+} from "@/components/status-badges";
 import { cn } from "@/lib/utils";
 
 interface AddOrganizationDialogProps {
@@ -23,6 +27,7 @@ const initialState = {
   slug: "",
   plan: "FREE" as string | null,
   locale: "FA" as string | null,
+  status: "ACTIVE" as string | null, // local-only (API sets default ACTIVE; we keep for future if backend allows)
   timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Tehran",
 };
 
@@ -46,6 +51,7 @@ export default function AddOrganizationDialog({
         plan: (form.plan as any) || undefined,
         locale: (form.locale as any) || undefined,
         timezone: form.timezone || undefined,
+        // status intentionally omitted unless backend later supports custom initial status
       },
       {
         onSuccess: () => {
@@ -57,6 +63,7 @@ export default function AddOrganizationDialog({
 
   const planOptions = OrgPlanEnum.options();
   const localeOptions = LocaleEnum.options();
+  const statusOptions = OrganizationStatusEnum.options();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -89,10 +96,10 @@ export default function AddOrganizationDialog({
               dir="ltr"
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1">
               <label className="text-xs font-medium">پلن</label>
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-wrap gap-1 bg-muted/10 p-2 rounded-md ring-1 ring-inset ring-border/50">
                 {planOptions.map((opt) => {
                   const active = form.plan === opt.value;
                   return (
@@ -102,13 +109,24 @@ export default function AddOrganizationDialog({
                       onClick={() =>
                         setForm((f) => ({ ...f, plan: opt.value }))
                       }
-                      className={cn(
-                        "px-2 py-0.5 rounded-md text-[11px] border transition-colors",
-                        active
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "bg-background hover:bg-accent border-muted-foreground/30"
-                      )}>
-                      {opt.label}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setForm((f) => ({ ...f, plan: opt.value }));
+                        }
+                      }}
+                      aria-pressed={active}
+                      className="focus:outline-none">
+                      <OrgPlanBadge
+                        plan={opt.value as any}
+                        tone={active ? "solid" : "soft"}
+                        size="xs"
+                        withIcon
+                        className={cn(
+                          "cursor-pointer select-none",
+                          !active && "opacity-75 hover:opacity-100"
+                        )}
+                      />
                     </button>
                   );
                 })}
@@ -116,28 +134,76 @@ export default function AddOrganizationDialog({
             </div>
             <div className="space-y-1">
               <label className="text-xs font-medium">زبان</label>
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-wrap gap-1 bg-muted/10 p-2 rounded-md ring-1 ring-inset ring-border/50">
                 {localeOptions.map((opt) => {
                   const active = form.locale === opt.value;
                   return (
-                    <button
+                    <span
                       key={opt.value}
-                      type="button"
+                      role="button"
+                      tabIndex={0}
+                      aria-pressed={active}
                       onClick={() =>
                         setForm((f) => ({ ...f, locale: opt.value }))
                       }
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setForm((f) => ({ ...f, locale: opt.value }));
+                        }
+                      }}
                       className={cn(
-                        "px-2 py-0.5 rounded-md text-[11px] border transition-colors",
+                        "px-2 py-0.5 rounded-md text-[11px] border transition-colors cursor-pointer",
                         active
                           ? "bg-primary text-primary-foreground border-primary"
                           : "bg-background hover:bg-accent border-muted-foreground/30"
                       )}>
                       {opt.label}
-                    </button>
+                    </span>
                   );
                 })}
               </div>
             </div>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium flex items-center gap-1">
+              وضعیت اولیه (فقط ACTIVE فعلاً)
+            </label>
+            <div className="flex flex-wrap gap-1 bg-muted/10 p-2 rounded-md ring-1 ring-inset ring-border/50">
+              {statusOptions.map((opt) => {
+                const active = form.status === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() =>
+                      setForm((f) => ({ ...f, status: opt.value }))
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setForm((f) => ({ ...f, status: opt.value }));
+                      }
+                    }}
+                    aria-pressed={active}
+                    className="focus:outline-none">
+                    <OrganizationStatusBadge
+                      status={opt.value as any}
+                      tone={active ? "solid" : "soft"}
+                      size="xs"
+                      className={cn(
+                        "cursor-pointer select-none",
+                        !active && "opacity-70 hover:opacity-100"
+                      )}
+                    />
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[10px] text-muted-foreground pr-1">
+              (در API فعلاً همیشه ACTIVE ایجاد می‌شود؛ این انتخاب برای آینده
+              نگه‌داری می‌شود)
+            </p>
           </div>
           <div className="space-y-1">
             <label className="text-xs font-medium flex items-center justify-between">

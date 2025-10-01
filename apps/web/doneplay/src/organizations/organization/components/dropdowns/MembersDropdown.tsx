@@ -29,6 +29,7 @@ import { useUser } from "@/users/api/users-hooks";
 import Link from "next/link";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { OrgRoleBadge } from "@/components/status-badges";
 import { toast } from "sonner";
 import { useAvatarImage } from "@/users/api/useAvatarImage";
 
@@ -254,19 +255,28 @@ function MemberRow({ orgId, membership }: MemberRowProps) {
         {roleOptions.map((opt) => {
           const active = roles.includes(opt.value);
           return (
-            <Button
+            <OrgRoleBadge
               key={opt.value}
-              type="button"
+              role={opt.value as any}
+              active={active}
+              tone={active ? "solid" : "soft"}
+              size="xs"
+              withIcon
+              tabIndex={0}
+              aria-pressed={active}
+              title={opt.label}
               onClick={() => toggleRole(opt.value)}
-              variant={active ? "default" : "outline"}
-              size="sm"
+              onKeyDown={(e: any) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  toggleRole(opt.value);
+                }
+              }}
               className={cn(
-                "h-6 px-2 text-[10px] font-medium rounded-md",
-                !active && "text-muted-foreground border-muted-foreground/30",
-                active && "bg-primary/90"
-              )}>
-              {opt.label}
-            </Button>
+                "cursor-pointer select-none transition h-6 px-2",
+                !active && "opacity-70 hover:opacity-100"
+              )}
+            />
           );
         })}
         <div className="ms-auto flex gap-1">

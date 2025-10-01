@@ -126,24 +126,13 @@ export default function SessionCard({
     setRel(formatJalaliRelative(session.startAt, { futureMode: "relative" }));
   }, [session.startAt]);
 
-  const stateColors: Partial<Record<SessionState, string>> = {
-    SCHEDULED: "border-sky-400/40 hover:border-sky-500/60",
-    IN_PROGRESS: "border-emerald-400/50 hover:border-emerald-500/70",
-    ANALYZING: "border-violet-400/40 hover:border-violet-500/60",
-    COMPLETED: "border-teal-400/50 hover:border-teal-500/70",
-    CANCELLED: "border-zinc-400/40 hover:border-zinc-500/70 opacity-90",
-  };
-
-  const panelBorder =
-    stateColors[session.state] ?? "border-border/50 hover:border-primary/50";
+  // Removed per new unified card styling (we no longer show a colored border per state)
 
   return (
     <Panel
       className={cn(
-        "relative group overflow-hidden border border-border/50 backdrop-blur-sm shadow-sm hover:shadow-md transition",
-        panelBorder
+        "relative group overflow-hidden rounded-2xl border border-border/60 bg-gradient-to-br from-card/80 to-muted/50 backdrop-blur-sm shadow-sm hover:shadow-md transition"
       )}>
-      <div className="absolute inset-y-0 right-0 w-0.5 bg-gradient-to-b from-primary/70 to-primary/30 opacity-60 group-hover:opacity-100 transition" />
       <PanelHeader className="gap-3 pb-0">
         <div className="flex flex-col gap-1.5 min-w-0">
           <PanelTitle className="flex items-center gap-1.5 text-[13px]">

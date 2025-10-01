@@ -96,7 +96,7 @@ export default function ActiveOrgMembers() {
   return (
     <>
       <div className="space-y-3">
-        <Panel className="p-4">
+        <Panel className="p-4 dark:bg-transparent ring-1 ring-border/40 shadow mb-[-1rem]">
           <FiltersBar
             q={q}
             setQ={(v) => setQ(v)}
@@ -107,7 +107,7 @@ export default function ActiveOrgMembers() {
           />
         </Panel>
 
-        <Panel>
+        <Panel className="dark:bg-transparent bg-transparent">
           <ResultsCount
             count={
               ((membersQ.data as any[]) || [])
@@ -129,7 +129,7 @@ export default function ActiveOrgMembers() {
                 }).length
             }
           />
-          <div className="divide-y">
+          <ul className="space-y-4">
             {((membersQ.data as any[]) || [])
               .filter((m: any) =>
                 roleFilter.length
@@ -160,11 +160,11 @@ export default function ActiveOrgMembers() {
                 />
               ))}
             {(membersQ.data || []).length === 0 && (
-              <div className="p-6 text-sm text-muted-foreground">
+              <li className="p-6 text-sm text-muted-foreground">
                 عضوی یافت نشد
-              </div>
+              </li>
             )}
-          </div>
+          </ul>
         </Panel>
       </div>
       {/* Confirm remove member dialog */}

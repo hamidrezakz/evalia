@@ -1,20 +1,43 @@
-# General
+#############################################
+# Root .dockerignore (merged & enhanced)
+# Purpose: shrink build context, avoid leaking secrets, keep reproducible builds.
+#############################################
+
+# --- VCS & editor junk ---
 .git
 .gitignore
-node_modules
-npm-debug.log
-yarn-error.log
-pnpm-debug.log
 .DS_Store
+Thumbs.db
 *.swp
+.idea
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
 
-# Build outputs
+# --- Dependencies (always reinstall inside image) ---
+node_modules
+**/node_modules
+**/.pnpm-store
+.npm
+.cache
+.turbo
+
+# --- Logs ---
+*.log
+npm-debug.log*
+yarn-error.log
+pnpm-debug.log*
+logs
+
+# --- Build outputs / generated ---
 **/dist
 .next
 **/.next
+**/.next/cache
 coverage
+out
 
-# Local env & secrets
+# --- Local env & secrets ---
 .env
 .env.*
 !.env.example
@@ -22,12 +45,36 @@ coverage
 apps/api/doneplay/.env.local
 apps/web/doneplay/.env.local
 
-# Prisma generated (kept if needed at runtime)
-**/prisma/generated
+# --- Prisma generated (regenerate during build) ---
+**/node_modules/.prisma/client
 
-# Uploads (mounted at runtime if needed)
+# Keep custom generated folder out of context if large (uncomment if safe)
+# **/prisma/generated
+
+# --- Uploads / runtime generated (mount via volume) ---
 apps/api/doneplay/uploads
+**/uploads
+tmp
+**/tmp
 
-# Misc
-.vscode
-.idea
+# --- Certificates / private keys (mount separately) ---
+**/*.pem
+**/*.key
+**/*.crt
+
+# --- Archives / assets (optional) ---
+*.tar
+*.tgz
+*.zip
+*.7z
+
+# --- Monorepo meta (kept) ---
+# DO NOT ignore pnpm workspace or lock file; needed for layer caching
+# pnpm-workspace.yaml
+# pnpm-lock.yaml
+
+# --- Legacy per-app Dockerfiles (kept intentionally, not used in compose) ---
+apps/web/doneplay/Dockerfile
+apps/api/doneplay/Dockerfile
+
+# End of file

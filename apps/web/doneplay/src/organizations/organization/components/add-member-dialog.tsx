@@ -13,6 +13,11 @@ import { cn } from "@/lib/utils";
 import { useAddOrganizationMember } from "@/organizations/member/api/organization-membership-hooks";
 import { UserSelectCombobox } from "@/users/components/UserSelectCombobox";
 import { OrgRoleEnum } from "@/lib/enums";
+import {
+  OrgRoleBadge,
+  OrganizationStatusBadge,
+} from "@/components/status-badges";
+import { useOrganization } from "@/organizations/organization/api/organization-hooks";
 
 export interface AddMemberDialogProps {
   orgId: number;
@@ -31,6 +36,7 @@ export function AddMemberDialog({
   const [roles, setRoles] = React.useState<string[]>([]);
 
   const addMemberMut = useAddOrganizationMember(orgId);
+  const { data: org } = useOrganization(orgId, open); // fetch org details when dialog open
 
   function handleAdd() {
     if (!selectedUserId) return;
@@ -58,8 +64,22 @@ export function AddMemberDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent dir="rtl" className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-sm">
-            افزودن عضو جدید به سازمان #{orgId}
+          <DialogTitle className="text-sm flex items-center gap-2 flex-wrap">
+            <span>افزودن عضو جدید به</span>
+            {org ? (
+              <span className="inline-flex items-center gap-1 max-w-[220px]">
+                <span className="font-semibold truncate" title={org.name}>
+                  {org.name}
+                </span>
+                <OrganizationStatusBadge
+                  status={org.status as any}
+                  tone="soft"
+                  size="xs"
+                />
+              </span>
+            ) : (
+              <span className="opacity-60">سازمان…</span>
+            )}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4 text-right">
@@ -76,28 +96,36 @@ export function AddMemberDialog({
             />
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">نقش‌ها (اختیاری، چندتایی)</Label>
-            <div className="flex flex-wrap gap-1 border rounded-md p-2 min-h-[42px] bg-muted/30">
+            <Label className="text-xs">نقش‌ها</Label>
+            <div className="flex flex-wrap gap-1 rounded-md p-2 min-h-[42px]">
               {roleOptions.map((opt) => {
                 const active = roles.includes(opt.value);
                 return (
-                  <button
-                    type="button"
+                  <OrgRoleBadge
                     key={opt.value}
-                    onClick={() => toggleRole(opt.value)}
+                    role={opt.value as any}
+                    active={active}
+                    tone={active ? "solid" : "soft"}
+                    size="xs"
                     className={cn(
-                      "px-2 py-0.5 rounded-md text-[11px] border transition-colors",
-                      active
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-background hover:bg-accent border-muted-foreground/20"
-                    )}>
-                    {opt.label}
-                  </button>
+                      "cursor-pointer select-none",
+                      !active && "opacity-75 hover:opacity-100"
+                    )}
+                    onClick={() => toggleRole(opt.value)}
+                    onKeyDown={(e: any) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        toggleRole(opt.value);
+                      }
+                    }}
+                    tabIndex={0}
+                    aria-pressed={active}
+                  />
                 );
               })}
               {roles.length === 0 && (
                 <span className="text-[10px] text-muted-foreground select-none">
-                  حداقل یک نقش (اختیاری)
+                  (وارد نشده)
                 </span>
               )}
             </div>
