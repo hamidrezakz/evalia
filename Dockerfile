@@ -4,7 +4,7 @@
 # Leverages a shared dependency layer for faster rebuilds.
 ###############################################
 
-FROM node:20-alpine AS deps
+FROM node:22-alpine AS deps
 WORKDIR /workspace
 RUN apk add --no-cache libc6-compat \
   && npm install -g pnpm
@@ -35,7 +35,7 @@ RUN pnpm --filter @doneplay/web build
 
 ###############################################
 # API runtime image (can be further slimmed by pruning dev deps if needed)
-FROM node:20-alpine AS api
+FROM node:22-alpine AS api
 WORKDIR /workspace
 RUN npm install -g pnpm
 # Copy full workspace (includes node_modules symlinks from pnpm)
@@ -46,7 +46,7 @@ CMD ["pnpm", "--filter", "@doneplay/api", "start:prod"]
 
 ###############################################
 # Web runtime image
-FROM node:20-alpine AS web
+FROM node:22-alpine AS web
 WORKDIR /workspace
 RUN npm install -g pnpm
 COPY --from=build-web /workspace .
