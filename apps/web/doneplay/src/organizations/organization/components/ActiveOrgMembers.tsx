@@ -107,7 +107,7 @@ export default function ActiveOrgMembers() {
           />
         </Panel>
 
-        <Panel className="dark:bg-transparent bg-transparent">
+        <Panel className="dark:bg-transparent bg-transparent @container">
           <ResultsCount
             count={
               ((membersQ.data as any[]) || [])
@@ -129,42 +129,50 @@ export default function ActiveOrgMembers() {
                 }).length
             }
           />
-          <ul className="space-y-4">
-            {((membersQ.data as any[]) || [])
-              .filter((m: any) =>
-                roleFilter.length
-                  ? (m.roles || []).some((r: string) => roleFilter.includes(r))
-                  : true
-              )
-              .filter((m: any) => {
-                if (!q && !status) return true;
-                const u = userMap.get(m.userId);
-                const name = u?.fullName || u?.name || "";
-                const phone = u?.phone || "";
-                const statusOk = status ? u?.status === status : true;
-                const qOk = q ? name.includes(q) || phone.includes(q) : true;
-                return statusOk && qOk;
-              })
-              .map((m: any) => (
-                <MemberRow
-                  key={m.id}
-                  member={m}
-                  user={userMap.get(m.userId)}
-                  mutateRoles={(membershipId, roles) =>
-                    updateRolesMut.mutate({ membershipId, roles })
-                  }
-                  onRemove={(membershipId, name) => {
-                    setSelectedMember({ id: membershipId, name });
-                    setConfirmOpen(true);
-                  }}
-                />
-              ))}
-            {(membersQ.data || []).length === 0 && (
-              <li className="p-6 text-sm text-muted-foreground">
-                عضوی یافت نشد
-              </li>
-            )}
-          </ul>
+          <div className="flex flex-col gap-4">
+            <div className="w-full" />
+            <div
+              className="member-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 items-stretch"
+              dir="rtl">
+              {((membersQ.data as any[]) || [])
+                .filter((m: any) =>
+                  roleFilter.length
+                    ? (m.roles || []).some((r: string) =>
+                        roleFilter.includes(r)
+                      )
+                    : true
+                )
+                .filter((m: any) => {
+                  if (!q && !status) return true;
+                  const u = userMap.get(m.userId);
+                  const name = u?.fullName || u?.name || "";
+                  const phone = u?.phone || "";
+                  const statusOk = status ? u?.status === status : true;
+                  const qOk = q ? name.includes(q) || phone.includes(q) : true;
+                  return statusOk && qOk;
+                })
+                .map((m: any) => (
+                  <div key={m.id} className="w-full flex h-full">
+                    <MemberRow
+                      member={m}
+                      user={userMap.get(m.userId)}
+                      mutateRoles={(membershipId, roles) =>
+                        updateRolesMut.mutate({ membershipId, roles })
+                      }
+                      onRemove={(membershipId, name) => {
+                        setSelectedMember({ id: membershipId, name });
+                        setConfirmOpen(true);
+                      }}
+                    />
+                  </div>
+                ))}
+              {((membersQ.data as any[]) || []).length === 0 && (
+                <div className="p-6 text-sm text-muted-foreground col-span-full text-center border border-dashed border-border/50 rounded-xl">
+                  عضوی یافت نشد
+                </div>
+              )}
+            </div>
+          </div>
         </Panel>
       </div>
       {/* Confirm remove member dialog */}
