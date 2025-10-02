@@ -27,3 +27,5 @@ Thumbs.db
 \n# SSL certificates (never commit private keys)
 nginx/ssl/
 *.pem
+backblaze-B2
+cloudflare-r2-credentials.txt

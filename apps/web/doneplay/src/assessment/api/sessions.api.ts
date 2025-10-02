@@ -288,6 +288,7 @@ const userSessionListItemSchema = z.object({
   templateId: z.number().int().positive(),
   startAt: z.string(),
   endAt: z.string(),
+  assignedAt: z.string().optional().nullable(),
   perspectives: z.array(responsePerspectiveEnum).default([]),
 });
 export type UserSessionListItem = z.infer<typeof userSessionListItemSchema>;

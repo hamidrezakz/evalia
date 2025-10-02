@@ -226,7 +226,7 @@ export class SessionService {
         include: {
           assignments: {
             where: { respondentUserId: userId },
-            select: { perspective: true },
+            select: { perspective: true, createdAt: true },
           },
         },
       }),
@@ -239,18 +239,29 @@ export class SessionService {
     ]);
 
     // Map to minimal payload including available perspectives for user in that session
-    const data = items.map((s) => ({
-      id: s.id,
-      name: s.name,
-      state: s.state,
-      organizationId: s.organizationId,
-      templateId: s.templateId,
-      startAt: s.startAt,
-      endAt: s.endAt,
-      perspectives: Array.from(
-        new Set((s as any).assignments.map((a: any) => a.perspective)),
-      ),
-    }));
+    const data = items.map((s) => {
+      const assignments: any[] = (s as any).assignments || [];
+      // Find earliest createdAt among this user's assignments as assignedAt
+      let assignedAt: Date | null = null;
+      for (const a of assignments) {
+        if (a?.createdAt) {
+          if (!assignedAt || a.createdAt < assignedAt) assignedAt = a.createdAt;
+        }
+      }
+      return {
+        id: s.id,
+        name: s.name,
+        state: s.state,
+        organizationId: s.organizationId,
+        templateId: s.templateId,
+        startAt: s.startAt,
+        endAt: s.endAt,
+        assignedAt: assignedAt,
+        perspectives: Array.from(
+          new Set(assignments.map((a: any) => a.perspective)),
+        ),
+      };
+    });
 
     return { data, meta: { page, pageSize, total } };
   }

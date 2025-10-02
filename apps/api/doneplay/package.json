@@ -32,6 +32,7 @@
     "health:check": "node -e \"require('http').get(process.env.API_HEALTH_URL||'http://localhost:3000/health',r=>{console.log('HEALTH STATUS',r.statusCode);process.exit(r.statusCode===200?0:1);})\""
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.679.0",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.1",

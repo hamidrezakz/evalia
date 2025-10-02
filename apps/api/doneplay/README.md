@@ -99,6 +99,72 @@ Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
 
 ---
 
+## Avatar Storage (Cloudflare R2 Integration)
+
+The API supports two storage backends for user avatar images:
+
+1. Local disk (`uploads/` directory) – default fallback if R2 env vars are missing.
+2. Cloudflare R2 (S3-compatible) with an optional custom CDN domain (e.g. `cdn.doneplay.site`).
+
+### How it works
+
+Upload flow (`POST /assets` with `type=AVATAR`):
+
+1. Multer stores the original image temporarily under `uploads/`.
+2. If `type=AVATAR`, the backend converts the image to WebP and compresses iteratively (target ≤ ~80KB).
+3. If R2 is configured (all required env vars present) the optimized file is uploaded to R2 under a deterministic key:
+
+- `avatars/<userId>.webp` (if authenticated user id available)
+- Otherwise: `avatars/<uuid>.webp`
+
+4. A database `asset` record is created. For remote objects the full CDN URL is stored; for local fallback a relative `/uploads/...` path.
+5. The authenticated user is auto-attached to the new avatar asset; any previous avatar asset + (local) file is cleaned up.
+
+### Deterministic Naming & Overwrite
+
+Each user always has at most one active avatar:
+
+- New uploads with the same user id overwrite the same R2 key (cache-control set to 5 minutes; adjust as needed).
+- The asset table old record is hard-deleted; the new one becomes canonical.
+
+### Environment Variables
+
+Required to activate R2 mode (examples):
+
+```
+R2_ENDPOINT=https://<account>.r2.cloudflarestorage.com
+R2_ACCESS_KEY_ID=***
+R2_SECRET_ACCESS_KEY=***
+R2_BUCKET=doneplayavatars
+R2_PUBLIC_BASE=https://cdn.doneplay.site
+```
+
+Optional tuning (already in `.env`):
+
+```
+AVATAR_MAX_SIZE_BYTES=102400
+AVATAR_FORCE_WEBP=true
+```
+
+### Frontend Handling
+
+The frontend treats absolute URLs (starting with `http`) directly. Relative `/uploads/...` URLs are prefixed with the API base. No code changes are required when switching to R2 beyond setting the env vars.
+
+### Cache Busting
+
+Currently overwriting keeps the same key (`<userId>.webp`). To mitigate stale CDN caches:
+
+- A short `Cache-Control` (`public, max-age=300, must-revalidate`) is applied on upload.
+- If you need stronger guarantees, consider appending a version query (e.g. `?v=<timestamp>`) in the DB URL or using unique keys per upload plus a redirect/table update strategy.
+
+### Future Enhancements (Suggested)
+
+- Delete old R2 object when switching from random UUID key to deterministic user key.
+- Add signed URL support for private buckets.
+- Add background image optimization queue for large originals (if you remove size limits).
+
+---
+
 ## Navigation Module (Dynamic Menu System)
 
 This service provides hierarchical menu items with multi-tenant override capability.
