@@ -44,7 +44,7 @@ export function MemberRow({
 
   return (
     <li
-      className="rounded-2xl border border-border/60 bg-gradient-to-br from-card/80 to-muted/50 backdrop-blur-sm shadow-sm hover:shadow-md transition-shadow px-4 pt-4 pb-3 focus-within:ring-2 ring-primary/40 flex flex-col gap-3"
+      className="h-full w-full rounded-2xl border border-border/60 bg-gradient-to-br from-card/80 to-muted/50 backdrop-blur-sm shadow-sm hover:shadow-md transition-shadow px-4 pt-4 pb-3 focus-within:ring-2 ring-primary/40 flex flex-col gap-3"
       dir="rtl"
       aria-label={`عضو ${fullName}`}>
       <div className="flex items-start gap-4">
