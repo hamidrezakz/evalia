@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { ResponsePerspective } from '@prisma/client';
 import { PrismaService } from '../../prisma.service';
+import { AiExportService } from './ai-export.service';
 
 const SESSION_STATE_FLOW: Record<string, string[]> = {
   SCHEDULED: ['IN_PROGRESS', 'CANCELLED'],
@@ -16,7 +17,10 @@ const SESSION_STATE_FLOW: Record<string, string[]> = {
 
 @Injectable()
 export class SessionService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly aiExport: AiExportService,
+  ) {}
 
   private async ensureTemplate(id: number) {
     const tpl = await this.prisma.assessmentTemplate.findFirst({
@@ -60,6 +64,7 @@ export class SessionService {
         description: dto.description || null,
         startAt: new Date(dto.startAt),
         endAt: new Date(dto.endAt),
+        // Optional scoring service interface
         meta: dto.meta || {},
       },
     });
@@ -375,5 +380,15 @@ export class SessionService {
       sections,
       responses,
     };
+  }
+
+  // Build AI-friendly export (concise questions + answers + unified option set)
+  async getAiExportForUserPerspective(
+    sessionId: number,
+    userId: number,
+    perspective: ResponsePerspective,
+    subjectUserId?: number,
+  ) {
+    return this.aiExport.build(sessionId, userId, perspective, subjectUserId);
   }
 }

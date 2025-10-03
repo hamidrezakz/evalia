@@ -46,6 +46,9 @@ import { useAvatarImage } from "@/users/api/useAvatarImage";
 import { TakeHeader } from "@/app/dashboard/tests/take/components/TakeHeader";
 import { RestrictedSubjectSelector } from "@/app/dashboard/tests/take/components/RestrictedSubjectSelector";
 import TakeSkeleton from "@/app/dashboard/tests/take/components/TakeSkeleton";
+// Results / analyses
+import { AiAssessmentExportButton } from "@/assessment/components/AiAssessmentExportButton"; // (still used inside results panel if needed in future here)
+import AssessmentResultsPanel from "./components/AssessmentResultsPanel";
 
 // Lightweight shared shape for user data we access (duplicated from previous inline interface)
 interface BasicUser {
@@ -579,7 +582,7 @@ export default function TakeAssessmentPage() {
       )}
 
       {/* Enhanced header card */}
-      <Panel className="shadow-sm w-full overflow-hidden">
+      <Panel className="shadow-sm w-full overflow-hidden max-w-2xl">
         <PanelHeader className="relative gap-4 flex flex-col xl:flex-row xl:items-start [.border-b]:border-border/70">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between w-full gap-4">
             {/* Left cluster (title & meta) */}
@@ -805,6 +808,27 @@ export default function TakeAssessmentPage() {
           </span>
         </div>
       )}
+      {/* Results (after completion) now shown directly under header panel */}
+      <AssessmentResultsPanel
+        className="max-w-2xl"
+        canLoadAnalyses={Boolean(
+          flatQuestions.length &&
+            answeredCount === flatQuestions.length &&
+            pendingCount === 0 &&
+            !!effSessionId &&
+            !!effUserId &&
+            !!effPerspective
+        )}
+        sessionId={effSessionId as number | null}
+        userId={effUserId as number | null}
+        perspective={effPerspective as string | null}
+        subjectUserId={
+          effPerspective && effPerspective !== "SELF"
+            ? (effSubjectUserId as number | null)
+            : null
+        }
+      />
+
       {uq.isLoading ? (
         <div className="text-sm text-muted-foreground">
           در حال بارگذاری سوالات…
@@ -1097,4 +1121,10 @@ export default function TakeAssessmentPage() {
   );
 }
 
+/**
+ * Lightweight results section that appears only after all questions are answered & saved.
+ * - Renders AI export download button
+ * - Renders Glasser radar chart if analysis available (template supports it)
+ * Future: Add more analyses/charts here (just append inside the card stack).
+ */
 // (SubjectSelector inlined previously has been replaced by modular RestrictedSubjectSelector)

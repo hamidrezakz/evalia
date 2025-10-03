@@ -8,6 +8,7 @@ import { TemplateService } from './services/template.service';
 import { SectionService } from './services/section.service';
 import { TemplateQuestionService } from './services/template-question.service';
 import { SessionService } from './services/session.service';
+import { AiExportService } from './services/ai-export.service';
 import { AssignmentService } from './services/assignment.service';
 import { ResponseService } from './services/response.service';
 import { Module } from '@nestjs/common';
@@ -45,6 +46,7 @@ import { OptionSetOptionController } from './controllers/option-set-option.contr
     SectionService,
     TemplateQuestionService,
     SessionService,
+    AiExportService,
     AssignmentService,
     ResponseService,
   ],
@@ -57,6 +59,7 @@ import { OptionSetOptionController } from './controllers/option-set-option.contr
     SectionService,
     TemplateQuestionService,
     SessionService,
+    AiExportService,
     AssignmentService,
     ResponseService,
   ],

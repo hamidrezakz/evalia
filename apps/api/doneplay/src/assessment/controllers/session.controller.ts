@@ -30,6 +30,7 @@ export class SessionController {
     return this.service.create(dto);
   }
 
+  // Optional scoring service interface
   @Get()
   @Roles({
     any: ['ORG:OWNER', 'ORG:MANAGER', 'ANALYSIS_MANAGER', 'ORG:MEMBER'],
@@ -126,6 +127,21 @@ export class SessionController {
     @Query() q: UserQuestionsQueryDto,
   ) {
     return this.service.getQuestionsForUserPerspective(
+      Number(id),
+      Number(userId),
+      q.perspective,
+      q.subjectUserId,
+    );
+  }
+
+  // AI export (concise) for user perspective
+  @Get(':id/user/:userId/ai-export')
+  getUserAiExport(
+    @Param('id') id: string,
+    @Param('userId') userId: string,
+    @Query() q: UserQuestionsQueryDto,
+  ) {
+    return this.service.getAiExportForUserPerspective(
       Number(id),
       Number(userId),
       q.perspective,
