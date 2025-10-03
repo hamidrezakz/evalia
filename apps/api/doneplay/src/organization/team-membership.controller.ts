@@ -9,8 +9,12 @@ import {
 } from '@nestjs/common';
 import { TeamMembershipService } from './team-membership.service';
 import { Roles } from '../common/roles.decorator';
+import { IsInt } from 'class-validator';
+import { Type } from 'class-transformer';
 
 class AddTeamMemberDto {
+  @Type(() => Number)
+  @IsInt()
   userId!: number;
 }
 

@@ -32,6 +32,8 @@ export const teamKeys = {
   detail: (orgId: number) => [...teamKeys.all(orgId), "detail"] as const,
   byId: (orgId: number, teamId: number) =>
     [...teamKeys.detail(orgId), teamId] as const,
+  members: (orgId: number, teamId: number) =>
+    [...teamKeys.byId(orgId, teamId), "members"] as const,
 };
 
 export type TeamKeyFactory = typeof teamKeys;
