@@ -19,7 +19,7 @@ git pull --rebase
 sudo docker compose build api web
 
 # بالا / ری‌کریت سرویس‌ها (مهاجرت خودکار در start:prod:migrated اجرا می‌شود)
-sudo docker compose up -d --force-recreate api web
+sudo docker compose up -d --force-recreate api web nginx
 
 # بررسی لاگ‌ها
 sudo docker compose logs -n 50 api
@@ -32,7 +32,10 @@ sudo docker compose logs -n 50 web
 sudo docker compose build nginx
 sudo docker compose up -d --force-recreate nginx
 ```
-
+برای حذف ایمیج ها . کش های بی‌استفاده
+```bash
+sudo docker system prune -af
+```
 ### بررسی سلامت سریع
 
 ```bash
