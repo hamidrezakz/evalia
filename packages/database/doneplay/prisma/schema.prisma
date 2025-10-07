@@ -185,6 +185,28 @@ enum AIAnalysisKind {
   RISK
 }
 
+/// Access level for organization linkage to a QuestionBank (سطح دسترسی سازمان به بانک سوال)
+enum QuestionBankAccessLevel {
+  USE      /// سازمان می‌تواند استفاده کند (خواندن سوالات در قالب‌ها)
+  EDIT     /// سازمان می‌تواند سوال جدید به بانک اضافه یا ویرایش کند (در صورتی که مالک اصلی نیست، محدودیت‌های کسب و کار در سرویس enforce می‌شوند)
+  ADMIN    /// مدیریت کامل (تغییر متادیتا، آرشیو، تنظیم دسترسی سایر سازمان‌ها)
+}
+
+/// Access level for organization linkage to an AssessmentTemplate (سطح دسترسی سازمان به تمپلیت ارزیابی)
+enum TemplateAccessLevel {
+  USE      /// فقط استفاده در ساخت Session
+  EDIT     /// ویرایش ساختار (افزودن/حذف سوال، تغییر بخش‌ها) – با رعایت policy
+  ADMIN    /// مدیریت کامل + تنظیم دسترسی دیگر سازمان‌ها
+  CLONE    /// فقط مجاز به کلون‌کردن نسخه جدید داخلی (سناریوی مارکت‌پلیس)
+}
+
+/// Access level for organization linkage to an OptionSet (سطح دسترسی سازمان به مجموعه گزینه)
+enum OptionSetAccessLevel {
+  USE      /// استفاده در سوال ها
+  EDIT     /// افزودن/حذف گزینه (در صورت policy)
+  ADMIN    /// مدیریت کامل + اشتراک گذاری
+}
+
 /// Soft delete strategy: each soft-deletable model has deletedAt nullable timestamp
 
 // ------------------------------
@@ -280,6 +302,18 @@ model Organization {
   auditLogs      AuditLog[]                    @relation("OrganizationAuditLogs")
   assets         Asset[]                       @relation("OrganizationAssets")
   serviceAssignments OrganizationServiceAssignment[] @relation("OrganizationServiceAssignments")
+  /// New: question banks created by this organization
+  createdQuestionBanks QuestionBank[] @relation("OrganizationCreatedQuestionBanks")
+  /// New: templates created by this organization
+  createdAssessmentTemplates AssessmentTemplate[] @relation("OrganizationCreatedAssessmentTemplates")
+  /// New: links granting access to question banks
+  questionBankLinks QuestionBankOrganizationLink[] @relation("OrganizationQuestionBankLinks")
+  /// New: links granting access to assessment templates
+  assessmentTemplateLinks AssessmentTemplateOrganizationLink[] @relation("OrganizationAssessmentTemplateLinks")
+  /// New: links granting access to option sets
+  optionSetLinks OptionSetOrganizationLink[] @relation("OrganizationOptionSetLinks")
+  /// New: option sets created by this organization
+  createdOptionSets OptionSet[] @relation("OrganizationCreatedOptionSets")
 
   @@index([plan])
   @@index([locale])
@@ -399,11 +433,17 @@ model QuestionBank {
   name        String   @unique
   description String?
   isSystem    Boolean  @default(false)
+  /// Optional: سازمانی که این بانک را ایجاد کرده (برای تفکیک مالک اصلی از لینک‌های اشتراکی)
+  createdByOrganizationId Int?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   deletedAt   DateTime?
 
   questions   Question[]
+  /// Links to organizations with access levels
+  orgLinks    QuestionBankOrganizationLink[]
+
+  createdByOrganization Organization? @relation("OrganizationCreatedQuestionBanks", fields: [createdByOrganizationId], references: [id])
 
   @@index([name])
 }
@@ -460,9 +500,15 @@ model OptionSet {
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
   deletedAt   DateTime?
+  /// Optional: سازمان سازنده (اگر global نیست)
+  createdByOrganizationId Int?
 
   options     OptionSetOption[] @relation("OptionSetOptions")
   questions   Question[]        @relation("QuestionsUsingOptionSet")
+  /// Links to organizations with access levels
+  orgLinks    OptionSetOrganizationLink[]
+
+  createdByOrganization Organization? @relation("OrganizationCreatedOptionSets", fields: [createdByOrganizationId], references: [id])
 
   @@index([name])
 }
@@ -492,6 +538,8 @@ model AssessmentTemplate {
   description    String?
   state          AssessmentState       @default(DRAFT)
   meta           Json                  @default("{}")
+  /// Optional: سازمان سازنده (اگر global نیست)
+  createdByOrganizationId Int?
   createdAt      DateTime              @default(now())
   updatedAt      DateTime              @updatedAt
   deletedAt      DateTime?
@@ -499,6 +547,10 @@ model AssessmentTemplate {
   // (v2 removed) organizationLinks join table
   sections       AssessmentTemplateSection[] @relation("TemplateSections")
   sessions       AssessmentSession[]         @relation("TemplateSessions")
+  /// Organization linkage (many-to-many with access levels)
+  orgLinks       AssessmentTemplateOrganizationLink[]
+
+  createdByOrganization Organization? @relation("OrganizationCreatedAssessmentTemplates", fields: [createdByOrganizationId], references: [id])
 
   @@index([state])
   @@index([name])
@@ -790,5 +842,58 @@ model VerificationCode {
 // ------------------------------
 // End of schema
 // ------------------------------
+
+// ------------------------------
+// NEW: Organization linkage models (many-to-many with access levels)
+// ------------------------------
+
+/// Link between QuestionBank and Organization (دسترسی سازمان به بانک سوال)
+model QuestionBankOrganizationLink {
+  id               Int                     @id @default(autoincrement())
+  questionBankId   Int
+  organizationId   Int
+  accessLevel      QuestionBankAccessLevel @default(USE)
+  createdAt        DateTime                @default(now())
+
+  questionBank     QuestionBank            @relation(fields: [questionBankId], references: [id], onDelete: Cascade)
+  organization     Organization            @relation("OrganizationQuestionBankLinks", fields: [organizationId], references: [id])
+
+  @@unique([questionBankId, organizationId])
+  @@index([organizationId])
+  @@index([accessLevel])
+}
+
+/// Link between AssessmentTemplate and Organization (دسترسی سازمان به تمپلیت)
+model AssessmentTemplateOrganizationLink {
+  id             Int                  @id @default(autoincrement())
+  templateId     Int
+  organizationId Int
+  accessLevel    TemplateAccessLevel  @default(USE)
+  createdAt      DateTime             @default(now())
+
+  template       AssessmentTemplate   @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  organization   Organization         @relation("OrganizationAssessmentTemplateLinks", fields: [organizationId], references: [id])
+
+  @@unique([templateId, organizationId])
+  @@index([organizationId])
+  @@index([accessLevel])
+}
+
+/// Link between OptionSet and Organization (دسترسی سازمان به مجموعه گزینه)
+model OptionSetOrganizationLink {
+  id             Int                 @id @default(autoincrement())
+  optionSetId    Int
+  organizationId Int
+  accessLevel    OptionSetAccessLevel @default(USE)
+  createdAt      DateTime            @default(now())
+
+  optionSet      OptionSet          @relation(fields: [optionSetId], references: [id], onDelete: Cascade)
+  organization   Organization       @relation("OrganizationOptionSetLinks", fields: [organizationId], references: [id])
+
+  @@unique([optionSetId, organizationId])
+  @@index([organizationId])
+  @@index([accessLevel])
+}
+
 
 
