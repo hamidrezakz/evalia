@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { apiRequest } from "@/lib/api.client";
+import { useOrgState } from "@/organizations/organization/context/org-context"; // (only for potential in-file hooks if needed later)
 import {
   questionBanksListEnvelope,
   questionBankSchema,
@@ -19,10 +20,17 @@ function buildListPath(raw?: Partial<ListQuestionBanksQuery>): string {
   return "/question-banks" + buildQuestionBanksQuery(parsed.data);
 }
 
+// Central utility to append orgId (kept local to avoid broad API churn)
+function withOrg(path: string, orgId?: number | null): string {
+  if (!orgId) return path; // allow caller to ensure guard already blocks unauth usage
+  return path + (path.includes("?") ? `&orgId=${orgId}` : `?orgId=${orgId}`);
+}
+
 export async function listQuestionBanks(
-  params?: Partial<ListQuestionBanksQuery>
+  params?: Partial<ListQuestionBanksQuery>,
+  orgId?: number | null
 ): Promise<{ data: QuestionBank[]; meta: unknown }> {
-  const path = buildListPath(params);
+  const path = withOrg(buildListPath(params), orgId);
   const res = await apiRequest(path, null, null);
   const validated = questionBanksListEnvelope.safeParse({
     data: res.data,
@@ -35,10 +43,17 @@ export async function listQuestionBanks(
   return validated.data;
 }
 
-export async function getQuestionBank(id: number): Promise<QuestionBank> {
+export async function getQuestionBank(
+  id: number,
+  orgId?: number | null
+): Promise<QuestionBank> {
   if (!Number.isInteger(id) || id <= 0)
     throw new Error("Question bank id must be positive");
-  const res = await apiRequest(`/question-banks/${id}`, null, detailSchema);
+  const res = await apiRequest(
+    withOrg(`/question-banks/${id}`, orgId),
+    null,
+    detailSchema
+  );
   return res as unknown as QuestionBank; // apiRequest with responseSchema returns inner validated data
 }
 
@@ -48,9 +63,12 @@ export const createQuestionBankBody = z.object({
   description: z.string().optional(),
 });
 export type CreateQuestionBankBody = z.infer<typeof createQuestionBankBody>;
-export async function createQuestionBank(body: CreateQuestionBankBody) {
+export async function createQuestionBank(
+  body: CreateQuestionBankBody,
+  orgId?: number | null
+) {
   const res = await apiRequest(
-    "/question-banks",
+    withOrg("/question-banks", orgId),
     createQuestionBankBody,
     questionBankSchema,
     { body }
@@ -65,10 +83,11 @@ export const updateQuestionBankBody = z.object({
 export type UpdateQuestionBankBody = z.infer<typeof updateQuestionBankBody>;
 export async function updateQuestionBank(
   id: number,
-  body: UpdateQuestionBankBody
+  body: UpdateQuestionBankBody,
+  orgId?: number | null
 ) {
   const res = await apiRequest(
-    `/question-banks/${id}`,
+    withOrg(`/question-banks/${id}`, orgId),
     updateQuestionBankBody,
     questionBankSchema,
     { method: "PATCH", body }
@@ -76,7 +95,9 @@ export async function updateQuestionBank(
   return res as unknown as QuestionBank;
 }
 
-export async function deleteQuestionBank(id: number) {
-  await apiRequest(`/question-banks/${id}`, null, null, { method: "DELETE" });
+export async function deleteQuestionBank(id: number, orgId?: number | null) {
+  await apiRequest(withOrg(`/question-banks/${id}`, orgId), null, null, {
+    method: "DELETE",
+  });
   return { id };
 }
