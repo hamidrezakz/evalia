@@ -4,45 +4,61 @@ import {
   Post,
   Body,
   Param,
-  Query,
   Patch,
   Delete,
+  UseGuards,
+  Req,
 } from '@nestjs/common';
 import { OptionSetService } from '../services/option-set.service';
-import {
-  CreateOptionSetDto,
-  ListOptionSetQueryDto,
-  UpdateOptionSetDto,
-} from '../dto/option-set.dto';
+import { CreateOptionSetDto, UpdateOptionSetDto } from '../dto/option-set.dto';
 import { Roles } from '../../common/roles.decorator';
+import { OrgContextGuard } from '../../common/org-context.guard';
+import { OrgId } from '../../common/org-id.decorator';
 
 @Controller('option-sets')
+@UseGuards(OrgContextGuard)
 export class OptionSetController {
   constructor(private readonly service: OptionSetService) {}
 
   @Roles({ any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER'] })
   @Post()
-  create(@Body() dto: CreateOptionSetDto) {
-    return this.service.create(dto);
+  create(
+    @Body() dto: CreateOptionSetDto,
+    @OrgId() orgId: number,
+    @Req() req: any,
+  ) {
+    const userId = req?.user?.userId;
+    return this.service.create(dto, orgId, userId);
   }
 
   @Get()
-  list(@Query() query: ListOptionSetQueryDto) {
-    return this.service.list(query);
+  list(@OrgId() orgId: number, @Req() req: any) {
+    const userId = req?.user?.userId;
+    return this.service.list({}, orgId, userId);
   }
 
   @Get(':id')
-  get(@Param('id') id: string) {
-    return this.service.getById(Number(id));
+  get(@Param('id') id: string, @OrgId() orgId: number, @Req() req: any) {
+    const userId = req?.user?.userId;
+    return this.service.getById(Number(id), orgId, userId);
   }
+
   @Roles({ any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER'] })
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateOptionSetDto) {
-    return this.service.update(Number(id), dto);
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateOptionSetDto,
+    @OrgId() orgId: number,
+    @Req() req: any,
+  ) {
+    const userId = req?.user?.userId;
+    return this.service.update(Number(id), dto, orgId, userId);
   }
+
   @Roles({ any: ['SUPER_ADMIN'] })
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.service.softDelete(Number(id));
+  remove(@Param('id') id: string, @OrgId() orgId: number, @Req() req: any) {
+    const userId = req?.user?.userId;
+    return this.service.softDelete(Number(id), orgId, userId);
   }
 }

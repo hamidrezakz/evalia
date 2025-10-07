@@ -222,6 +222,7 @@ export class AuthService {
 
   private async issueTokens(userId: number) {
     const roles = await this.gatherRoles(userId);
+    const orgIds = roles.org.map((o) => o.orgId);
     // Fetch tokenVersion to embed in JWT (for selective invalidation)
     const userTokenMeta = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -232,6 +233,7 @@ export class AuthService {
       sub: userId,
       type: 'access',
       roles,
+      orgIds,
       tokenVersion,
     });
     const refreshToken = this.jwt.sign(

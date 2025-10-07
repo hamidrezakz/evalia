@@ -4,52 +4,71 @@ import {
   Post,
   Body,
   Param,
-  Query,
   Patch,
   Delete,
+  UseGuards,
+  Req,
 } from '@nestjs/common';
 import { QuestionBankService } from '../services/question-bank.service';
 import {
   CreateQuestionBankDto,
-  ListQuestionBankQueryDto,
   UpdateQuestionBankDto,
 } from '../dto/question-bank.dto';
 import { Roles } from '../../common/roles.decorator';
+import { OrgContextGuard } from '../../common/org-context.guard';
+import { OrgId } from '../../common/org-id.decorator';
 
 @Controller('question-banks')
+@UseGuards(OrgContextGuard)
 export class QuestionBankController {
   constructor(private readonly service: QuestionBankService) {}
 
   @Post()
   @Roles({ any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER'] })
-  create(@Body() dto: CreateQuestionBankDto) {
-    return this.service.create(dto);
+  create(
+    @Body() dto: CreateQuestionBankDto,
+    @OrgId() orgId: number,
+    @Req() req: any,
+  ) {
+    const userId = req?.user?.userId;
+    return this.service.create(dto, orgId, userId);
   }
 
   @Get()
-  list(@Query() query: ListQuestionBankQueryDto) {
-    return this.service.list(query);
+  list(@OrgId() orgId: number, @Req() req: any) {
+    const userId = req?.user?.userId;
+    // Leaving query filters minimal; could be extended to accept DTO again
+    return this.service.list({}, orgId, userId);
   }
 
   @Get(':id')
-  get(@Param('id') id: string) {
-    return this.service.getById(Number(id));
+  get(@Param('id') id: string, @OrgId() orgId: number, @Req() req: any) {
+    const userId = req?.user?.userId;
+    return this.service.getById(Number(id), orgId, userId);
   }
 
   @Patch(':id')
   @Roles({ any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER'] })
-  update(@Param('id') id: string, @Body() dto: UpdateQuestionBankDto) {
-    return this.service.update(Number(id), dto);
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateQuestionBankDto,
+    @OrgId() orgId: number,
+    @Req() req: any,
+  ) {
+    const userId = req?.user?.userId;
+    return this.service.update(Number(id), dto, orgId, userId);
   }
 
   @Delete(':id')
   @Roles({ any: ['SUPER_ADMIN'] })
-  remove(@Param('id') id: string) {
-    return this.service.softDelete(Number(id));
+  remove(@Param('id') id: string, @OrgId() orgId: number, @Req() req: any) {
+    const userId = req?.user?.userId;
+    return this.service.softDelete(Number(id), orgId, userId);
   }
 
   @Get(':id/questions-count')
-  count(@Param('id') id: string) {
-    return this.service.countQuestions(Number(id));
+  count(@Param('id') id: string, @OrgId() orgId: number, @Req() req: any) {
+    const userId = req?.user?.userId;
+    return this.service.countQuestions(Number(id), orgId, userId);
   }
 }

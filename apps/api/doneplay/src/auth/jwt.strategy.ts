@@ -34,6 +34,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       tenantId: payload.tid,
       phone: payload.phone,
       roles,
+      orgIds: Array.isArray(payload.orgIds)
+        ? payload.orgIds
+        : roles.org.map((o: any) => o.orgId),
       tokenVersion: payload.tokenVersion ?? 1,
     };
   }
