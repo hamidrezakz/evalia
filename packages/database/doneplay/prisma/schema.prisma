@@ -303,6 +303,9 @@ model Organization {
   lockedAt       DateTime?
   createdById    Int?
   createdBy      User?                      @relation("OrganizationsCreated", fields: [createdById], references: [id])
+  /// Optional avatar asset (mirrors User.avatarAssetId)
+  avatarAssetId Int? @unique
+  avatarAsset   Asset? @relation("OrganizationAvatarAsset", fields: [avatarAssetId], references: [id])
   createdAt      DateTime                   @default(now())
   updatedAt      DateTime                   @updatedAt
   deletedAt      DateTime?
@@ -827,6 +830,7 @@ model Asset {
 
   organization   Organization? @relation("OrganizationAssets", fields: [organizationId], references: [id])
   users          User[]        @relation("UserAvatarAsset")
+  organizations  Organization[] @relation("OrganizationAvatarAsset")
 
   @@index([organizationId, type])
   @@index([filename])
