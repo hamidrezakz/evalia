@@ -207,6 +207,21 @@ enum OptionSetAccessLevel {
   ADMIN    /// مدیریت کامل + اشتراک گذاری
 }
 
+/// Organization capability (ویژگی/توانمندی سازمان) – allows marking multiple orgs as MASTER, etc.
+enum OrganizationCapability {
+  MASTER          /// سازمان مادر که می‌تواند زیرسازمان بسازد
+  BILLING_PROVIDER /// (آینده) مدیریت مالی زیرمجموعه‌ها
+  ANALYTICS_HUB    /// (آینده) تجمیع گزارش‌ها
+}
+
+/// Relationship type between organizations (نوع رابطه سازمان‌ها)
+enum OrganizationRelationshipType {
+  PARENT_CHILD   /// رابطه عادی والد-فرزند
+  FRANCHISE      /// مدل فرانچایز
+  MANAGED        /// مدیریت عملیاتی (outsourced)
+  BRAND_ALIAS    /// نمایه/برند مشترک
+}
+
 /// Soft delete strategy: each soft-deletable model has deletedAt nullable timestamp
 
 // ------------------------------
@@ -314,6 +329,12 @@ model Organization {
   optionSetLinks OptionSetOrganizationLink[] @relation("OrganizationOptionSetLinks")
   /// New: option sets created by this organization
   createdOptionSets OptionSet[] @relation("OrganizationCreatedOptionSets")
+  /// Capability assignments (e.g., MASTER)
+  organizationCapabilityAssignments OrganizationCapabilityAssignment[] @relation("OrgCapabilityAssignments")
+  /// Relationships where this organization is the PARENT
+  childRelationships OrganizationRelationship[] @relation("OrgRelParent")
+  /// Relationships where this organization is the CHILD
+  parentRelationships OrganizationRelationship[] @relation("OrgRelChild")
 
   @@index([plan])
   @@index([locale])
@@ -893,6 +914,42 @@ model OptionSetOrganizationLink {
   @@unique([optionSetId, organizationId])
   @@index([organizationId])
   @@index([accessLevel])
+}
+
+// ------------------------------
+// NEW: Organization hierarchy & capability models (multi-master design)
+// ------------------------------
+
+/// Assignment of a capability to an organization (قابلیت سازمان)
+model OrganizationCapabilityAssignment {
+  id             Int                   @id @default(autoincrement())
+  organizationId Int
+  capability     OrganizationCapability
+  active         Boolean               @default(true)
+  createdAt      DateTime              @default(now())
+
+  organization   Organization @relation("OrgCapabilityAssignments", fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, capability])
+  @@index([capability])
+  @@index([active])
+}
+
+/// Direct relationship between two organizations (رابطه مستقیم سازمان‌ها)
+model OrganizationRelationship {
+  id                   Int                          @id @default(autoincrement())
+  parentOrganizationId Int
+  childOrganizationId  Int
+  relationshipType     OrganizationRelationshipType @default(PARENT_CHILD)
+  cascadeResources     Boolean                      @default(true) /// اگر true منابع والد به فرزند به صورت ارثی قابل استفاده است
+  createdAt            DateTime                     @default(now())
+
+  parent Organization @relation("OrgRelParent", fields: [parentOrganizationId], references: [id], onDelete: Cascade)
+  child  Organization @relation("OrgRelChild", fields: [childOrganizationId], references: [id], onDelete: Cascade)
+
+  @@unique([parentOrganizationId, childOrganizationId])
+  @@index([childOrganizationId])
+  @@index([relationshipType])
 }
 
 
