@@ -6,7 +6,8 @@ import {
   useResponses,
   useBulkUpsertResponses,
   useAssignmentsDetailed,
-} from "@/assessment/api/templates-hooks";
+} from "@/assessment/api/sessions-hooks";
+import { useOrgState } from "@/organizations/organization/context";
 import type {
   UserSessionQuestions,
   UpsertResponseBody,
@@ -64,6 +65,9 @@ export function useTakeAssessment(): UseTakeAssessmentResult {
     setActivePerspective,
     activeSession,
   } = useAssessmentUserSessions();
+  const orgCtx = useOrgState();
+  const activeOrgId =
+    orgCtx.activeOrganizationId || (activeSession as any)?.organizationId || null;
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -120,6 +124,7 @@ export function useTakeAssessment(): UseTakeAssessmentResult {
   ]);
 
   const assignmentsDetailed = useAssignmentsDetailed(
+    activeOrgId,
     previewMode ? null : activeSessionId ?? null
   );
   const allowedSubjectIds = useMemo(() => {
@@ -176,6 +181,7 @@ export function useTakeAssessment(): UseTakeAssessmentResult {
   }, [previewMode, activePerspective]);
 
   const uq = useUserSessionQuestions(
+    activeOrgId,
     canLoad ? (effSessionId as number) : null,
     canLoad ? (effUserId as number) : null,
     canLoad ? (effPerspective as string) : null,
@@ -185,6 +191,7 @@ export function useTakeAssessment(): UseTakeAssessmentResult {
   );
   const hasEmbedded = !!(uq.data as any)?.responses?.length;
   const respQ = useResponses(
+    activeOrgId,
     uq.data && !hasEmbedded
       ? {
           sessionId: uq.data.session.id,
@@ -195,7 +202,7 @@ export function useTakeAssessment(): UseTakeAssessmentResult {
         }
       : { sessionId: undefined }
   );
-  const bulk = useBulkUpsertResponses();
+  const bulk = useBulkUpsertResponses(activeOrgId);
 
   const buildTypeMap = useCallback((res: UserSessionQuestions | null) => {
     const map: Record<number, string> = {};

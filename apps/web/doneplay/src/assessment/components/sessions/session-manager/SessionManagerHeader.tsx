@@ -85,7 +85,7 @@ export function SessionManagerHeader({
             مدیریت، جستجو و فیلتر جلسات سنجش
           </PanelDescription>
         </div>
-        {!isScoped && canCreateSession && (
+        {canCreateSession && (
           <PanelAction className="w-full sm:w-auto">
             <Button
               size="sm"

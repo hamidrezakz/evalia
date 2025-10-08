@@ -11,7 +11,8 @@ import {
   useResponses,
   useBulkUpsertResponses,
   useAssignmentsDetailed,
-} from "@/assessment/api/templates-hooks";
+} from "@/assessment/api/sessions-hooks";
+import { useOrgState } from "@/organizations/organization/context";
 import { ResponsePerspectiveEnum, SessionStateEnum } from "@/lib/enums";
 import { Badge } from "@/components/ui/badge";
 import { cn, formatIranPhone } from "@/lib/utils";
@@ -81,6 +82,11 @@ export default function TakeAssessmentPage() {
     setActivePerspective,
     activeSession,
   } = useAssessmentUserSessions();
+  const orgCtx = useOrgState();
+  const activeOrgId =
+    orgCtx.activeOrganizationId ||
+    (activeSession as any)?.organizationId ||
+    null;
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [data, setData] = React.useState<UserSessionQuestions | null>(null);
@@ -153,6 +159,7 @@ export default function TakeAssessmentPage() {
 
   // Load assignments to help auto-pick a subject when a unique one exists
   const assignmentsDetailed = useAssignmentsDetailed(
+    activeOrgId,
     previewMode ? null : activeSessionId ?? null
   );
   // Derive allowed subject user IDs based on assignments for the active respondent & perspective
@@ -215,6 +222,7 @@ export default function TakeAssessmentPage() {
 
   // Data via React Query hooks
   const uq = useUserSessionQuestions(
+    activeOrgId,
     canLoad ? (effSessionId as number) : null,
     canLoad ? (effUserId as number) : null,
     canLoad ? (effPerspective as string) : null,
@@ -224,6 +232,7 @@ export default function TakeAssessmentPage() {
   );
   const hasEmbedded = !!(uq.data as any)?.responses?.length;
   const respQ = useResponses(
+    activeOrgId,
     uq.data && !hasEmbedded
       ? {
           sessionId: uq.data.session.id,
@@ -234,7 +243,7 @@ export default function TakeAssessmentPage() {
         }
       : { sessionId: undefined }
   );
-  const bulk = useBulkUpsertResponses();
+  const bulk = useBulkUpsertResponses(activeOrgId);
 
   // helpers to build map and parse responses
   const buildTypeMap = React.useCallback((res: UserSessionQuestions | null) => {
@@ -560,9 +569,9 @@ export default function TakeAssessmentPage() {
   }
 
   return (
-    <div className="space-y-6 text-right" dir="rtl">
+    <div className="space-y-6 text-right max-w-2xl" dir="rtl">
       {/* Floating progress */}
-      <div className="fixed left-2 sm:left-3 sm:bottom-2 bottom-[-1.2rem] z-40 pointer-events-none">
+      <div className="fixed max-w-2xl left-2 sm:left-5 lg:left-[6%] xl:left-[22%] sm:bottom-2 bottom-[-1.2rem] z-40 pointer-events-none">
         <ProgressCircle value={answeredCount} total={flatQuestions.length} />
       </div>
       {!readOnly && canLoad && (

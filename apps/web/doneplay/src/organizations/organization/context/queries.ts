@@ -10,6 +10,10 @@ export function useOrganizations(enabled: boolean) {
     queryFn: fetchUserOrganizations,
     enabled,
     staleTime: STALE_TIME_ORGS,
-    retry: 1,
+    retry: (failureCount, error: any) => {
+      // Avoid hammering endpoint if forbidden
+      if (error?.status === 403 || error?.status === 401) return false;
+      return failureCount < 2; // retry up to 2 times
+    },
   });
 }

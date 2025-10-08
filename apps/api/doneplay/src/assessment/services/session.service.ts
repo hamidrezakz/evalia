@@ -74,8 +74,16 @@ export class SessionService {
     const page = Number(query.page) > 0 ? Number(query.page) : 1;
     const pageSize = Math.min(Number(query.pageSize) || 20, 100);
     const where: any = { deletedAt: null };
-    if (query.organizationId)
-      where.organizationId = Number(query.organizationId);
+    if (query.organizationId !== undefined && query.organizationId !== null) {
+      // Normalize array (duplicate query param) to first value
+      const rawOrg = Array.isArray(query.organizationId)
+        ? query.organizationId[0]
+        : query.organizationId;
+      const orgNum = Number(rawOrg);
+      if (Number.isFinite(orgNum)) {
+        where.organizationId = orgNum;
+      }
+    }
     if (query.templateId) where.templateId = Number(query.templateId);
     if (query.state) where.state = query.state;
     if (query.search)
@@ -305,9 +313,24 @@ export class SessionService {
     if (perspective === 'SELF' && !subjectUserId) {
       whereAssignment.OR = [{ subjectUserId: null }, { subjectUserId: userId }];
     }
-    const assignment = await this.prisma.assessmentAssignment.findFirst({
+    let assignment = await this.prisma.assessmentAssignment.findFirst({
       where: whereAssignment,
     });
+    // Legacy fallback: older rows may still have userId populated instead of respondentUserId
+    if (!assignment) {
+      const legacyWhere: any = {
+        sessionId,
+        userId, // legacy column value
+        perspective,
+      };
+      if (subjectUserId) legacyWhere.subjectUserId = subjectUserId;
+      if (perspective === 'SELF' && !subjectUserId) {
+        legacyWhere.OR = [{ subjectUserId: null }, { subjectUserId: userId }];
+      }
+      assignment = await this.prisma.assessmentAssignment.findFirst({
+        where: legacyWhere,
+      });
+    }
     if (!assignment)
       throw new NotFoundException('No assignment for this user/perspective');
 

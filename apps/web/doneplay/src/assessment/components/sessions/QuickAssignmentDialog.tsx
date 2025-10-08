@@ -18,7 +18,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Users } from "lucide-react";
 import UserSelectCombobox from "@/users/components/UserSelectCombobox";
 import { ResponsePerspectiveEnum, type ResponsePerspective } from "@/lib/enums";
-import { useAddAssignment } from "@/assessment/api/templates-hooks";
+import { useAddAssignment } from "@/assessment/api/sessions-hooks";
 
 interface QuickAssignmentDialogProps {
   open: boolean;
@@ -43,7 +43,7 @@ export default function QuickAssignmentDialog({
     React.useState<ResponsePerspective>("SELF");
   const [userId, setUserId] = React.useState<number | null>(null); // respondent
   const [subjectUserId, setSubjectUserId] = React.useState<number | null>(null);
-  const addMut = useAddAssignment();
+  const addMut = useAddAssignment(organizationId);
 
   // Reset when closed
   React.useEffect(() => {

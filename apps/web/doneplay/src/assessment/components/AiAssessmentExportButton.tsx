@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { triggerDownloadJson } from "../export/download-json.util";
 import { getUserAiExport } from "../api/ai-export.api";
+import { useOrgState } from "@/organizations/organization/context";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -42,6 +43,7 @@ export const AiAssessmentExportButton: React.FC<Props> = ({
   const [error, setError] = useState<string | null>(null);
   const [downloadedName, setDownloadedName] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const { activeOrganizationId } = useOrgState();
 
   const samplePrompt = `با استفاده از فایل JSON پیوست که شامل:
   • متادیتای آزمون (شناسه، عنوان، توضیحات، دسته‌بندی)
@@ -110,7 +112,8 @@ export const AiAssessmentExportButton: React.FC<Props> = ({
         sessionId,
         userId,
         perspective,
-        subjectUserId
+        subjectUserId,
+        activeOrganizationId || undefined
       );
       const name =
         filename ||
@@ -131,10 +134,7 @@ export const AiAssessmentExportButton: React.FC<Props> = ({
   return (
     <Dialog open={open} onOpenChange={(o) => !loading && setOpen(o)}>
       <DialogTrigger asChild>
-        <Button
-          size="sm"
-          className="gap-2"
-          disabled={loading}>
+        <Button size="sm" className="gap-2" disabled={loading}>
           {loading ? (
             <>
               <Loader2 className="size-4 animate-spin" /> آماده‌سازی

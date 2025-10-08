@@ -19,10 +19,9 @@ import {
   formatJalaliRelative,
 } from "@/lib/jalali-date";
 import { useOrganization } from "@/organizations/organization/api/organization-hooks";
-import {
-  useTemplate,
-  useSessionQuestionCount,
-} from "@/assessment/api/templates-hooks";
+import { useTemplate } from "@/assessment/api/templates-hooks"; // template hooks remain here
+import { useSessionQuestionCount } from "@/assessment/api/sessions-hooks";
+import { useOrgState } from "@/organizations/organization/context";
 import type { SessionState } from "@/lib/enums";
 import {
   DropdownMenu,
@@ -72,10 +71,15 @@ export default function SessionCard({
   onChangeState,
   onOpenQuickAssign,
 }: SessionCardProps) {
+  const orgCtx = useOrgState();
+  const activeOrgId =
+    orgCtx.activeOrganizationId || session.organizationId || null;
   const orgQ = useOrganization(session.organizationId ?? null);
-  const tplQ = useTemplate(session.templateId ?? null);
-
-  const questionCountQuery = useSessionQuestionCount(session.id ?? null);
+  const tplQ = useTemplate(activeOrgId, session.templateId ?? null);
+  const questionCountQuery = useSessionQuestionCount(
+    activeOrgId,
+    session.id ?? null
+  );
   // Defer question count to avoid SSR/CSR mismatch when query resolves only on client
   const [questionCount, setQuestionCount] = React.useState<number | null>(null);
   React.useEffect(() => {

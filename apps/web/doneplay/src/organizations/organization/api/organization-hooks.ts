@@ -40,15 +40,19 @@ const STALE_TIME_USER_ORGS = 2 * 60 * 1000; // 2 min
  * Paginated/filtered organization listing.
  * Provide the same params object identity to benefit from caching.
  */
-export function useOrganizations(params?: Partial<Record<string, unknown>>) {
+export function useOrganizations(
+  params?: Partial<Record<string, unknown>>,
+  opts?: { enabled?: boolean }
+) {
+  const enabled = opts?.enabled ?? true;
   return useQuery({
     queryKey: orgKeys.list(params),
     queryFn: async () => {
       const envelope = await listOrganizations(params || {});
       return envelope; // { data, meta }
     },
+    enabled,
     staleTime: STALE_TIME_LIST,
-    // If using React Query v4 and want transition smoothing, re-add keepPreviousData: true
   });
 }
 

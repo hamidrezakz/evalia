@@ -45,7 +45,16 @@ export class UpdateSessionDto {
 }
 
 export class ListSessionQueryDto {
-  @IsOptional() organizationId?: number;
+  @IsOptional()
+  @Transform(({ value }) => {
+    // Handle duplicate query params (?organizationId=4&organizationId=4) which Express may parse as array
+    const raw = Array.isArray(value) ? value[0] : value;
+    if (raw === undefined || raw === null || raw === '') return undefined;
+    const n = typeof raw === 'string' ? parseInt(raw, 10) : raw;
+    return Number.isFinite(n) ? n : undefined;
+  })
+  @IsInt()
+  organizationId?: number;
   @IsOptional() templateId?: number;
   @IsOptional() state?: SessionStateDto;
   @IsOptional() search?: string;
@@ -119,4 +128,18 @@ export class UserQuestionsQueryDto {
   )
   @IsInt()
   subjectUserId?: number;
+  // Allow (optional) organization scoping params so validation doesn't reject them when guard supplies them.
+  @IsOptional()
+  @Transform(({ value }) =>
+    typeof value === 'string' ? parseInt(value, 10) : value,
+  )
+  @IsInt()
+  organizationId?: number;
+
+  @IsOptional()
+  @Transform(({ value }) =>
+    typeof value === 'string' ? parseInt(value, 10) : value,
+  )
+  @IsInt()
+  orgId?: number;
 }

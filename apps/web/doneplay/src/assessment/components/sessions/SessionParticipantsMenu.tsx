@@ -18,7 +18,9 @@ import {
   useAssignmentsDetailed,
   useDeleteAssignment,
   sessionsKeys,
-} from "@/assessment/api/templates-hooks";
+  useAssignmentProgress,
+  useUserSessionProgress,
+} from "@/assessment/api/sessions-hooks";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -32,12 +34,9 @@ import {
 import { Trash2, Loader2, ChevronDown } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { getUser } from "@/users/api/users.api";
-import {
-  useAssignmentProgress,
-  useUserSessionProgress,
-} from "@/assessment/api/templates-hooks";
 import { AssignmentProgressBadge } from "@/components/status-badges/AssignmentProgressBadge";
 import { useRouter } from "next/navigation";
+import { useOrgState } from "@/organizations/organization/context";
 // Removed inline user creation per design feedback
 
 /**
@@ -58,7 +57,12 @@ export function SessionParticipantsMenu({
   onQuickAssign,
 }: SessionParticipantsMenuProps) {
   const router = useRouter();
-  const { data: assignmentsRaw } = useAssignmentsDetailed(session.id);
+  const orgCtx = useOrgState();
+  const activeOrgId = orgCtx.activeOrganizationId || null;
+  const { data: assignmentsRaw } = useAssignmentsDetailed(
+    activeOrgId,
+    session.id
+  );
   const assignments = React.useMemo(
     () => (Array.isArray(assignmentsRaw) ? (assignmentsRaw as any[]) : []),
     [assignmentsRaw]
@@ -266,7 +270,7 @@ export function SessionParticipantsMenu({
     | { mode: "multi"; ids: number[] }
     | null;
   const [pendingDelete, setPendingDelete] = React.useState<PendingDelete>(null);
-  const delMut = useDeleteAssignment();
+  const delMut = useDeleteAssignment(activeOrgId);
   const qc = useQueryClient();
 
   async function performDelete() {
@@ -312,7 +316,7 @@ export function SessionParticipantsMenu({
   // Progress chip components
   // Standardized progress badge wrappers
   function ProgressByAssignment({ id }: { id: number }) {
-    const { data } = useAssignmentProgress(id);
+    const { data } = useAssignmentProgress(activeOrgId, id);
     if (!data) return null;
     return (
       <AssignmentProgressBadge
@@ -335,7 +339,7 @@ export function SessionParticipantsMenu({
     perspective?: string;
     subjectUserId?: number;
   }) {
-    const { data } = useUserSessionProgress(sessionId, userId, {
+    const { data } = useUserSessionProgress(activeOrgId, sessionId, userId, {
       perspective,
       subjectUserId,
     });

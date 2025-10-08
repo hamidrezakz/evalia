@@ -1,4 +1,5 @@
 import { useUserAiExport } from "../api/ai-export-hooks";
+import { useOrgState } from "@/organizations/organization/context";
 import { extractAnalyses, AnalysesMap } from "./analyses-types";
 
 /**
@@ -12,11 +13,13 @@ export function useAssessmentAnalyses(
   perspective: string | null,
   subjectUserId?: number | null
 ) {
+  const { activeOrganizationId } = useOrgState();
   const exportQuery = useUserAiExport(
     sessionId,
     userId,
     perspective,
-    subjectUserId
+    subjectUserId,
+    activeOrganizationId || null
   );
   const analyses: AnalysesMap | undefined = extractAnalyses(exportQuery.data);
   return { ...exportQuery, analyses };

@@ -5,7 +5,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
 import { SessionStateBadge } from "@/components/status-badges/SessionStateBadge";
 import { AssignmentProgressBadge } from "@/components/status-badges/AssignmentProgressBadge";
-import { useSessionQuestionCount } from "@/assessment/api/templates-hooks";
+import { useSessionQuestionCount } from "@/assessment/api/sessions-hooks";
+import { useOrgState } from "@/organizations/organization/context";
 import { useAssessmentUserSessions } from "@/assessment/context/assessment-user-sessions";
 import { useRouter } from "next/navigation";
 import {
@@ -32,7 +33,9 @@ export function SessionUserCard({
   className,
   onJoinOverride,
 }: SessionUserCardProps) {
-  const qc = useSessionQuestionCount(session.id);
+  const orgCtx = useOrgState();
+  const activeOrgId = orgCtx.activeOrganizationId || null;
+  const qc = useSessionQuestionCount(activeOrgId, session.id);
   const { setActiveSessionId, setActivePerspective, availablePerspectives } =
     useAssessmentUserSessions();
   const router = useRouter();

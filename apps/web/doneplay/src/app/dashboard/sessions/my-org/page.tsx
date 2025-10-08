@@ -60,7 +60,7 @@ export default function MyOrgSessionsPage() {
         </PanelHeader>
         <PanelContent className="block p-1 md:p-2">
           {orgId ? (
-            <SessionManager organizationId={orgId} />
+            <SessionManager />
           ) : (
             <div className="text-sm text-muted-foreground p-2">
               ابتدا یک سازمان فعال انتخاب کنید.

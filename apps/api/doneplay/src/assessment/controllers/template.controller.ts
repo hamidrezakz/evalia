@@ -45,12 +45,32 @@ export class TemplateController {
   }
 
   @Get(':id')
+  @Roles({
+    any: [
+      'SUPER_ADMIN',
+      'ANALYSIS_MANAGER',
+      'ORG:OWNER',
+      'ORG:MANAGER',
+      // Allow basic members to view template metadata
+      'ORG:MEMBER',
+    ],
+  })
   get(@Param('id') id: string, @OrgId() orgId: number, @Req() req: any) {
     const userId = req?.user?.userId;
     return this.service.getById(Number(id), orgId, userId);
   }
 
   @Get(':id/full')
+  @Roles({
+    any: [
+      'SUPER_ADMIN',
+      'ANALYSIS_MANAGER',
+      'ORG:OWNER',
+      'ORG:MANAGER',
+      // Allow members to fetch full structure for answering
+      'ORG:MEMBER',
+    ],
+  })
   full(@Param('id') id: string, @OrgId() orgId: number, @Req() req: any) {
     const userId = req?.user?.userId;
     return this.service.getFull(Number(id), orgId, userId);

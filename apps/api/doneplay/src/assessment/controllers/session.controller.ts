@@ -46,6 +46,10 @@ export class SessionController {
   // لیست جلسات (orgId اکنون توسط گارد استخراج می‌شود؛ اگر query.organizationId نبود ست می‌کنیم)
   list(@Query() q: ListSessionQueryDto, @OrgId() orgId?: number) {
     if (orgId && !q.organizationId) (q as any).organizationId = orgId;
+    // Defensive: if framework parsed repeated organizationId (?organizationId=4&organizationId=4) as array
+    if (Array.isArray((q as any).organizationId)) {
+      (q as any).organizationId = Number((q as any).organizationId[0]);
+    }
     return this.service.list(q);
   }
 

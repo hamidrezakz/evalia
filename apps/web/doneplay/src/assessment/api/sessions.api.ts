@@ -15,23 +15,50 @@ import {
   sessionStateEnum,
 } from "../types/templates.types";
 
-function buildSessionListPath(raw?: Partial<ListSessionsQuery>) {
-  if (!raw) return "/sessions";
+function buildSessionListPath(
+  raw?: Partial<ListSessionsQuery>,
+  orgId?: number | null
+) {
+  if (!raw) return `/sessions${orgId ? `?organizationId=${orgId}` : ""}`;
   const parsed = listSessionsQuerySchema.safeParse(raw);
   if (!parsed.success) throw new Error("Invalid session list params");
-  return "/sessions" + buildSessionsQuery(parsed.data);
+  let base = "/sessions" + buildSessionsQuery(parsed.data);
+  if (orgId) {
+    // If organizationId was already provided in raw, avoid duplicating
+    const already = /[?&]organizationId=/.test(base);
+    if (!already) {
+      base += base.includes("?")
+        ? `&organizationId=${orgId}`
+        : `?organizationId=${orgId}`;
+    }
+  }
+  return base;
 }
-export async function listSessions(params?: Partial<ListSessionsQuery>) {
-  const path = buildSessionListPath(params);
+export async function listSessions(
+  params?: Partial<ListSessionsQuery>,
+  orgId?: number | null
+) {
+  const path = buildSessionListPath(params, orgId);
   const res = await apiRequest(path, null, null);
   return { data: res.data as Session[], meta: res.meta };
 }
-export async function getSession(id: number): Promise<Session> {
-  const res = await apiRequest(`/sessions/${id}`, null, sessionSchema);
+export async function getSession(
+  id: number,
+  orgId?: number | null
+): Promise<Session> {
+  const res = await apiRequest(
+    `/sessions/${id}${orgId ? `?orgId=${orgId}` : ""}`,
+    null,
+    sessionSchema
+  );
   return res as unknown as Session;
 }
-export async function getFullSession(id: number) {
-  const res = await apiRequest(`/sessions/${id}/full`, null, null);
+export async function getFullSession(id: number, orgId?: number | null) {
+  const res = await apiRequest(
+    `/sessions/${id}/full${orgId ? `?orgId=${orgId}` : ""}`,
+    null,
+    null
+  );
   return res;
 }
 // Minimal metadata for a session: question count
@@ -41,9 +68,14 @@ export type SessionQuestionCount = {
   total: number;
 };
 export async function getSessionQuestionCount(
-  id: number
+  id: number,
+  orgId?: number | null
 ): Promise<SessionQuestionCount> {
-  const res = await apiRequest(`/sessions/${id}/question-count`, null, null);
+  const res = await apiRequest(
+    `/sessions/${id}/question-count${orgId ? `?orgId=${orgId}` : ""}`,
+    null,
+    null
+  );
   // apiRequest returns envelope; prefer res.data if present
   const data = (res as any)?.data ?? res;
   return data as SessionQuestionCount;
@@ -59,27 +91,46 @@ export const createSessionBody = z.object({
   meta: z.any().optional(),
 });
 export type CreateSessionBody = z.infer<typeof createSessionBody>;
-export async function createSession(body: CreateSessionBody) {
-  const res = await apiRequest("/sessions", createSessionBody, sessionSchema, {
-    body,
-  });
+export async function createSession(
+  body: CreateSessionBody,
+  orgId?: number | null
+) {
+  const payload = { ...body } as any;
+  if (orgId && !payload.organizationId) payload.organizationId = orgId;
+  const res = await apiRequest(
+    `/sessions${orgId ? `?orgId=${orgId}` : ""}`,
+    createSessionBody,
+    sessionSchema,
+    {
+      body: payload,
+    }
+  );
   return res as unknown as Session;
 }
 export const updateSessionBody = createSessionBody.partial().extend({
   state: sessionStateEnum.optional(),
 });
 export type UpdateSessionBody = z.infer<typeof updateSessionBody>;
-export async function updateSession(id: number, body: UpdateSessionBody) {
+export async function updateSession(
+  id: number,
+  body: UpdateSessionBody,
+  orgId?: number | null
+) {
   const res = await apiRequest(
-    `/sessions/${id}`,
+    `/sessions/${id}${orgId ? `?orgId=${orgId}` : ""}`,
     updateSessionBody,
     sessionSchema,
     { method: "PATCH", body }
   );
   return res as unknown as Session;
 }
-export async function deleteSession(id: number) {
-  await apiRequest(`/sessions/${id}`, null, null, { method: "DELETE" });
+export async function deleteSession(id: number, orgId?: number | null) {
+  await apiRequest(
+    `/sessions/${id}${orgId ? `?orgId=${orgId}` : ""}`,
+    null,
+    null,
+    { method: "DELETE" }
+  );
   return { id };
 }
 
@@ -94,9 +145,12 @@ export const addAssignmentBody = z.object({
   perspective: z.string().optional(),
 });
 export type AddAssignmentBody = z.infer<typeof addAssignmentBody>;
-export async function addAssignment(body: AddAssignmentBody) {
+export async function addAssignment(
+  body: AddAssignmentBody,
+  orgId?: number | null
+) {
   const res = await apiRequest(
-    "/assignments",
+    `/assignments${orgId ? `?orgId=${orgId}` : ""}`,
     addAssignmentBody,
     assignmentSchema,
     { body }
@@ -113,12 +167,17 @@ export const bulkAssignBody = z.object({
 });
 export type BulkAssignBody = z.infer<typeof bulkAssignBody>;
 const bulkAssignResultSchema = z.object({ created: z.number().int() });
-export async function bulkAssign(body: BulkAssignBody) {
+export async function bulkAssign(body: BulkAssignBody, orgId?: number | null) {
   // Accept both envelope shapes by skipping responseSchema and validating manually
-  const res = await apiRequest("/assignments/bulk", bulkAssignBody, null, {
-    method: "POST",
-    body,
-  });
+  const res = await apiRequest(
+    `/assignments/bulk${orgId ? `?orgId=${orgId}` : ""}`,
+    bulkAssignBody,
+    null,
+    {
+      method: "POST",
+      body,
+    }
+  );
   const payload =
     res && typeof res === "object" && res !== null && "data" in res
       ? (res as any).data
@@ -131,9 +190,12 @@ export async function bulkAssign(body: BulkAssignBody) {
   }
   return validated.data as { created: number };
 }
-export async function listAssignments(sessionId: number) {
+export async function listAssignments(
+  sessionId: number,
+  orgId?: number | null
+) {
   const res = await apiRequest(
-    `/assignments/session/${sessionId}`,
+    `/assignments/session/${sessionId}${orgId ? `?orgId=${orgId}` : ""}`,
     null,
     z.array(assignmentSchema)
   );
@@ -145,17 +207,26 @@ export const updateAssignmentBody = z.object({
   perspective: z.string().optional(),
 });
 export type UpdateAssignmentBody = z.infer<typeof updateAssignmentBody>;
-export async function updateAssignment(id: number, body: UpdateAssignmentBody) {
+export async function updateAssignment(
+  id: number,
+  body: UpdateAssignmentBody,
+  orgId?: number | null
+) {
   const res = await apiRequest(
-    `/assignments/${id}`,
+    `/assignments/${id}${orgId ? `?orgId=${orgId}` : ""}`,
     updateAssignmentBody,
     assignmentSchema,
     { method: "PATCH", body }
   );
   return res as unknown as Assignment;
 }
-export async function deleteAssignment(id: number) {
-  await apiRequest(`/assignments/${id}`, null, null, { method: "DELETE" });
+export async function deleteAssignment(id: number, orgId?: number | null) {
+  await apiRequest(
+    `/assignments/${id}${orgId ? `?orgId=${orgId}` : ""}`,
+    null,
+    null,
+    { method: "DELETE" }
+  );
   return { id };
 }
 
@@ -170,9 +241,12 @@ export const upsertResponseBody = z.object({
   textValue: z.string().optional(),
 });
 export type UpsertResponseBody = z.infer<typeof upsertResponseBody>;
-export async function upsertResponse(body: UpsertResponseBody) {
+export async function upsertResponse(
+  body: UpsertResponseBody,
+  orgId?: number | null
+) {
   const res = await apiRequest(
-    "/responses",
+    `/responses${orgId ? `?orgId=${orgId}` : ""}`,
     upsertResponseBody,
     responseSchema,
     { body }
@@ -187,16 +261,19 @@ const bulkUpsertResultSchema = z.object({
   count: z.number().int(),
   items: z.array(responseSchema),
 });
-export async function bulkUpsertResponses(body: BulkUpsertResponsesBody) {
+export async function bulkUpsertResponses(
+  body: BulkUpsertResponsesBody,
+  orgId?: number | null
+) {
   const res = await apiRequest(
-    "/responses/bulk",
+    `/responses/bulk${orgId ? `?orgId=${orgId}` : ""}`,
     bulkUpsertResponsesBody,
     bulkUpsertResultSchema,
     { method: "POST", body }
   );
   return res as unknown as { count: number; items: AssessmentResponse[] };
 }
-export async function listResponses(params: any) {
+export async function listResponses(params: any, orgId?: number | null) {
   const parsed = listResponsesQuerySchema.safeParse(params);
   if (!parsed.success) throw new Error("Invalid responses list params");
   const { sessionId, ...rest } = parsed.data;
@@ -209,18 +286,29 @@ export async function listResponses(params: any) {
     .map((e) => `${encodeURIComponent(e[0])}=${encodeURIComponent(e[1])}`)
     .join("&");
   const res = await apiRequest(
-    `/responses?sessionId=${sessionId}${qs ? "&" + qs : ""}`,
+    `/responses?sessionId=${sessionId}${qs ? "&" + qs : ""}${
+      orgId ? `&orgId=${orgId}` : ""
+    }`,
     null,
     null
   );
   return { data: res.data as AssessmentResponse[], meta: res.meta };
 }
-export async function getResponse(id: number) {
-  const res = await apiRequest(`/responses/${id}`, null, responseSchema);
+export async function getResponse(id: number, orgId?: number | null) {
+  const res = await apiRequest(
+    `/responses/${id}${orgId ? `?orgId=${orgId}` : ""}`,
+    null,
+    responseSchema
+  );
   return res as unknown as AssessmentResponse;
 }
-export async function deleteResponse(id: number) {
-  await apiRequest(`/responses/${id}`, null, null, { method: "DELETE" });
+export async function deleteResponse(id: number, orgId?: number | null) {
+  await apiRequest(
+    `/responses/${id}${orgId ? `?orgId=${orgId}` : ""}`,
+    null,
+    null,
+    { method: "DELETE" }
+  );
   return { id };
 }
 
@@ -246,7 +334,8 @@ export async function getUserProgress(
         userId: number;
         perspective?: string;
         subjectUserId?: number;
-      }
+      },
+  orgId?: number | null
 ) {
   const entries = Object.entries(params).map(
     ([k, v]) => [k, String(v)] as [string, string]
@@ -254,7 +343,11 @@ export async function getUserProgress(
   const qs = entries
     .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
     .join("&");
-  const res = await apiRequest(`/responses/progress/by?${qs}`, null, null);
+  const res = await apiRequest(
+    `/responses/progress/by?${qs}${orgId ? `&orgId=${orgId}` : ""}`,
+    null,
+    null
+  );
   return (res as any)?.data as UserProgress;
 }
 
@@ -295,13 +388,21 @@ export type UserSessionListItem = z.infer<typeof userSessionListItemSchema>;
 
 export async function listUserSessions(
   userId: number,
-  params: Partial<ListUserSessionsQuery> = {}
+  params: Partial<ListUserSessionsQuery> = {},
+  orgId?: number | null
 ) {
   const parsed = listUserSessionsQuerySchema.safeParse(params);
   if (!parsed.success) throw new Error("Invalid user sessions list params");
   const qs = buildListUserSessionsQuery(parsed.data);
   const res = await apiRequest(
-    `/sessions/user/${userId}${qs}`,
+    // Backend DTO expects 'organizationId' (ListUserSessionsQueryDto); previously we sent 'orgId' causing 400.
+    `/sessions/user/${userId}${qs}${
+      orgId
+        ? qs
+          ? `&organizationId=${orgId}`
+          : `?organizationId=${orgId}`
+        : ""
+    }`,
     null,
     z.array(userSessionListItemSchema)
   );
@@ -318,9 +419,15 @@ const userPerspectivesSchema = z.object({
   perspectives: z.array(responsePerspectiveEnum).default([]),
 });
 export type UserPerspectives = z.infer<typeof userPerspectivesSchema>;
-export async function getUserPerspectives(sessionId: number, userId: number) {
+export async function getUserPerspectives(
+  sessionId: number,
+  userId: number,
+  orgId?: number | null
+) {
   const res = await apiRequest(
-    `/sessions/${sessionId}/user/${userId}/perspectives`,
+    `/sessions/${sessionId}/user/${userId}/perspectives${
+      orgId ? `?organizationId=${orgId}` : ""
+    }`,
     null,
     userPerspectivesSchema
   );
@@ -395,7 +502,8 @@ export async function getUserSessionQuestions(
   sessionId: number,
   userId: number,
   perspective: z.infer<typeof responsePerspectiveEnum>,
-  subjectUserId?: number
+  subjectUserId?: number,
+  orgId?: number | null
 ) {
   const res = await apiRequest(
     `/sessions/${sessionId}/user/${userId}/questions?perspective=${encodeURIComponent(
@@ -404,7 +512,7 @@ export async function getUserSessionQuestions(
       subjectUserId
         ? `&subjectUserId=${encodeURIComponent(String(subjectUserId))}`
         : ""
-    }`,
+    }${orgId ? `&organizationId=${orgId}` : ""}`,
     null,
     userSessionQuestionsSchema
   );

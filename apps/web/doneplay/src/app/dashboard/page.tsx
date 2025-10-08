@@ -18,13 +18,13 @@ import {
   formatJalaliRelative,
 } from "@/lib/jalali-date";
 import { Layers } from "lucide-react";
-import { useUserSessions } from "@/assessment/api/templates-hooks";
+import { useUserSessions } from "@/assessment/api/sessions-hooks";
 import { SessionStateEnum } from "@/lib/enums";
 import { useAssessmentUserSessions } from "@/assessment/context/assessment-user-sessions";
 import { useRouter } from "next/navigation";
 import { useQueries } from "@tanstack/react-query";
 import { getUserProgress } from "@/assessment/api/sessions.api";
-import { sessionsKeys } from "@/assessment/api/templates-hooks";
+import { sessionsKeys } from "@/assessment/api/sessions-hooks";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   DashboardHeaderSkeleton,
@@ -51,7 +51,12 @@ export default function DashboardLandingPage() {
   const loading = userQuery.isLoading || orgCtx.loading;
   const user = userQuery.data as any;
   const orgs = orgCtx.organizations || [];
-  const userSessionsQ = useUserSessions(userId, { pageSize: 12 });
+  // Determine active organization early (before hooks needing orgId)
+  const activeOrg =
+    orgs.find((o: any) => o.id === orgCtx.activeOrganizationId) || orgs[0];
+  // Active organization id (explicit scoping for multi-tenant queries)
+  const activeOrgId = orgCtx.activeOrganizationId || activeOrg?.id || null;
+  const userSessionsQ = useUserSessions(activeOrgId, userId, { pageSize: 12 });
   const sessions = (userSessionsQ.data as any)?.data || [];
   const sessionsLoadingDetailed =
     !mounted ||
@@ -69,9 +74,7 @@ export default function DashboardLandingPage() {
   const completedCount = sessions.filter(
     (s: any) => s.state === "COMPLETED"
   ).length;
-  // Active organization and role
-  const activeOrg =
-    orgs.find((o: any) => o.id === orgCtx.activeOrganizationId) || orgs[0];
+  // Active organization and role (activeOrg already computed above)
   const rolesCount = orgCtx.activeRole ? 1 : 0;
 
   // Progress-based completion (per user, not just session.state)
@@ -83,7 +86,11 @@ export default function DashboardLandingPage() {
         undefined,
         undefined
       ),
-      queryFn: () => getUserProgress({ sessionId: s.id, userId: userId! }),
+      queryFn: () =>
+        getUserProgress(
+          { sessionId: s.id, userId: userId! },
+          activeOrgId || undefined
+        ),
       enabled: !!userId && !!s?.id,
       staleTime: 30 * 1000,
     })),
