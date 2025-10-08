@@ -82,7 +82,10 @@ export class AiExportService {
       });
     } catch (err: any) {
       // eslint-disable-next-line no-console
-      console.warn('[AiExport] fallback without deletedAt filter', err?.message);
+      console.warn(
+        '[AiExport] fallback without deletedAt filter',
+        err?.message,
+      );
       session = await this.prisma.assessmentSession.findUnique({
         where: { id: sessionId },
         include: {
@@ -136,7 +139,7 @@ export class AiExportService {
 
     // Raw SQL authoritative scrub (race conditions or fallback path)
     try {
-  const sectionIds = sections.map((s: any) => s.id);
+      const sectionIds = sections.map((s: any) => s.id);
       if (sectionIds.length) {
         const softIds = await this.prisma.$queryRawUnsafe<any[]>(
           'SELECT id FROM "AssessmentTemplateQuestion" WHERE "sectionId" = ANY($1) AND "deletedAt" IS NOT NULL',
@@ -179,7 +182,7 @@ export class AiExportService {
     const tpl = session.template;
 
     // Flatten questions
-  const flattened = data.sections.flatMap((s: any) => s.questions);
+    const flattened = data.sections.flatMap((s: any) => s.questions);
 
     // Index responses by templateQuestionId
     const respByTQ: Record<number, any> = {};
@@ -190,7 +193,7 @@ export class AiExportService {
     for (const q of flattened) {
       const opts = q.question?.optionSet?.options || q.question?.options;
       if (opts?.length) {
-  unified = opts.map((o: any) => {
+        unified = opts.map((o: any) => {
           const numLabel = Number(o.label);
           const numeric = Number.isFinite(numLabel)
             ? numLabel
@@ -202,7 +205,7 @@ export class AiExportService {
     }
 
     // Step 4: Build normalized question views
-  const questions = flattened.map((q: any, idx: number) => {
+    const questions = flattened.map((q: any, idx: number) => {
       const resp = respByTQ[q.templateQuestionId];
       let answer: string | null = null;
       let numeric: number | null = null;
@@ -275,7 +278,7 @@ export class AiExportService {
       };
     });
 
-  const answered = questions.filter((q: any) => q.answer != null).length;
+    const answered = questions.filter((q: any) => q.answer != null).length;
 
     // Step 5: Run registered analyses (includes Glasser if supports())
     const analyses: Record<string, any> = {};
