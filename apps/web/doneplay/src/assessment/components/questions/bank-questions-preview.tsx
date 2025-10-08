@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import type { Question } from "@/assessment/types/question-banks.types";
 import { useQuestions, useUpdateQuestion } from "@/assessment/api/hooks";
+import { useOrgState } from "@/organizations/organization/context/org-context";
 import { Edit2 } from "lucide-react";
 
 export type BankQuestionsPreviewProps = {
@@ -22,8 +23,9 @@ export function BankQuestionsPreview({
   editable = true,
   className,
 }: BankQuestionsPreviewProps) {
-  const updateQuestion = useUpdateQuestion();
-  const bankQuestionsQ = useQuestions({
+  const { activeOrganizationId } = useOrgState();
+  const updateQuestion = useUpdateQuestion(activeOrganizationId);
+  const bankQuestionsQ = useQuestions(activeOrganizationId, {
     bankId: bankId ?? undefined,
     pageSize,
   });

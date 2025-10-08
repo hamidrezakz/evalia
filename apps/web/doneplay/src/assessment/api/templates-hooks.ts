@@ -143,10 +143,13 @@ export const sessionsKeys = {
 };
 
 // Templates
-export function useTemplates(params?: any) {
+export function useTemplates(orgId: number | null, params?: any) {
   return useQuery({
-    queryKey: templatesKeys.list(params),
-    queryFn: () => listTemplates(params),
+    queryKey: orgId
+      ? [...templatesKeys.list(params), orgId]
+      : ["templates", "list", "disabled"],
+    queryFn: () => listTemplates(params, orgId || undefined),
+    enabled: !!orgId,
     // Keep list data warm for short period to avoid flicker when navigating back
     staleTime: 60 * 1000,
     // Avoid aggressive refetch on window focus while building templates
@@ -154,69 +157,89 @@ export function useTemplates(params?: any) {
     // NOTE: keepPreviousData removed (older @tanstack/react-query version) – emulate manually in consumer if needed
   });
 }
-export function useTemplate(id: number | null) {
+export function useTemplate(orgId: number | null, id: number | null) {
   return useQuery({
-    queryKey: id ? templatesKeys.byId(id) : ["templates", "detail", "disabled"],
+    queryKey:
+      id && orgId
+        ? [...templatesKeys.byId(id), orgId]
+        : ["templates", "detail", "disabled"],
     queryFn: () => {
       if (!id) throw new Error("no id");
-      return getTemplate(id);
+      return getTemplate(id, orgId || undefined);
     },
-    enabled: !!id,
+    enabled: !!id && !!orgId,
   });
 }
-export function useFullTemplate(id: number | null) {
+export function useFullTemplate(orgId: number | null, id: number | null) {
   return useQuery({
-    queryKey: id ? templatesKeys.full(id) : ["templates", "full", "disabled"],
+    queryKey:
+      id && orgId
+        ? [...templatesKeys.full(id), orgId]
+        : ["templates", "full", "disabled"],
     queryFn: () => {
       if (!id) throw new Error("no id");
-      return getFullTemplate(id);
+      return getFullTemplate(id, orgId || undefined);
     },
-    enabled: !!id,
+    enabled: !!id && !!orgId,
   });
 }
-export function useCreateTemplate() {
+export function useCreateTemplate(orgId: number | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: createTemplate,
+    mutationFn: (body: any) => {
+      if (!orgId) throw new Error("orgId required");
+      return createTemplate(body, orgId);
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: templatesKeys.all }),
   });
 }
-export function useUpdateTemplate() {
+export function useUpdateTemplate(orgId: number | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, body }: { id: number; body: any }) =>
-      updateTemplate(id, body),
+    mutationFn: ({ id, body }: { id: number; body: any }) => {
+      if (!orgId) throw new Error("orgId required");
+      return updateTemplate(id, body, orgId);
+    },
     onSuccess: (t) => {
       qc.invalidateQueries({ queryKey: templatesKeys.all });
       qc.setQueryData(templatesKeys.byId(t.id), t);
     },
   });
 }
-export function useDeleteTemplate() {
+export function useDeleteTemplate(orgId: number | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: deleteTemplate,
+    mutationFn: (id: number) => {
+      if (!orgId) throw new Error("orgId required");
+      return deleteTemplate(id, orgId);
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: templatesKeys.all }),
   });
 }
 
 // Sections
-export function useTemplateSections(templateId: number | null) {
+export function useTemplateSections(
+  orgId: number | null,
+  templateId: number | null
+) {
   return useQuery({
     queryKey: templateId
       ? templatesKeys.sections(templateId)
       : ["templates", "sections", "disabled"],
     queryFn: () => {
       if (!templateId) throw new Error("no templateId");
-      return listTemplateSections(templateId);
+      return listTemplateSections(templateId, orgId || undefined);
     },
-    enabled: !!templateId,
+    enabled: !!templateId && !!orgId,
   });
 }
-export function useCreateTemplateSection() {
+export function useCreateTemplateSection(orgId: number | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: createTemplateSection,
+    mutationFn: (body: any) => {
+      if (!orgId) throw new Error("orgId required");
+      return createTemplateSection(body, orgId);
+    },
     // Optimistically add new section to current cache for its template
     onMutate: async (vars: any) => {
       await qc.cancelQueries({
@@ -257,22 +280,26 @@ export function useCreateTemplateSection() {
     },
   });
 }
-export function useUpdateTemplateSection() {
+export function useUpdateTemplateSection(orgId: number | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, body }: { id: number; body: any }) =>
-      updateTemplateSection(id, body),
+    mutationFn: ({ id, body }: { id: number; body: any }) => {
+      if (!orgId) throw new Error("orgId required");
+      return updateTemplateSection(id, body, orgId);
+    },
     onSuccess: (sec: any) =>
       qc.invalidateQueries({
         queryKey: templatesKeys.sections(sec.templateId),
       }),
   });
 }
-export function useReorderTemplateSections() {
+export function useReorderTemplateSections(orgId: number | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ templateId, body }: { templateId: number; body: any }) =>
-      reorderTemplateSections(templateId, body),
+    mutationFn: ({ templateId, body }: { templateId: number; body: any }) => {
+      if (!orgId) throw new Error("orgId required");
+      return reorderTemplateSections(templateId, body, orgId);
+    },
     onMutate: async (vars) => {
       await qc.cancelQueries({
         queryKey: templatesKeys.sections(vars.templateId),
@@ -303,18 +330,19 @@ export function useReorderTemplateSections() {
   });
 }
 
-export function useDeleteTemplateSection() {
+export function useDeleteTemplateSection(orgId: number | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: deleteTemplateSection,
+    mutationFn: (id: number) => {
+      if (!orgId) throw new Error("orgId required");
+      return deleteTemplateSection(id, orgId);
+    },
     onSuccess: async (res: { id: number }) => {
       // Try to find which template this section belonged to by scanning cached section lists
-      const sectionQueries = qc
-        .getQueryCache()
-        .findAll({
-          predicate: (q) =>
-            Array.isArray(q.queryKey) && q.queryKey.includes("sections"),
-        });
+      const sectionQueries = qc.getQueryCache().findAll({
+        predicate: (q) =>
+          Array.isArray(q.queryKey) && q.queryKey.includes("sections"),
+      });
       let foundTemplateId: number | null = null;
       for (const q of sectionQueries) {
         const data: any = q.state.data;
@@ -347,54 +375,67 @@ export function useDeleteTemplateSection() {
 }
 
 // Template Questions
-export function useTemplateSectionQuestions(sectionId: number | null) {
+export function useTemplateSectionQuestions(
+  orgId: number | null,
+  sectionId: number | null
+) {
   return useQuery({
     queryKey: sectionId
       ? templatesKeys.sectionQuestions(sectionId)
       : ["template-section", "questions", "disabled"],
     queryFn: () => {
       if (!sectionId) throw new Error("no sectionId");
-      return listTemplateSectionQuestions(sectionId);
+      return listTemplateSectionQuestions(sectionId, orgId || undefined);
     },
-    enabled: !!sectionId,
+    enabled: !!sectionId && !!orgId,
   });
 }
-export function useAddTemplateQuestion() {
+export function useAddTemplateQuestion(orgId: number | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: addTemplateQuestion,
+    mutationFn: (body: any) => {
+      if (!orgId) throw new Error("orgId required");
+      return addTemplateQuestion(body, orgId);
+    },
     onSuccess: (link: any) =>
       qc.invalidateQueries({
         queryKey: templatesKeys.sectionQuestions(link.sectionId),
       }),
   });
 }
-export function useUpdateTemplateQuestion() {
+export function useUpdateTemplateQuestion(orgId: number | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, body }: { id: number; body: any }) =>
-      updateTemplateQuestion(id, body),
+    mutationFn: ({ id, body }: { id: number; body: any }) => {
+      if (!orgId) throw new Error("orgId required");
+      return updateTemplateQuestion(id, body, orgId);
+    },
     onSuccess: (link: any) =>
       qc.invalidateQueries({
         queryKey: templatesKeys.sectionQuestions(link.sectionId),
       }),
   });
 }
-export function useBulkSetSectionQuestions() {
+export function useBulkSetSectionQuestions(orgId: number | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ sectionId, body }: { sectionId: number; body: any }) =>
-      bulkSetTemplateSectionQuestions(sectionId, body),
+    mutationFn: ({ sectionId, body }: { sectionId: number; body: any }) => {
+      if (!orgId) throw new Error("orgId required");
+      return bulkSetTemplateSectionQuestions(sectionId, body, orgId);
+    },
     onSuccess: (_links, vars) =>
       qc.invalidateQueries({
         queryKey: templatesKeys.sectionQuestions(vars.sectionId),
       }),
   });
 }
-export function useDeleteTemplateQuestion() {
+export function useDeleteTemplateQuestion(orgId: number | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: deleteTemplateQuestion,
+    mutationFn: (id: number) => {
+      if (!orgId) throw new Error("orgId required");
+      return deleteTemplateQuestion(id, orgId);
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: templatesKeys.all }),
   });
 }

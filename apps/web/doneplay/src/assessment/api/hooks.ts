@@ -62,11 +62,11 @@ export function useQuestionBankCount(
 ) {
   return useQuery({
     queryKey: bankId
-      ? questionBanksKeys.count(bankId)
+      ? [...questionBanksKeys.count(bankId), orgId]
       : ["question-banks", "count", "disabled"],
     queryFn: () => {
       if (!bankId) throw new Error("no bankId");
-      return getQuestionBankCount(bankId);
+      return getQuestionBankCount(bankId, orgId || undefined);
     },
     enabled: !!bankId && !!orgId,
     staleTime: 30_000,

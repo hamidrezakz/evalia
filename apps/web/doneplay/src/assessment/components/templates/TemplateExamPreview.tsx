@@ -10,6 +10,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useFullTemplate } from "@/assessment/api/templates-hooks";
+import { useOrgState } from "@/organizations/organization/context/org-context";
 import { QuestionText } from "@/app/dashboard/tests/take/components/QuestionText";
 import { QuestionBoolean } from "@/app/dashboard/tests/take/components/QuestionBoolean";
 import { QuestionSingleChoice } from "@/app/dashboard/tests/take/components/QuestionSingleChoice";
@@ -25,7 +26,11 @@ export default function TemplateExamPreview({
   title?: string;
   sectionId?: number | null;
 }) {
-  const { data, isLoading, error } = useFullTemplate(templateId);
+  const { activeOrganizationId } = useOrgState();
+  const { data, isLoading, error } = useFullTemplate(
+    activeOrganizationId,
+    templateId
+  );
   const sections: any[] = React.useMemo(() => {
     const list = Array.isArray((data as any)?.sections)
       ? (data as any).sections

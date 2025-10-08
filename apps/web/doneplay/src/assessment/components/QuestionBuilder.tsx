@@ -27,6 +27,7 @@ import {
 } from "@/assessment/api/question-hooks";
 // add update hook
 import { useUpdateQuestion } from "@/assessment/api/question-hooks";
+import { useOrgState } from "@/organizations/organization/context/org-context";
 import type { Question } from "@/assessment/types/question-banks.types";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -79,14 +80,33 @@ export function QuestionBuilder() {
     inlineOptions: [],
   });
 
-  const banksQ = useQuestionBanks();
-  const questionsQ = useQuestions({
-    bankId: state.bankId || undefined,
-    search: state.search || undefined,
-  });
-  const optionSetsQ = useOptionSets();
-  const createQuestion = useCreateQuestion();
-  const updateQuestion = useUpdateQuestion();
+  const { activeOrganizationId } = useOrgState();
+  const banksQ = useQuestionBanks(activeOrganizationId);
+  const questionsQ = useQuestions(
+    activeOrganizationId,
+    {
+      bankId: state.bankId || undefined,
+      search: state.search || undefined,
+      pageSize: 200,
+    },
+    { enabledIfNoBank: false }
+  );
+  const optionSetsQ = useOptionSets(activeOrganizationId);
+  const createQuestion = useCreateQuestion(activeOrganizationId);
+  const updateQuestion = useUpdateQuestion(activeOrganizationId);
+
+  // Force refetch when bank switches (defensive if react-query cache key reused)
+  React.useEffect(() => {
+    if (state.bankId && activeOrganizationId) {
+      // small timeout to allow state settle
+      const t = setTimeout(() => {
+        try {
+          (questionsQ as any).refetch?.();
+        } catch {}
+      }, 10);
+      return () => clearTimeout(t);
+    }
+  }, [state.bankId, activeOrganizationId]);
 
   const selectedQuestion: Question | null = React.useMemo(() => {
     const arr = Array.isArray(questionsQ.data?.data)
@@ -123,7 +143,10 @@ export function QuestionBuilder() {
   // Fetch options for selected/draft option set for live preview
   const selectedOptionSetId =
     selectedQuestion?.optionSetId ?? state.draftOptionSetId ?? null;
-  const optionSetOptionsQ = useOptionSetOptions(selectedOptionSetId || null);
+  const optionSetOptionsQ = useOptionSetOptions(
+    activeOrganizationId,
+    selectedOptionSetId || null
+  );
   const previewOptions = React.useMemo(() => {
     // Priority: selected option set -> inline options (draft) -> selected question inline
     if (selectedOptionSetId) {
@@ -405,7 +428,7 @@ export function QuestionBuilder() {
           </PanelTitle>
           <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
             {banksQ.isLoading && <span>لود بانک‌ها...</span>}
-            {questionsQ.isLoading && <span>لود سوالات...</span>}
+            {state.bankId && questionsQ.isLoading && <span>لود سوالات...</span>}
           </div>
         </PanelHeader>
         <PanelContent className="flex-col gap-3">
@@ -438,7 +461,18 @@ export function QuestionBuilder() {
               }
             />
             <div className="max-h-72 overflow-auto rounded-md border divide-y">
-              {Array.isArray(questionsQ.data?.data) &&
+              {state.bankId && questionsQ.error && (
+                <div className="text-[11px] text-destructive px-3 py-2">
+                  خطا در دریافت سوالات
+                </div>
+              )}
+              {!state.bankId && (
+                <div className="text-[11px] text-muted-foreground px-3 py-2">
+                  ابتدا یک بانک را انتخاب کنید
+                </div>
+              )}
+              {state.bankId &&
+              Array.isArray(questionsQ.data?.data) &&
               questionsQ.data?.data.length ? (
                 (questionsQ.data?.data as any[]).map((q) => {
                   const active = state.selectedQuestionId === q.id;
@@ -467,13 +501,13 @@ export function QuestionBuilder() {
                     </button>
                   );
                 })
-              ) : (
+              ) : state.bankId ? (
                 <div className="text-[11px] text-muted-foreground px-3 py-2">
                   {questionsQ.isLoading
                     ? "در حال بارگذاری..."
                     : "سوالی یافت نشد"}
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
         </PanelContent>

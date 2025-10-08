@@ -19,6 +19,7 @@ import {
   useUpdateTemplateQuestion,
   useDeleteTemplateQuestion,
 } from "@/assessment/api/templates-hooks";
+import { useOrgState } from "@/organizations/organization/context/org-context";
 import { useQueryClient } from "@tanstack/react-query";
 import { templatesKeys } from "@/assessment/api/templates-hooks";
 import { ResponsePerspectiveEnum, type ResponsePerspective } from "@/lib/enums";
@@ -41,15 +42,19 @@ export default function TemplateQuestionsPreviewEditor({
   templateName?: string | null;
 }) {
   const qc = useQueryClient();
-  const { data, isLoading, error } = useFullTemplate(templateId);
+  const { activeOrganizationId } = useOrgState();
+  const { data, isLoading, error } = useFullTemplate(
+    activeOrganizationId,
+    templateId
+  );
   const sections: any[] = React.useMemo(() => {
     const d: any = data as any;
     if (Array.isArray(d?.sections)) return d.sections;
     if (Array.isArray(d?.data?.sections)) return d.data.sections;
     return [];
   }, [data]);
-  const updateLink = useUpdateTemplateQuestion();
-  const deleteLink = useDeleteTemplateQuestion();
+  const updateLink = useUpdateTemplateQuestion(activeOrganizationId);
+  const deleteLink = useDeleteTemplateQuestion(activeOrganizationId);
 
   async function invalidate() {
     if (templateId) {

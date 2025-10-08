@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { apiRequest } from "@/lib/api.client";
+import { appendOrgId } from "./org-path";
 import {
   optionSetsListEnvelope,
   optionSetSchema,
@@ -20,16 +21,11 @@ function buildListPath(raw?: Partial<ListOptionSetsQuery>): string {
   return "/option-sets" + buildOptionSetsQuery(parsed.data);
 }
 
-function withOrg(path: string, orgId?: number | null): string {
-  if (!orgId) return path;
-  return path + (path.includes("?") ? `&orgId=${orgId}` : `?orgId=${orgId}`);
-}
-
 export async function listOptionSets(
   params?: Partial<ListOptionSetsQuery>,
   orgId?: number | null
 ): Promise<{ data: OptionSet[]; meta: unknown }> {
-  const path = withOrg(buildListPath(params), orgId);
+  const path = appendOrgId(buildListPath(params), orgId);
   const res = await apiRequest(path, null, null);
   const validated = optionSetsListEnvelope.safeParse({
     data: res.data,
@@ -49,7 +45,7 @@ export async function getOptionSet(
   if (!Number.isInteger(id) || id <= 0)
     throw new Error("Option set id must be positive");
   const res = await apiRequest(
-    withOrg(`/option-sets/${id}`, orgId),
+    appendOrgId(`/option-sets/${id}`, orgId),
     null,
     optionSetSchema
   );
@@ -78,7 +74,7 @@ export async function createOptionSet(
   orgId?: number | null
 ) {
   const res = await apiRequest(
-    withOrg("/option-sets", orgId),
+    appendOrgId("/option-sets", orgId),
     createOptionSetBody,
     optionSetSchema,
     { body }
@@ -94,7 +90,7 @@ export async function updateOptionSet(
   orgId?: number | null
 ) {
   const res = await apiRequest(
-    withOrg(`/option-sets/${id}`, orgId),
+    appendOrgId(`/option-sets/${id}`, orgId),
     updateOptionSetBody,
     optionSetSchema,
     { method: "PATCH", body }
@@ -103,7 +99,7 @@ export async function updateOptionSet(
 }
 
 export async function deleteOptionSet(id: number, orgId?: number | null) {
-  await apiRequest(withOrg(`/option-sets/${id}`, orgId), null, null, {
+  await apiRequest(appendOrgId(`/option-sets/${id}`, orgId), null, null, {
     method: "DELETE",
   });
   return { id };
@@ -129,7 +125,7 @@ export async function bulkReplaceOptionSetOptions(
   orgId?: number | null
 ): Promise<OptionSetOption[]> {
   const res = await apiRequest(
-    withOrg(`/option-set-options/${optionSetId}`, orgId),
+    appendOrgId(`/option-set-options/${optionSetId}`, orgId),
     bulkReplaceOptionsBody,
     optionSetOptionsListSchema,
     { method: "POST", body }
@@ -142,7 +138,7 @@ export async function listOptionSetOptions(
   orgId?: number | null
 ): Promise<OptionSetOption[]> {
   const res = await apiRequest(
-    withOrg(`/option-set-options/${optionSetId}`, orgId),
+    appendOrgId(`/option-set-options/${optionSetId}`, orgId),
     null,
     optionSetOptionsListSchema
   );
@@ -164,7 +160,7 @@ export async function updateOptionSetOption(
   orgId?: number | null
 ) {
   const res = await apiRequest(
-    withOrg(`/option-set-options/${id}`, orgId),
+    appendOrgId(`/option-set-options/${id}`, orgId),
     updateOptionSetOptionBody,
     optionSetOptionSchema,
     { method: "PATCH", body }
@@ -173,8 +169,13 @@ export async function updateOptionSetOption(
 }
 
 export async function deleteOptionSetOption(id: number, orgId?: number | null) {
-  await apiRequest(withOrg(`/option-set-options/${id}`, orgId), null, null, {
-    method: "DELETE",
-  });
+  await apiRequest(
+    appendOrgId(`/option-set-options/${id}`, orgId),
+    null,
+    null,
+    {
+      method: "DELETE",
+    }
+  );
   return { id };
 }

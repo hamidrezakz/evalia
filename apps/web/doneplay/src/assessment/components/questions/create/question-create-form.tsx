@@ -12,6 +12,7 @@ import { fadeSlideUp } from "@/lib/motion/presets";
 import { Save, PlusCircle } from "lucide-react";
 import { QuestionTypeEnum } from "@/lib/enums";
 import type { CreateQuestionBody } from "@/assessment/api/questions.api";
+// NOTE: bank & option set comboboxes now require orgId implicitly through their internal hooks which were updated to use org context.
 
 // Live draft type exposed upward (some fields may be incomplete while user is typing)
 export interface QuestionDraft extends Partial<CreateQuestionBody> {

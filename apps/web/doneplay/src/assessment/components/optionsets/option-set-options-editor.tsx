@@ -3,20 +3,14 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Tag,
-  Type,
-  Trash2,
-  PlusCircle,
-  Save,
-  RotateCcw,
-} from "lucide-react";
+import { Tag, Type, Trash2, PlusCircle, Save, RotateCcw } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Panel, PanelContent } from "@/components/ui/panel";
 import {
   useOptionSetOptions,
   useBulkReplaceOptionSetOptions,
 } from "../../api/hooks";
+import { useOrgState } from "@/organizations/organization/context/org-context";
 
 interface OptionSetOptionsEditorProps {
   optionSetId: number;
@@ -31,8 +25,12 @@ export const OptionSetOptionsEditor: React.FC<OptionSetOptionsEditorProps> = ({
   onSaved,
   className,
 }) => {
-  const { data, isLoading } = useOptionSetOptions(optionSetId);
-  const bulkMutation = useBulkReplaceOptionSetOptions();
+  const { activeOrganizationId } = useOrgState();
+  const { data, isLoading } = useOptionSetOptions(
+    activeOrganizationId,
+    optionSetId
+  );
+  const bulkMutation = useBulkReplaceOptionSetOptions(activeOrganizationId);
   const [draft, setDraft] = React.useState<DraftItem[]>([]);
   const [dirty, setDirty] = React.useState(false);
 

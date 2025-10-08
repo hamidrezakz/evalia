@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/panel";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useQuestions } from "../../api/hooks";
+import { useOrgState } from "@/organizations/organization/context/org-context";
 import Link from "next/link";
 
 interface RecentQuestionsPanelProps {
@@ -17,7 +18,11 @@ interface RecentQuestionsPanelProps {
 export const RecentQuestionsPanel: React.FC<RecentQuestionsPanelProps> = ({
   limit = 6,
 }) => {
-  const { data, isLoading } = useQuestions({ limit, sort: "createdAt:desc" });
+  const { activeOrganizationId } = useOrgState();
+  const { data, isLoading } = useQuestions(activeOrganizationId, {
+    limit,
+    sort: "createdAt:desc",
+  });
   const items: any[] = (data as any)?.data || [];
   return (
     <Panel>

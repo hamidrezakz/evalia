@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { apiRequest } from "@/lib/api.client";
-import { useOrgState } from "@/organizations/organization/context/org-context"; // (only for potential in-file hooks if needed later)
+import { appendOrgId } from "./org-path";
 import {
   questionBanksListEnvelope,
   questionBankSchema,
@@ -20,17 +20,11 @@ function buildListPath(raw?: Partial<ListQuestionBanksQuery>): string {
   return "/question-banks" + buildQuestionBanksQuery(parsed.data);
 }
 
-// Central utility to append orgId (kept local to avoid broad API churn)
-function withOrg(path: string, orgId?: number | null): string {
-  if (!orgId) return path; // allow caller to ensure guard already blocks unauth usage
-  return path + (path.includes("?") ? `&orgId=${orgId}` : `?orgId=${orgId}`);
-}
-
 export async function listQuestionBanks(
   params?: Partial<ListQuestionBanksQuery>,
   orgId?: number | null
 ): Promise<{ data: QuestionBank[]; meta: unknown }> {
-  const path = withOrg(buildListPath(params), orgId);
+  const path = appendOrgId(buildListPath(params), orgId);
   const res = await apiRequest(path, null, null);
   const validated = questionBanksListEnvelope.safeParse({
     data: res.data,
@@ -50,7 +44,7 @@ export async function getQuestionBank(
   if (!Number.isInteger(id) || id <= 0)
     throw new Error("Question bank id must be positive");
   const res = await apiRequest(
-    withOrg(`/question-banks/${id}`, orgId),
+    appendOrgId(`/question-banks/${id}`, orgId),
     null,
     detailSchema
   );
@@ -68,7 +62,7 @@ export async function createQuestionBank(
   orgId?: number | null
 ) {
   const res = await apiRequest(
-    withOrg("/question-banks", orgId),
+    appendOrgId("/question-banks", orgId),
     createQuestionBankBody,
     questionBankSchema,
     { body }
@@ -87,7 +81,7 @@ export async function updateQuestionBank(
   orgId?: number | null
 ) {
   const res = await apiRequest(
-    withOrg(`/question-banks/${id}`, orgId),
+    appendOrgId(`/question-banks/${id}`, orgId),
     updateQuestionBankBody,
     questionBankSchema,
     { method: "PATCH", body }
@@ -96,7 +90,7 @@ export async function updateQuestionBank(
 }
 
 export async function deleteQuestionBank(id: number, orgId?: number | null) {
-  await apiRequest(withOrg(`/question-banks/${id}`, orgId), null, null, {
+  await apiRequest(appendOrgId(`/question-banks/${id}`, orgId), null, null, {
     method: "DELETE",
   });
   return { id };

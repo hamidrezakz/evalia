@@ -49,6 +49,7 @@ import {
   useUpdateTemplate,
   useDeleteTemplate,
 } from "@/assessment/api/templates-hooks";
+import { useOrgState } from "@/organizations/organization/context/org-context";
 import TemplateCombobox from "./TemplateCombobox";
 import type {
   Template,
@@ -74,10 +75,11 @@ export default function TemplateManager({ onSelect }: TemplateManagerProps) {
     null | { mode: "create" } | { mode: "edit"; tpl: Template }
   >(null);
 
-  const { data, isLoading } = useTemplates({ search });
-  const createMut = useCreateTemplate();
-  const updateMut = useUpdateTemplate();
-  const deleteMut = useDeleteTemplate();
+  const { activeOrganizationId } = useOrgState();
+  const { data, isLoading } = useTemplates(activeOrganizationId, { search });
+  const createMut = useCreateTemplate(activeOrganizationId);
+  const updateMut = useUpdateTemplate(activeOrganizationId);
+  const deleteMut = useDeleteTemplate(activeOrganizationId);
 
   const list: Template[] = (data as any)?.data || [];
 

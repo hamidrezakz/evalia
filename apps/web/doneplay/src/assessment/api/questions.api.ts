@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { apiRequest } from "@/lib/api.client";
+import { appendOrgId } from "./org-path";
 import {
   questionsListEnvelope,
   questionSchema,
@@ -20,16 +21,11 @@ function buildListPath(raw?: Partial<ListQuestionsQuery>): string {
   return "/questions" + buildQuestionsQuery(parsed.data);
 }
 
-function withOrg(path: string, orgId?: number | null): string {
-  if (!orgId) return path;
-  return path + (path.includes("?") ? `&orgId=${orgId}` : `?orgId=${orgId}`);
-}
-
 export async function listQuestions(
   params?: Partial<ListQuestionsQuery>,
   orgId?: number | null
 ): Promise<{ data: Question[]; meta: unknown }> {
-  const path = withOrg(buildListPath(params), orgId);
+  const path = appendOrgId(buildListPath(params), orgId);
   const res = await apiRequest(path, null, null);
   const validated = questionsListEnvelope.safeParse({
     data: res.data,
@@ -49,7 +45,7 @@ export async function getQuestion(
   if (!Number.isInteger(id) || id <= 0)
     throw new Error("Question id must be positive");
   const res = await apiRequest(
-    withOrg(`/questions/${id}`, orgId),
+    appendOrgId(`/questions/${id}`, orgId),
     null,
     detailSchema
   );
@@ -95,7 +91,7 @@ export async function createQuestion(
   orgId?: number | null
 ) {
   const res = await apiRequest(
-    withOrg("/questions", orgId),
+    appendOrgId("/questions", orgId),
     createQuestionBody,
     questionSchema,
     { body }
@@ -111,7 +107,7 @@ export async function updateQuestion(
   orgId?: number | null
 ) {
   const res = await apiRequest(
-    withOrg(`/questions/${id}`, orgId),
+    appendOrgId(`/questions/${id}`, orgId),
     updateQuestionBody,
     questionSchema,
     { method: "PATCH", body }
@@ -120,7 +116,7 @@ export async function updateQuestion(
 }
 
 export async function deleteQuestion(id: number, orgId?: number | null) {
-  await apiRequest(withOrg(`/questions/${id}`, orgId), null, null, {
+  await apiRequest(appendOrgId(`/questions/${id}`, orgId), null, null, {
     method: "DELETE",
   });
   return { id };

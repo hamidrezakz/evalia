@@ -52,6 +52,7 @@ import SectionCombobox from "../combobox/SectionCombobox";
 import QuestionSearchCombobox from "../combobox/QuestionSearchCombobox";
 import { QuestionBankCombobox } from "@/assessment/components/questions/create/question-bank-combobox";
 import { useQuestions, useUpdateQuestion } from "@/assessment/api/hooks";
+import { useOrgState } from "@/organizations/organization/context/org-context";
 import BankQuestionsPreview from "@/assessment/components/questions/bank-questions-preview";
 // Edit2 imported above with Plus
 
@@ -61,8 +62,12 @@ export default function AssignQuestionToSection({
   template: Template | null;
 }) {
   const templateId = template?.id ?? null;
+  const { activeOrganizationId } = useOrgState();
   const [bankId, setBankId] = React.useState<number | null>(null);
-  const { data: sections } = useTemplateSections(templateId);
+  const { data: sections } = useTemplateSections(
+    activeOrganizationId,
+    templateId
+  );
   const sectionList: TemplateSection[] = React.useMemo(() => {
     const raw: any = sections as any;
     const list = Array.isArray(raw)
@@ -82,9 +87,9 @@ export default function AssignQuestionToSection({
     []
   );
 
-  const addMut = useAddTemplateQuestion();
+  const addMut = useAddTemplateQuestion(activeOrganizationId);
   const [justAdded, setJustAdded] = React.useState(false);
-  const updateQuestion = useUpdateQuestion();
+  const updateQuestion = useUpdateQuestion(activeOrganizationId);
   const { handleSubmit, setValue, watch, reset } = useForm<FormVals>({
     defaultValues: {
       sectionId: null,
@@ -103,6 +108,7 @@ export default function AssignQuestionToSection({
 
   // Prefill order as max(current)+1 when section changes
   const { data: sectionQuestions } = useTemplateSectionQuestions(
+    activeOrganizationId,
     sectionId || null
   );
   React.useEffect(() => {

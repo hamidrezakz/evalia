@@ -33,6 +33,7 @@ import {
   useUpdateSession,
   useSession,
 } from "@/assessment/api/templates-hooks";
+import { useOrgState } from "@/organizations/organization/context/org-context";
 import { useTeams } from "@/organizations/team/api/team-hooks";
 import { JalaliDatePicker } from "@/components/date/JalaliDateComponents";
 
@@ -116,6 +117,9 @@ export function SessionUpsertDialog(props: {
   const orgQ = useOrganizations({ pageSize: 50 });
   const organizations = (orgQ.data as any)?.data || [];
   const selectedOrgId = watch("organizationId");
+  const { activeOrganizationId } = useOrgState();
+  // Fallback: اگر کاربر هنوز سازمانی داخل فرم انتخاب نکرده، از سازمان فعال سشن (کانتکس) استفاده کن
+  const effectiveOrgId = selectedOrgId || activeOrganizationId || null;
   const selectedOrgQ = useOrganization(selectedOrgId || null);
   const mergedOrgs = React.useMemo(() => {
     const sel = selectedOrgQ.data as any;
@@ -126,12 +130,13 @@ export function SessionUpsertDialog(props: {
 
   // Templates
   const [templateSearch, setTemplateSearch] = React.useState("");
-  const { data: templatesData, isLoading: tplLoading } = useTemplates({
-    search: templateSearch,
-  });
+  const { data: templatesData, isLoading: tplLoading } = useTemplates(
+    effectiveOrgId,
+    { search: templateSearch }
+  );
   const templates = templatesData?.data || [];
   const selectedTemplateId = watch("templateId") || null;
-  const selectedTemplateQ = useTemplate(selectedTemplateId);
+  const selectedTemplateQ = useTemplate(effectiveOrgId, selectedTemplateId);
   const mergedTemplates = React.useMemo(() => {
     const sel = selectedTemplateQ.data as any;
     if (!sel) return templates;
@@ -219,7 +224,7 @@ export function SessionUpsertDialog(props: {
             <div className="space-y-2">
               <Label>سازمان</Label>
               <OrgSelectCombobox
-                value={watch("organizationId")}
+                value={watch("organizationId") ?? activeOrganizationId ?? null}
                 onChange={(id) => {
                   setValue("organizationId", id ?? null);
                   setValue("teamScopeId", null);
@@ -231,18 +236,22 @@ export function SessionUpsertDialog(props: {
             <div className="space-y-2 md:col-span-1">
               <Label>تمپلیت</Label>
               <Combobox<{ id: number; name: string }>
-                items={mergedTemplates}
+                items={effectiveOrgId ? mergedTemplates : []}
                 value={watch("templateId")}
                 onChange={(v) => setValue("templateId", (v as number) ?? null)}
                 searchable
                 searchValue={templateSearch}
                 onSearchChange={setTemplateSearch}
-                placeholder="انتخاب/جستجوی تمپلیت"
+                placeholder={
+                  effectiveOrgId
+                    ? "انتخاب/جستجوی تمپلیت"
+                    : "ابتدا سازمان را انتخاب کنید"
+                }
                 getKey={(t) => t.id}
                 getLabel={(t) => t.name}
-                loading={tplLoading}
+                loading={tplLoading && !!effectiveOrgId}
                 leadingIcon={FileText}
-                disabled={isEdit}
+                disabled={isEdit || !effectiveOrgId}
               />
             </div>
             <div className="space-y-2 md:col-span-1">

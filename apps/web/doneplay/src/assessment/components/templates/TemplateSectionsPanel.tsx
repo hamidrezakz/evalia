@@ -51,6 +51,7 @@ import {
   useDeleteTemplateSection,
   useUpdateTemplate,
 } from "@/assessment/api/templates-hooks";
+import { useOrgState } from "@/organizations/organization/context/org-context";
 import type {
   Template,
   TemplateSection,
@@ -72,13 +73,17 @@ export default function TemplateSectionsPanel({
   template,
 }: TemplateSectionsPanelProps) {
   const templateId = template?.id ?? null;
-  const { data: sections, isLoading } = useTemplateSections(templateId);
+  const { activeOrganizationId } = useOrgState();
+  const { data: sections, isLoading } = useTemplateSections(
+    activeOrganizationId,
+    templateId
+  );
 
-  const createMut = useCreateTemplateSection();
-  const updateMut = useUpdateTemplateSection();
-  const reorderMut = useReorderTemplateSections();
-  const deleteMut = useDeleteTemplateSection();
-  const updateTemplateMut = useUpdateTemplate();
+  const createMut = useCreateTemplateSection(activeOrganizationId);
+  const updateMut = useUpdateTemplateSection(activeOrganizationId);
+  const reorderMut = useReorderTemplateSections(activeOrganizationId);
+  const deleteMut = useDeleteTemplateSection(activeOrganizationId);
+  const updateTemplateMut = useUpdateTemplate(activeOrganizationId);
 
   const [dialogOpen, setDialogOpen] = useState<
     null | { mode: "create" } | { mode: "edit"; id: number; title: string }
