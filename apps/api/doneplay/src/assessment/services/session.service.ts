@@ -118,6 +118,7 @@ export class SessionService {
             sections: {
               include: {
                 questions: {
+                  where: { deletedAt: null } as any,
                   include: {
                     question: {
                       include: {
@@ -154,7 +155,7 @@ export class SessionService {
     const sectionIds = sections.map((sec) => sec.id);
     // Each section has many 'assessmentTemplateQuestion' links; count directly
     const total = await this.prisma.assessmentTemplateQuestion.count({
-      where: { sectionId: { in: sectionIds } },
+      where: { sectionId: { in: sectionIds }, deletedAt: null } as any,
     });
     return { sessionId: s.id, templateId: s.templateId, total };
   }
@@ -334,21 +335,25 @@ export class SessionService {
     if (!assignment)
       throw new NotFoundException('No assignment for this user/perspective');
 
-    const full = await this.prisma.assessmentSession.findUnique({
-      where: { id: sessionId },
-      include: {
-        template: {
-          include: {
-            sections: {
-              orderBy: { order: 'asc' },
-              include: {
-                questions: {
-                  orderBy: { order: 'asc' },
-                  include: {
-                    question: {
-                      include: {
-                        options: true,
-                        optionSet: { include: { options: true } },
+    let full: any;
+    try {
+      full = await this.prisma.assessmentSession.findUnique({
+        where: { id: sessionId },
+        include: {
+          template: {
+            include: {
+              sections: {
+                orderBy: { order: 'asc' },
+                include: {
+                  questions: {
+                    where: { deletedAt: null } as any,
+                    orderBy: { order: 'asc' },
+                    include: {
+                      question: {
+                        include: {
+                          options: true,
+                          optionSet: { include: { options: true } },
+                        },
                       },
                     },
                   },
@@ -357,37 +362,97 @@ export class SessionService {
             },
           },
         },
-      },
-    });
+      });
+    } catch (err: any) {
+      // Fallback if prisma client (types or runtime) rejects deletedAt filter
+      // eslint-disable-next-line no-console
+      console.warn(
+        '[getQuestionsForUserPerspective] fallback without deletedAt filter',
+        err?.message,
+      );
+      full = await this.prisma.assessmentSession.findUnique({
+        where: { id: sessionId },
+        include: {
+          template: {
+            include: {
+              sections: {
+                orderBy: { order: 'asc' },
+                include: {
+                  questions: {
+                    orderBy: { order: 'asc' },
+                    include: {
+                      question: {
+                        include: {
+                          options: true,
+                          optionSet: { include: { options: true } },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+    }
     if (!full) throw new NotFoundException('Session not found');
 
     // Filter sections/questions by template question perspectives if defined
-    const sections = (full.template.sections || []).map((sec) => {
-      const qs = sec.questions
-        .filter((link) =>
-          !link.perspectives || link.perspectives.length === 0
-            ? true
-            : link.perspectives.includes(perspective as any),
-        )
-        .map((link) => ({
-          templateQuestionId: link.id,
-          questionId: link.questionId,
-          required: link.required,
-          order: link.order,
-          question: link.question,
-        }));
-      return {
-        id: sec.id,
-        title: sec.title,
-        order: sec.order,
-        questions: qs,
-      };
-    });
+    const sections = ((full as any).template?.sections || []).map(
+      (sec: any) => {
+        const qs = sec.questions
+          .filter((link: any) =>
+            !link.perspectives || link.perspectives.length === 0
+              ? true
+              : link.perspectives.includes(perspective as any),
+          )
+          .filter((link: any) => !link.deletedAt) // defensive in fallback mode
+          .map((link: any) => ({
+            templateQuestionId: link.id,
+            questionId: link.questionId,
+            required: link.required,
+            order: link.order,
+            question: link.question,
+          }));
+        return {
+          id: sec.id,
+          title: sec.title,
+          order: sec.order,
+          questions: qs,
+        };
+      },
+    );
 
     // Fetch existing responses for this assignment limited to these templateQuestionIds
-    const templateQuestionIds = sections.flatMap((s) =>
-      s.questions.map((q) => q.templateQuestionId),
+    const templateQuestionIds = sections.flatMap((s: any) =>
+      s.questions.map((q: any) => q.templateQuestionId),
     );
+
+    // Extra authoritative scrub (in addition to earlier) using raw query across involved sections
+    try {
+      const involvedSectionIds = sections.map((s: any) => s.id);
+      if (involvedSectionIds.length) {
+        const softIds = await this.prisma.$queryRawUnsafe<any[]>(
+          'SELECT id FROM "AssessmentTemplateQuestion" WHERE "sectionId" = ANY($1) AND "deletedAt" IS NOT NULL',
+          involvedSectionIds,
+        );
+        if (softIds?.length) {
+          const softSet = new Set(softIds.map((r) => r.id));
+          for (const sec of sections as any[]) {
+            sec.questions = sec.questions.filter(
+              (q: any) => !softSet.has(q.templateQuestionId),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        '[getQuestionsForUserPerspective] raw soft scrub failed',
+        (e as any)?.message,
+      );
+    }
     const responses = await this.prisma.assessmentResponse.findMany({
       where: {
         sessionId,
@@ -396,6 +461,36 @@ export class SessionService {
       },
       orderBy: { createdAt: 'asc' },
     });
+
+    // Final defensive scrub: ensure no soft-deleted link slipped through (race condition or fallback path)
+    if (sections.length) {
+      const allSectionIds = sections.map((s: any) => s.id);
+      let softDeletedIds: number[] = [];
+      try {
+        const softs = await this.prisma.assessmentTemplateQuestion.findMany({
+          where: {
+            sectionId: { in: allSectionIds },
+            deletedAt: { not: null },
+          } as any,
+          select: { id: true },
+        });
+        softDeletedIds = softs.map((s) => s.id);
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.warn(
+          '[getQuestionsForUserPerspective] soft-delete scrub query failed',
+          (e as any)?.message,
+        );
+      }
+      if (softDeletedIds.length) {
+        const softSet = new Set(softDeletedIds);
+        for (const sec of sections as any[]) {
+          sec.questions = sec.questions.filter(
+            (q: any) => !softSet.has(q.templateQuestionId),
+          );
+        }
+      }
+    }
 
     return {
       session: { id: full.id, name: full.name, state: full.state },

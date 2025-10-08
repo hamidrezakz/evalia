@@ -607,13 +607,15 @@ model AssessmentTemplateQuestion {
   required       Boolean     @default(true)
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
+  deletedAt      DateTime?
 
   section        AssessmentTemplateSection @relation("TemplateSectionQuestions", fields: [sectionId], references: [id], onDelete: Cascade)
   question       Question                  @relation("QuestionTemplateLinks", fields: [questionId], references: [id])
   responses      AssessmentResponse[]      @relation("TemplateQuestionResponses")
 
-  @@unique([sectionId, questionId])
+  @@unique([sectionId, questionId], map: "AssessmentTemplateQuestion_sectionId_questionId_key")
   @@index([questionId])
+  @@index([sectionId, questionId, deletedAt])
 }
 
 // (v2 removed) OrganizationAssessmentTemplateLink join model

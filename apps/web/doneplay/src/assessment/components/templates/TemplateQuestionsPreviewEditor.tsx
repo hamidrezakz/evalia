@@ -153,6 +153,7 @@ function SectionBlock({
   onDelete: (id: number) => Promise<void>;
 }) {
   const list = (section.questions || [])
+    .filter((q: any) => !q.deletedAt)
     .slice()
     .sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
 

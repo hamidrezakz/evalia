@@ -339,6 +339,13 @@ export function useDeleteTemplateQuestion(orgId: number | null) {
       if (!orgId) throw new Error("orgId required");
       return deleteTemplateQuestion(id, orgId);
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: templatesKeys.all }),
+    onSuccess: (_res, _vars, _ctx) => {
+      // Invalidate all full template queries (cheap) instead of broad templates list
+      const cache = qc.getQueryCache().getAll();
+      const fullKeys = cache
+        .map((q) => q.queryKey)
+        .filter((k: any) => Array.isArray(k) && k.includes("full"));
+      for (const k of fullKeys) qc.invalidateQueries({ queryKey: k as any });
+    },
   });
 }

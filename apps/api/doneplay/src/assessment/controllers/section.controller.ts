@@ -17,9 +17,13 @@ import {
 import { Roles } from '../../common/roles.decorator';
 import { OrgContextGuard } from '../../common/org-context.guard';
 import { OrgId } from '../../common/org-id.decorator';
+import {
+  TemplateAccessGuard,
+  TemplateAccess,
+} from '../guards/template-access.guard';
 
 @Controller('template-sections')
-@UseGuards(OrgContextGuard)
+@UseGuards(OrgContextGuard, TemplateAccessGuard)
 export class SectionController {
   constructor(private readonly service: SectionService) {}
 
@@ -27,11 +31,13 @@ export class SectionController {
   @Roles({
     any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER', 'ORG:OWNER', 'ORG:MANAGER'],
   })
+  @TemplateAccess('EDIT')
   create(@Body() dto: CreateSectionDto, @OrgId() _orgId: number) {
     return this.service.create(dto);
   }
 
   @Get(':templateId')
+  @TemplateAccess('USE')
   list(@Param('templateId') templateId: string, @OrgId() _orgId: number) {
     return this.service.list(Number(templateId));
   }
@@ -40,6 +46,7 @@ export class SectionController {
   @Roles({
     any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER', 'ORG:OWNER', 'ORG:MANAGER'],
   })
+  @TemplateAccess('EDIT')
   update(
     @Param('id') id: string,
     @Body() dto: UpdateSectionDto,
@@ -52,6 +59,7 @@ export class SectionController {
   @Roles({
     any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER', 'ORG:OWNER', 'ORG:MANAGER'],
   })
+  @TemplateAccess('EDIT')
   reorder(
     @Param('templateId') templateId: string,
     @Body() dto: ReorderSectionsDto,
@@ -64,6 +72,7 @@ export class SectionController {
   @Roles({
     any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER', 'ORG:OWNER', 'ORG:MANAGER'],
   })
+  @TemplateAccess('EDIT')
   remove(@Param('id') id: string, @OrgId() _orgId: number) {
     return this.service.softDelete(Number(id));
   }

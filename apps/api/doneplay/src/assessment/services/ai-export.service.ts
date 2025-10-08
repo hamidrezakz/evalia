@@ -52,21 +52,25 @@ export class AiExportService {
     });
     if (!assignment) throw new Error('Assignment not found for AI export');
 
-    const session = await this.prisma.assessmentSession.findUnique({
-      where: { id: sessionId },
-      include: {
-        template: {
-          include: {
-            sections: {
-              orderBy: { order: 'asc' },
-              include: {
-                questions: {
-                  orderBy: { order: 'asc' },
-                  include: {
-                    question: {
-                      include: {
-                        options: true,
-                        optionSet: { include: { options: true } },
+    let session: any;
+    try {
+      session = await this.prisma.assessmentSession.findUnique({
+        where: { id: sessionId },
+        include: {
+          template: {
+            include: {
+              sections: {
+                orderBy: { order: 'asc' },
+                include: {
+                  questions: {
+                    where: { deletedAt: null } as any,
+                    orderBy: { order: 'asc' },
+                    include: {
+                      question: {
+                        include: {
+                          options: true,
+                          optionSet: { include: { options: true } },
+                        },
                       },
                     },
                   },
@@ -75,18 +79,47 @@ export class AiExportService {
             },
           },
         },
-      },
-    });
+      });
+    } catch (err: any) {
+      // eslint-disable-next-line no-console
+      console.warn('[AiExport] fallback without deletedAt filter', err?.message);
+      session = await this.prisma.assessmentSession.findUnique({
+        where: { id: sessionId },
+        include: {
+          template: {
+            include: {
+              sections: {
+                orderBy: { order: 'asc' },
+                include: {
+                  questions: {
+                    orderBy: { order: 'asc' },
+                    include: {
+                      question: {
+                        include: {
+                          options: true,
+                          optionSet: { include: { options: true } },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+    }
     if (!session) throw new Error('Session not found');
 
-    const sections = (session.template?.sections || []).map((sec) => {
-      const qs = sec.questions
-        .filter((link) =>
+    const sections = (session.template?.sections || []).map((sec: any) => {
+      const qs = (sec.questions || [])
+        .filter((link: any) =>
           !link.perspectives || link.perspectives.length === 0
             ? true
             : link.perspectives.includes(perspective as any),
         )
-        .map((link) => ({
+        .filter((link: any) => !link.deletedAt)
+        .map((link: any) => ({
           templateQuestionId: link.id,
           questionId: link.questionId,
           required: link.required,
@@ -101,8 +134,30 @@ export class AiExportService {
       };
     });
 
-    const templateQuestionIds = sections.flatMap((s) =>
-      s.questions.map((q) => q.templateQuestionId),
+    // Raw SQL authoritative scrub (race conditions or fallback path)
+    try {
+  const sectionIds = sections.map((s: any) => s.id);
+      if (sectionIds.length) {
+        const softIds = await this.prisma.$queryRawUnsafe<any[]>(
+          'SELECT id FROM "AssessmentTemplateQuestion" WHERE "sectionId" = ANY($1) AND "deletedAt" IS NOT NULL',
+          sectionIds,
+        );
+        if (softIds?.length) {
+          const softSet = new Set(softIds.map((r) => r.id));
+          for (const sec of sections as any[]) {
+            sec.questions = sec.questions.filter(
+              (q: any) => !softSet.has(q.templateQuestionId),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn('[AiExport] soft scrub query failed', (e as any)?.message);
+    }
+
+    const templateQuestionIds = sections.flatMap((s: any) =>
+      s.questions.map((q: any) => q.templateQuestionId),
     );
     const responses = await this.prisma.assessmentResponse.findMany({
       where: {
@@ -124,7 +179,7 @@ export class AiExportService {
     const tpl = session.template;
 
     // Flatten questions
-    const flattened = data.sections.flatMap((s) => s.questions);
+  const flattened = data.sections.flatMap((s: any) => s.questions);
 
     // Index responses by templateQuestionId
     const respByTQ: Record<number, any> = {};
@@ -135,7 +190,7 @@ export class AiExportService {
     for (const q of flattened) {
       const opts = q.question?.optionSet?.options || q.question?.options;
       if (opts?.length) {
-        unified = opts.map((o) => {
+  unified = opts.map((o: any) => {
           const numLabel = Number(o.label);
           const numeric = Number.isFinite(numLabel)
             ? numLabel
@@ -147,7 +202,7 @@ export class AiExportService {
     }
 
     // Step 4: Build normalized question views
-    const questions = flattened.map((q, idx) => {
+  const questions = flattened.map((q: any, idx: number) => {
       const resp = respByTQ[q.templateQuestionId];
       let answer: string | null = null;
       let numeric: number | null = null;
@@ -220,7 +275,7 @@ export class AiExportService {
       };
     });
 
-    const answered = questions.filter((q) => q.answer != null).length;
+  const answered = questions.filter((q: any) => q.answer != null).length;
 
     // Step 5: Run registered analyses (includes Glasser if supports())
     const analyses: Record<string, any> = {};
@@ -230,7 +285,7 @@ export class AiExportService {
         try {
           analyses[svc.key] = svc.analyze({
             template: tpl,
-            questions: questions.map((q) => ({
+            questions: questions.map((q: any) => ({
               number: q.number,
               numeric: q.numeric,
               answer: q.answer,

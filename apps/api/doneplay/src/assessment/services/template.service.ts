@@ -127,24 +127,85 @@ export class TemplateService {
 
   async getFull(id: number, orgId: number, _actorUserId?: number) {
     const tpl = await this.getById(id, orgId, _actorUserId);
-    const sections = await this.prisma.assessmentTemplateSection.findMany({
+    // Fetch sections first
+    const sectionsBase = await this.prisma.assessmentTemplateSection.findMany({
       where: { templateId: id, deletedAt: null },
       orderBy: { order: 'asc' },
-      include: {
-        questions: {
-          orderBy: { order: 'asc' },
-          include: {
-            question: {
-              include: {
-                options: true,
-                optionSet: { include: { options: true } },
-              },
-            },
-          },
-        },
+      select: {
+        id: true,
+        templateId: true,
+        title: true,
+        order: true,
+        createdAt: true,
+        updatedAt: true,
       },
     });
-    return { ...tpl, sections } as any;
+
+    // For each section, fetch ONLY active (non soft-deleted) question links
+    const sectionsWithQuestions = await Promise.all(
+      sectionsBase.map(async (sec) => {
+        let links: any[] = [];
+        try {
+          links = await this.prisma.assessmentTemplateQuestion.findMany({
+            where: { sectionId: sec.id, deletedAt: null } as any,
+            orderBy: { order: 'asc' },
+            include: {
+              question: {
+                include: {
+                  options: true,
+                  optionSet: { include: { options: true } },
+                },
+              },
+            },
+          });
+        } catch (err: any) {
+          // Fallback: client schema might not yet have deletedAt; fetch all then filter manually
+          // eslint-disable-next-line no-console
+          console.warn(
+            '[getFull] fallback (no deletedAt filter) section',
+            sec.id,
+            err?.message,
+          );
+          const rawAll = await this.prisma.assessmentTemplateQuestion.findMany({
+            where: { sectionId: sec.id },
+            orderBy: { order: 'asc' },
+            include: {
+              question: {
+                include: {
+                  options: true,
+                  optionSet: { include: { options: true } },
+                },
+              },
+            },
+          });
+          links = rawAll.filter((l: any) => !l.deletedAt);
+        }
+        // Defensive scrub: ensure DB's authoritative soft-deleted ids removed (covers race conditions)
+        try {
+          const softIds = await this.prisma.$queryRawUnsafe<any[]>(
+            'SELECT id FROM "AssessmentTemplateQuestion" WHERE "sectionId"=$1 AND "deletedAt" IS NOT NULL',
+            sec.id,
+          );
+          if (softIds?.length) {
+            const softSet = new Set(softIds.map((r) => r.id));
+            links = links.filter((l) => !softSet.has(l.id));
+          }
+        } catch (e) {
+          // eslint-disable-next-line no-console
+          console.warn(
+            '[getFull] soft scrub query failed',
+            (e as any)?.message,
+          );
+        }
+        const normalized = links.map((l: any, idx: number) => ({
+          ...l,
+          order: idx,
+        }));
+        return { ...sec, questions: normalized } as any;
+      }),
+    );
+
+    return { ...tpl, sections: sectionsWithQuestions } as any;
   }
 
   async update(id: number, dto: any, orgId: number, _actorUserId?: number) {

@@ -64,6 +64,7 @@ export const templateQuestionLinkSchema = z.object({
   perspectives: z.array(z.string()),
   required: z.boolean(),
   question: questionSchema.optional(),
+  deletedAt: z.string().nullable().optional(),
 });
 export type TemplateQuestionLink = z.infer<typeof templateQuestionLinkSchema>;
 

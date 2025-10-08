@@ -18,9 +18,13 @@ import {
 import { Roles } from '../../common/roles.decorator';
 import { OrgContextGuard } from '../../common/org-context.guard';
 import { OrgId } from '../../common/org-id.decorator';
+import {
+  TemplateAccessGuard,
+  TemplateAccess,
+} from '../guards/template-access.guard';
 
 @Controller('templates')
-@UseGuards(OrgContextGuard)
+@UseGuards(OrgContextGuard, TemplateAccessGuard)
 export class TemplateController {
   constructor(private readonly service: TemplateService) {}
 
@@ -55,6 +59,7 @@ export class TemplateController {
       'ORG:MEMBER',
     ],
   })
+  @TemplateAccess('USE')
   get(@Param('id') id: string, @OrgId() orgId: number, @Req() req: any) {
     const userId = req?.user?.userId;
     return this.service.getById(Number(id), orgId, userId);
@@ -71,6 +76,7 @@ export class TemplateController {
       'ORG:MEMBER',
     ],
   })
+  @TemplateAccess('USE')
   full(@Param('id') id: string, @OrgId() orgId: number, @Req() req: any) {
     const userId = req?.user?.userId;
     return this.service.getFull(Number(id), orgId, userId);
@@ -80,6 +86,7 @@ export class TemplateController {
   @Roles({
     any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER', 'ORG:OWNER', 'ORG:MANAGER'],
   })
+  @TemplateAccess('EDIT')
   update(
     @Param('id') id: string,
     @Body() dto: UpdateTemplateDto,
@@ -94,6 +101,7 @@ export class TemplateController {
   @Roles({
     any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER', 'ORG:OWNER', 'ORG:MANAGER'],
   })
+  @TemplateAccess('ADMIN')
   remove(@Param('id') id: string, @OrgId() orgId: number, @Req() req: any) {
     const userId = req?.user?.userId;
     return this.service.softDelete(Number(id), orgId, userId);

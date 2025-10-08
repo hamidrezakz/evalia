@@ -47,7 +47,7 @@ export async function getSession(
   orgId?: number | null
 ): Promise<Session> {
   const res = await apiRequest(
-    `/sessions/${id}${orgId ? `?orgId=${orgId}` : ""}`,
+    `/sessions/${id}${orgId ? `?organizationId=${orgId}` : ""}`,
     null,
     sessionSchema
   );
@@ -55,7 +55,7 @@ export async function getSession(
 }
 export async function getFullSession(id: number, orgId?: number | null) {
   const res = await apiRequest(
-    `/sessions/${id}/full${orgId ? `?orgId=${orgId}` : ""}`,
+    `/sessions/${id}/full${orgId ? `?organizationId=${orgId}` : ""}`,
     null,
     null
   );
@@ -72,7 +72,7 @@ export async function getSessionQuestionCount(
   orgId?: number | null
 ): Promise<SessionQuestionCount> {
   const res = await apiRequest(
-    `/sessions/${id}/question-count${orgId ? `?orgId=${orgId}` : ""}`,
+    `/sessions/${id}/question-count${orgId ? `?organizationId=${orgId}` : ""}`,
     null,
     null
   );
@@ -98,7 +98,7 @@ export async function createSession(
   const payload = { ...body } as any;
   if (orgId && !payload.organizationId) payload.organizationId = orgId;
   const res = await apiRequest(
-    `/sessions${orgId ? `?orgId=${orgId}` : ""}`,
+    `/sessions${orgId ? `?organizationId=${orgId}` : ""}`,
     createSessionBody,
     sessionSchema,
     {
@@ -117,7 +117,7 @@ export async function updateSession(
   orgId?: number | null
 ) {
   const res = await apiRequest(
-    `/sessions/${id}${orgId ? `?orgId=${orgId}` : ""}`,
+    `/sessions/${id}${orgId ? `?organizationId=${orgId}` : ""}`,
     updateSessionBody,
     sessionSchema,
     { method: "PATCH", body }
@@ -126,7 +126,7 @@ export async function updateSession(
 }
 export async function deleteSession(id: number, orgId?: number | null) {
   await apiRequest(
-    `/sessions/${id}${orgId ? `?orgId=${orgId}` : ""}`,
+    `/sessions/${id}${orgId ? `?organizationId=${orgId}` : ""}`,
     null,
     null,
     { method: "DELETE" }
@@ -150,7 +150,7 @@ export async function addAssignment(
   orgId?: number | null
 ) {
   const res = await apiRequest(
-    `/assignments${orgId ? `?orgId=${orgId}` : ""}`,
+    `/assignments${orgId ? `?organizationId=${orgId}` : ""}`,
     addAssignmentBody,
     assignmentSchema,
     { body }
@@ -170,7 +170,7 @@ const bulkAssignResultSchema = z.object({ created: z.number().int() });
 export async function bulkAssign(body: BulkAssignBody, orgId?: number | null) {
   // Accept both envelope shapes by skipping responseSchema and validating manually
   const res = await apiRequest(
-    `/assignments/bulk${orgId ? `?orgId=${orgId}` : ""}`,
+    `/assignments/bulk${orgId ? `?organizationId=${orgId}` : ""}`,
     bulkAssignBody,
     null,
     {
@@ -195,7 +195,9 @@ export async function listAssignments(
   orgId?: number | null
 ) {
   const res = await apiRequest(
-    `/assignments/session/${sessionId}${orgId ? `?orgId=${orgId}` : ""}`,
+    `/assignments/session/${sessionId}${
+      orgId ? `?organizationId=${orgId}` : ""
+    }`,
     null,
     z.array(assignmentSchema)
   );
@@ -213,7 +215,7 @@ export async function updateAssignment(
   orgId?: number | null
 ) {
   const res = await apiRequest(
-    `/assignments/${id}${orgId ? `?orgId=${orgId}` : ""}`,
+    `/assignments/${id}${orgId ? `?organizationId=${orgId}` : ""}`,
     updateAssignmentBody,
     assignmentSchema,
     { method: "PATCH", body }
@@ -222,7 +224,7 @@ export async function updateAssignment(
 }
 export async function deleteAssignment(id: number, orgId?: number | null) {
   await apiRequest(
-    `/assignments/${id}${orgId ? `?orgId=${orgId}` : ""}`,
+    `/assignments/${id}${orgId ? `?organizationId=${orgId}` : ""}`,
     null,
     null,
     { method: "DELETE" }
@@ -246,7 +248,7 @@ export async function upsertResponse(
   orgId?: number | null
 ) {
   const res = await apiRequest(
-    `/responses${orgId ? `?orgId=${orgId}` : ""}`,
+    `/responses${orgId ? `?organizationId=${orgId}` : ""}`,
     upsertResponseBody,
     responseSchema,
     { body }
@@ -266,7 +268,7 @@ export async function bulkUpsertResponses(
   orgId?: number | null
 ) {
   const res = await apiRequest(
-    `/responses/bulk${orgId ? `?orgId=${orgId}` : ""}`,
+    `/responses/bulk${orgId ? `?organizationId=${orgId}` : ""}`,
     bulkUpsertResponsesBody,
     bulkUpsertResultSchema,
     { method: "POST", body }
@@ -296,7 +298,7 @@ export async function listResponses(params: any, orgId?: number | null) {
 }
 export async function getResponse(id: number, orgId?: number | null) {
   const res = await apiRequest(
-    `/responses/${id}${orgId ? `?orgId=${orgId}` : ""}`,
+    `/responses/${id}${orgId ? `?organizationId=${orgId}` : ""}`,
     null,
     responseSchema
   );
@@ -304,7 +306,7 @@ export async function getResponse(id: number, orgId?: number | null) {
 }
 export async function deleteResponse(id: number, orgId?: number | null) {
   await apiRequest(
-    `/responses/${id}${orgId ? `?orgId=${orgId}` : ""}`,
+    `/responses/${id}${orgId ? `?organizationId=${orgId}` : ""}`,
     null,
     null,
     { method: "DELETE" }
