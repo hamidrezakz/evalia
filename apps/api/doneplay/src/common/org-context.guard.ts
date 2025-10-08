@@ -6,20 +6,37 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { PrismaService } from '../prisma.service';
 
 // Metadata key (optional future use for allowing endpoints without org)
 export const ORG_OPTIONAL_KEY = 'org_optional';
 
 @Injectable()
 export class OrgContextGuard implements CanActivate {
-  constructor(private readonly reflector: Reflector) {}
+  constructor(
+    private readonly reflector: Reflector,
+    private readonly prisma: PrismaService,
+  ) {}
 
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest();
-    // Source priority: explicit orgId/organizationId in route params, then query ?orgId=
-    // (header form x-org-id removed per simplified design)
+    // Source priority:
+    // 1) Explicit :orgId / :organizationId route params
+    // 2) Query string ?orgId=
+    // 3) Derive from JWT active organization membership if single / explicitly flagged
+    // (header x-org-id intentionally omitted for simplicity)
     let raw =
-      req.params?.orgId || req.params?.organizationId || req.query?.orgId;
+      // Explicit route params
+      req.params?.orgId ||
+      req.params?.organizationId ||
+      // Query params
+      req.query?.orgId ||
+      (req.query?.organizationId as any) ||
+      // Body (create / update workflows)
+      req.body?.orgId ||
+      req.body?.organizationId ||
+      // Custom header (front-end can send x-org-id)
+      req.headers['x-org-id'];
 
     if (Array.isArray(raw)) raw = raw[0];
     const optional = this.reflector.getAllAndOverride<boolean>(
@@ -27,10 +44,50 @@ export class OrgContextGuard implements CanActivate {
       [context.getHandler(), context.getClass()],
     );
     if (!raw) {
-      if (optional) return true;
-      throw new BadRequestException(
-        'Missing organization identifier (?orgId= or :orgId param)',
-      );
+      // Try to infer from JWT memberships if only one org or an 'activeOrgId' claim exists
+      const user = req.user;
+      if (user) {
+        const roles = user.roles || { org: [] };
+        const orgMemberships: any[] = Array.isArray(roles.org) ? roles.org : [];
+        // Support tokens that carry an activeOrgId claim directly
+        if (user.activeOrgId) {
+          raw = user.activeOrgId;
+        } else if (orgMemberships.length === 1 && orgMemberships[0]?.orgId) {
+          raw = orgMemberships[0].orgId;
+        }
+      }
+      if (!raw) {
+        // Fallback: if route has an :id for a resource we can resolve organizationId from DB (sessions/templates)
+        const idParam = req.params?.id;
+        const idNum = idParam ? Number(idParam) : undefined;
+        if (idNum && Number.isFinite(idNum)) {
+          try {
+            // Determine resource type from baseUrl
+            const base: string = req.baseUrl || '';
+            if (base.includes('/sessions')) {
+              const s = await this.prisma.assessmentSession.findUnique({
+                where: { id: idNum },
+                select: { organizationId: true },
+              });
+              if (s) raw = s.organizationId;
+            } else if (base.includes('/templates')) {
+              const t = await this.prisma.assessmentTemplate.findUnique({
+                where: { id: idNum },
+                select: { createdByOrganizationId: true },
+              });
+              if (t?.createdByOrganizationId) raw = t.createdByOrganizationId;
+            }
+          } catch (_) {
+            // swallow - fallback only
+          }
+        }
+        if (!raw) {
+          if (optional) return true;
+          throw new BadRequestException(
+            'Missing organization identifier (?orgId=, ?organizationId=, body.organizationId or inferable membership)',
+          );
+        }
+      }
     }
     const parsed = Number(raw);
     if (!parsed || Number.isNaN(parsed) || parsed <= 0) {
@@ -51,9 +108,21 @@ export class OrgContextGuard implements CanActivate {
     const orgMemberships: any[] = Array.isArray(roles.org) ? roles.org : [];
     const hasOrg = orgMemberships.some((m) => {
       if (!m) return false;
-      if (typeof m.orgId === 'number') return m.orgId === parsed; // numeric form
-      if (typeof m.orgId === 'string') return Number(m.orgId) === parsed; // string form
-      return false;
+      // Supported shapes:
+      // { orgId }
+      // { organizationId }
+      // { org: { id } }
+      // { organization: { id } }
+      // primitive id (rare)
+      let oid: any = undefined;
+      if (typeof m === 'number' || typeof m === 'string') oid = m;
+      else if (m.orgId !== undefined) oid = m.orgId;
+      else if (m.organizationId !== undefined) oid = m.organizationId;
+      else if (m.org?.id !== undefined) oid = m.org.id;
+      else if (m.organization?.id !== undefined) oid = m.organization.id;
+      if (oid === undefined) return false;
+      const num = Number(oid);
+      return Number.isFinite(num) && num === parsed;
     });
     if (!hasOrg) {
       if (optional) return true; // allow optional endpoints to proceed silently

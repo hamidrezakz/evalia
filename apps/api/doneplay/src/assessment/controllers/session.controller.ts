@@ -7,6 +7,8 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
+  Req,
 } from '@nestjs/common';
 import { SessionService } from '../services/session.service';
 import {
@@ -17,25 +19,33 @@ import {
   UserQuestionsQueryDto,
 } from '../dto/session.dto';
 import { Roles } from '../../common/roles.decorator';
-import { Req, ForbiddenException } from '@nestjs/common';
+import { ForbiddenException } from '@nestjs/common';
+import { OrgContextGuard } from '../../common/org-context.guard';
+import { OrgId } from '../../common/org-id.decorator';
 import { Request } from 'express';
 
 @Controller('sessions')
+@UseGuards(OrgContextGuard)
 export class SessionController {
   constructor(private readonly service: SessionService) {}
 
   @Post()
-  @Roles({ any: ['ORG:OWNER', 'ORG:MANAGER', 'ANALYSIS_MANAGER'] })
-  create(@Body() dto: CreateSessionDto) {
-    return this.service.create(dto);
+  @Roles({
+    any: ['ORG:OWNER', 'ORG:MANAGER', 'ANALYSIS_MANAGER', 'SUPER_ADMIN'],
+  })
+  create(
+    @Body() dto: CreateSessionDto,
+    @OrgId() orgId: number,
+    @Req() req: any,
+  ) {
+    return this.service.create({ ...dto, organizationId: orgId } as any);
   }
 
   // Optional scoring service interface
   @Get()
-  @Roles({
-    any: ['ORG:OWNER', 'ORG:MANAGER', 'ANALYSIS_MANAGER', 'ORG:MEMBER'],
-  })
-  list(@Query() q: ListSessionQueryDto) {
+  // لیست جلسات (orgId اکنون توسط گارد استخراج می‌شود؛ اگر query.organizationId نبود ست می‌کنیم)
+  list(@Query() q: ListSessionQueryDto, @OrgId() orgId?: number) {
+    if (orgId && !q.organizationId) (q as any).organizationId = orgId;
     return this.service.list(q);
   }
 
@@ -56,14 +66,25 @@ export class SessionController {
   }
 
   @Patch(':id')
-  @Roles({ any: ['ORG:OWNER', 'ORG:MANAGER', 'ANALYSIS_MANAGER'] })
-  update(@Param('id') id: string, @Body() dto: UpdateSessionDto) {
-    return this.service.update(Number(id), dto);
+  @Roles({
+    any: ['ORG:OWNER', 'ORG:MANAGER', 'ANALYSIS_MANAGER', 'SUPER_ADMIN'],
+  })
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateSessionDto,
+    @OrgId() orgId: number,
+  ) {
+    return this.service.update(Number(id), {
+      ...dto,
+      organizationId: orgId,
+    } as any);
   }
 
   @Delete(':id')
-  // Only analysis manager can delete sessions (SUPER_ADMIN still bypasses via guard)
-  @Roles({ any: ['ANALYSIS_MANAGER'] })
+  // Extended delete permissions
+  @Roles({
+    any: ['ANALYSIS_MANAGER', 'ORG:OWNER', 'ORG:MANAGER', 'SUPER_ADMIN'],
+  })
   remove(@Param('id') id: string) {
     return this.service.softDelete(Number(id));
   }
@@ -75,6 +96,7 @@ export class SessionController {
     @Param('userId') userId: string,
     @Query() q: ListUserSessionsQueryDto,
     @Req() req: Request,
+    @OrgId() orgId?: number,
   ) {
     const authUser: any = (req as any).user;
     const targetId = Number(userId);
@@ -89,6 +111,7 @@ export class SessionController {
     if (!Number.isFinite(authId)) throw new ForbiddenException('unauthorized');
 
     // Self access always allowed
+    if (orgId && !q.organizationId) (q as any).organizationId = orgId;
     if (authId === targetId) {
       return this.service.listForUser(targetId, q);
     }

@@ -25,7 +25,9 @@ export class TemplateController {
   constructor(private readonly service: TemplateService) {}
 
   @Post()
-  @Roles({ any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER'] })
+  @Roles({
+    any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER', 'ORG:OWNER', 'ORG:MANAGER'],
+  })
   create(
     @Body() dto: CreateTemplateDto,
     @OrgId() orgId: number,
@@ -55,7 +57,9 @@ export class TemplateController {
   }
 
   @Patch(':id')
-  @Roles({ any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER'] })
+  @Roles({
+    any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER', 'ORG:OWNER', 'ORG:MANAGER'],
+  })
   update(
     @Param('id') id: string,
     @Body() dto: UpdateTemplateDto,
@@ -67,7 +71,9 @@ export class TemplateController {
   }
 
   @Delete(':id')
-  @Roles({ any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER'] })
+  @Roles({
+    any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER', 'ORG:OWNER', 'ORG:MANAGER'],
+  })
   remove(@Param('id') id: string, @OrgId() orgId: number, @Req() req: any) {
     const userId = req?.user?.userId;
     return this.service.softDelete(Number(id), orgId, userId);

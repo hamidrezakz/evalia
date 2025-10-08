@@ -20,7 +20,9 @@ import { OrgId } from '../../common/org-id.decorator';
 export class OptionSetController {
   constructor(private readonly service: OptionSetService) {}
 
-  @Roles({ any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER'] })
+  @Roles({
+    any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER', 'ORG:OWNER', 'ORG:MANAGER'],
+  })
   @Post()
   create(
     @Body() dto: CreateOptionSetDto,
@@ -43,7 +45,9 @@ export class OptionSetController {
     return this.service.getById(Number(id), orgId, userId);
   }
 
-  @Roles({ any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER'] })
+  @Roles({
+    any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER', 'ORG:OWNER', 'ORG:MANAGER'],
+  })
   @Patch(':id')
   update(
     @Param('id') id: string,
@@ -55,7 +59,9 @@ export class OptionSetController {
     return this.service.update(Number(id), dto, orgId, userId);
   }
 
-  @Roles({ any: ['SUPER_ADMIN'] })
+  @Roles({
+    any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER', 'ORG:OWNER', 'ORG:MANAGER'],
+  })
   @Delete(':id')
   remove(@Param('id') id: string, @OrgId() orgId: number, @Req() req: any) {
     const userId = req?.user?.userId;

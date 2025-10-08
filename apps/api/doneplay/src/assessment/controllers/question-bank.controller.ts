@@ -24,7 +24,9 @@ export class QuestionBankController {
   constructor(private readonly service: QuestionBankService) {}
 
   @Post()
-  @Roles({ any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER'] })
+  @Roles({
+    any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER', 'ORG:OWNER', 'ORG:MANAGER'],
+  })
   create(
     @Body() dto: CreateQuestionBankDto,
     @OrgId() orgId: number,
@@ -48,7 +50,9 @@ export class QuestionBankController {
   }
 
   @Patch(':id')
-  @Roles({ any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER'] })
+  @Roles({
+    any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER', 'ORG:OWNER', 'ORG:MANAGER'],
+  })
   update(
     @Param('id') id: string,
     @Body() dto: UpdateQuestionBankDto,
@@ -60,7 +64,9 @@ export class QuestionBankController {
   }
 
   @Delete(':id')
-  @Roles({ any: ['SUPER_ADMIN'] })
+  @Roles({
+    any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER', 'ORG:OWNER', 'ORG:MANAGER'],
+  })
   remove(@Param('id') id: string, @OrgId() orgId: number, @Req() req: any) {
     const userId = req?.user?.userId;
     return this.service.softDelete(Number(id), orgId, userId);
