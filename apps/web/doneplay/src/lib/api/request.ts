@@ -4,6 +4,8 @@ import { ApiError } from "./error";
 import { ensureRefreshed } from "./refresh";
 import { tokenStorage } from "@/lib/token-storage";
 import { ApiResponse, RequestOptions } from "./types";
+import { notifyError, notifySuccess } from "@/lib/notifications";
+import { getNotificationPrefs } from "@/lib/notification-prefs";
 
 // Default headers for all API requests
 const defaultHeaders: Record<string, string> = {
@@ -84,6 +86,8 @@ export async function apiRequest<TData = unknown, TBody = unknown>(
       if (typeof j.message === "string") message = j.message;
       else if (typeof j.error === "string") message = j.error;
     }
+    // Fire-and-forget toast
+    notifyError(message);
     throw new ApiError(message, res.status, json);
   }
   const envelope = apiResponseSchema.safeParse(json);
@@ -97,6 +101,7 @@ export async function apiRequest<TData = unknown, TBody = unknown>(
   if (responseSchema) {
     const inner = responseSchema.safeParse(envelope.data.data);
     if (!inner.success) {
+      notifyError("Inner data validation failed");
       throw new ApiError(
         "Inner data validation failed",
         res.status,
@@ -104,8 +109,84 @@ export async function apiRequest<TData = unknown, TBody = unknown>(
       );
     }
     // Attach validated inner data back to envelope
-    return { ...envelope.data, data: inner.data } as ApiResponse<TData>;
+    const resp = { ...envelope.data, data: inner.data } as ApiResponse<TData>;
+    // Auto success toast for non-GET
+    try {
+      const methodUpper = (
+        options.method || (options.body ? "POST" : "GET")
+      ).toUpperCase();
+      if (methodUpper !== "GET") {
+        const st = options.successToast;
+        const serverMsg = envelope.data.message;
+        const prefs = getNotificationPrefs();
+        const suppressed = prefs.suppressSuccess === true || st === false;
+        if (suppressed) {
+          // suppress
+        } else if (typeof st === "string") {
+          notifySuccess(st);
+        } else {
+          let msg = serverMsg ?? undefined;
+          const transformed = prefs.transformSuccessMessage?.({
+            method: methodUpper,
+            path,
+            serverMessage: msg ?? null,
+          });
+          if (typeof transformed === "string") msg = transformed;
+          if (transformed === null) {
+            // explicit suppress
+          } else {
+            const fallback =
+              methodUpper === "POST"
+                ? "با موفقیت ایجاد شد"
+                : methodUpper === "PUT" || methodUpper === "PATCH"
+                ? "با موفقیت ذخیره شد"
+                : methodUpper === "DELETE"
+                ? "با موفقیت حذف شد"
+                : "عملیات با موفقیت انجام شد";
+            notifySuccess(String(msg || fallback));
+          }
+        }
+      }
+    } catch {}
+    return resp;
   }
   // Always return the full envelope object
+  try {
+    const methodUpper = (
+      options.method || (options.body ? "POST" : "GET")
+    ).toUpperCase();
+    if (methodUpper !== "GET") {
+      const st = options.successToast;
+      const serverMsg = envelope.data.message;
+      const prefs = getNotificationPrefs();
+      const suppressed = prefs.suppressSuccess === true || st === false;
+      if (suppressed) {
+        // suppress
+      } else if (typeof st === "string") {
+        notifySuccess(st);
+      } else {
+        let msg = serverMsg ?? undefined;
+        const transformed = prefs.transformSuccessMessage?.({
+          method: methodUpper,
+          path,
+          serverMessage: msg ?? null,
+        });
+        if (typeof transformed === "string") msg = transformed;
+        if (transformed === null) {
+          // explicit suppress
+        } else {
+          const fallback =
+            methodUpper === "POST"
+              ? "با موفقیت ایجاد شد"
+              : methodUpper === "PUT" || methodUpper === "PATCH"
+              ? "با موفقیت ذخیره شد"
+              : methodUpper === "DELETE"
+              ? "با موفقیت حذف شد"
+              : "عملیات با موفقیت انجام شد";
+          notifySuccess(String(msg || fallback));
+        }
+      }
+    }
+  } catch {}
   return envelope.data as ApiResponse<TData>;
 }

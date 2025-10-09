@@ -4,6 +4,7 @@ import { ensureRefreshed } from "./refresh";
 import { tokenStorage } from "@/lib/token-storage";
 import { resolveApiBase } from "./helpers";
 import type { ApiResponse } from "./types";
+import { notifySuccess } from "@/lib/notifications";
 
 type MultipartOptions = {
   headers?: Record<string, string>;
@@ -82,10 +83,25 @@ export async function apiRequestMultipart<TData = unknown>(
     if (!parsed.success) {
       throw new Error("Inner data validation failed: " + parsed.error.message);
     }
-    return {
+    const result = {
       ...(envelope.data as any),
       data: parsed.data,
     } as ApiResponse<TData>;
+    try {
+      const serverMsg = (envelope.data as any)?.message as
+        | string
+        | null
+        | undefined;
+      notifySuccess(String(serverMsg || "با موفقیت آپلود شد"));
+    } catch {}
+    return result;
   }
+  try {
+    const serverMsg = (envelope.data as any)?.message as
+      | string
+      | null
+      | undefined;
+    notifySuccess(String(serverMsg || "با موفقیت آپلود شد"));
+  } catch {}
   return envelope.data as ApiResponse<TData>;
 }
