@@ -339,3 +339,29 @@ export async function listOrganizationParents(childOrganizationId: number) {
   );
   return res.data;
 }
+
+// ------------------------------
+// Public branding by slug (for org-specific login page)
+// ------------------------------
+
+export const OrganizationPublicBrandSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  slug: z.string(),
+  plan: z.string().optional(),
+  status: z.string().optional(),
+  avatarUrl: z.string().nullable().optional(),
+  locale: z.string().optional(),
+  timezone: z.string().optional(),
+});
+export type OrganizationPublicBrand = z.infer<
+  typeof OrganizationPublicBrandSchema
+>;
+
+export async function getOrganizationBySlugPublic(slug: string) {
+  return apiRequest<OrganizationPublicBrand>(
+    `/organizations/by-slug/${encodeURIComponent(slug)}/public`,
+    null,
+    OrganizationPublicBrandSchema
+  );
+}

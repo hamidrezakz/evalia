@@ -66,7 +66,8 @@ export async function checkIdentifier(phoneOrEmailRaw: string) {
 
 export async function loginWithPassword(
   identifierRaw: string,
-  password: string
+  password: string,
+  orgSlug?: string | null
 ) {
   const phone = toPhone(identifierRaw);
   const res = await apiRequest<
@@ -76,7 +77,7 @@ export async function loginWithPassword(
     "/auth/login/password",
     phoneSchema.merge(passwordSchema),
     loginPasswordDataSchema,
-    { body: { phone, password } }
+    { body: { phone, password, ...(orgSlug ? { orgSlug } : {}) } }
   );
   tokenStorage.set(res.data.tokens);
   return res;
@@ -97,14 +98,15 @@ export async function requestOtp(identifierRaw: string, purpose: string) {
 export async function verifyOtp(
   identifierRaw: string,
   purpose: string,
-  code: string
+  code: string,
+  orgSlug?: string | null
 ) {
   const phone = toPhone(identifierRaw);
   const res = await apiRequest<
     VerifyOtpData,
     { phone: string; purpose: string; code: string }
   >("/auth/otp/verify", otpVerifySchema, verifyOtpDataSchema, {
-    body: { phone, purpose, code },
+    body: { phone, purpose, code, ...(orgSlug ? { orgSlug } : {}) },
   });
   if (res.data.mode === "LOGIN") tokenStorage.set(res.data.tokens);
   return res;
@@ -114,7 +116,8 @@ export async function completeRegistration(
   signupToken: string,
   firstName: string,
   lastName: string,
-  password: string
+  password: string,
+  orgSlug?: string | null
 ) {
   const res = await apiRequest<
     CompleteRegistrationData,
@@ -128,7 +131,15 @@ export async function completeRegistration(
     "/auth/complete-registration",
     completeRegistrationSchema,
     completeRegistrationDataSchema,
-    { body: { signupToken, firstName, lastName, password } }
+    {
+      body: {
+        signupToken,
+        firstName,
+        lastName,
+        password,
+        ...(orgSlug ? { orgSlug } : {}),
+      },
+    }
   );
   tokenStorage.set(res.data.tokens);
   return res;

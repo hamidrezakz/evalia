@@ -30,6 +30,7 @@ import {
 } from './dto/relationship.dto';
 import { UseGuards } from '@nestjs/common';
 import { OrgCapabilityGuardFor } from '../common/org-capability.guard.factory';
+import { Public } from '../common/public.decorator';
 
 @Controller('organizations')
 export class OrganizationController {
@@ -58,6 +59,13 @@ export class OrganizationController {
   @Get(':id')
   get(@Param('id') id: string) {
     return this.service.findById(Number(id));
+  }
+
+  // Public branding for login by slug
+  @Public()
+  @Get('by-slug/:slug/public')
+  getBySlugPublic(@Param('slug') slug: string) {
+    return this.service.findBySlugPublic(slug);
   }
   @Roles({ any: ['SUPER_ADMIN'] })
   @Patch(':id')

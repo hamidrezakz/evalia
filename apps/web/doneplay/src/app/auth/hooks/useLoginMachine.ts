@@ -82,7 +82,10 @@ function reducer(state: State, action: Action): State {
   }
 }
 
-export function useLoginMachine(onSuccess: () => void) {
+export function useLoginMachine(
+  onSuccess: () => void,
+  orgSlug?: string | null
+) {
   const [state, dispatch] = useReducer(reducer, initial);
   const queryClient = useQueryClient();
 
@@ -203,8 +206,12 @@ export function useLoginMachine(onSuccess: () => void) {
   }, [state.phone, checkIdentifierMutation]);
 
   const doPasswordLogin = useCallback(() => {
-    loginMutation.mutate({ identifier: state.phone, password: state.password });
-  }, [state.phone, state.password, loginMutation]);
+    (loginMutation as any).mutate({
+      identifier: state.phone,
+      password: state.password,
+      orgSlug: orgSlug || null,
+    });
+  }, [state.phone, state.password, orgSlug, loginMutation]);
 
   const requestLoginOtp = useCallback(() => {
     // Force password reset flow for existing users via OTP
@@ -216,12 +223,13 @@ export function useLoginMachine(onSuccess: () => void) {
   }, [state.phone, requestOtpMutation]);
 
   const verifyLoginOtp = useCallback(() => {
-    verifyOtpMutation.mutate({
+    (verifyOtpMutation as any).mutate({
       identifier: state.phone,
       purpose: "LOGIN",
       code: state.otp,
+      orgSlug: orgSlug || null,
     });
-  }, [state.phone, state.otp, verifyOtpMutation]);
+  }, [state.phone, state.otp, orgSlug, verifyOtpMutation]);
 
   const submitResetOtp = useCallback(() => {
     resetPasswordMutation.mutate({
@@ -233,17 +241,19 @@ export function useLoginMachine(onSuccess: () => void) {
 
   const finishRegistration = useCallback(() => {
     if (!state.signupToken) return;
-    completeRegistrationMutation.mutate({
+    (completeRegistrationMutation as any).mutate({
       signupToken: state.signupToken,
       firstName: state.firstName,
       lastName: state.lastName,
       password: state.password,
+      orgSlug: orgSlug || null,
     });
   }, [
     state.signupToken,
     state.firstName,
     state.lastName,
     state.password,
+    orgSlug,
     completeRegistrationMutation,
   ]);
 

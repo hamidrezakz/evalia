@@ -201,6 +201,29 @@ export class OrganizationService {
     };
   }
 
+  async findBySlugPublic(slug: string) {
+    const org = await this.prisma.organization.findFirst({
+      where: { slug, deletedAt: null },
+      include: { avatarAsset: { select: { url: true } } },
+    });
+    if (!org)
+      throw new NotFoundException({
+        message: 'Organization not found',
+        code: 'ORG_NOT_FOUND',
+      });
+    return {
+      id: org.id,
+      name: (org as any).name,
+      slug: (org as any).slug,
+      plan: (org as any).plan,
+      status: (org as any).status,
+      avatarUrl: (org as any).avatarAsset?.url ?? null,
+      // Optional minimal brand info; extend later if needed
+      locale: (org as any).locale,
+      timezone: (org as any).timezone,
+    };
+  }
+
   async update(id: number, dto: UpdateOrganizationDto) {
     await this.findById(id);
     try {

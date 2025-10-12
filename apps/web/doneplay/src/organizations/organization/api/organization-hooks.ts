@@ -27,6 +27,7 @@ import {
   listOrganizationParents,
   createOrganizationRelationship,
   deleteOrganizationRelationship,
+  getOrganizationBySlugPublic,
 } from "./organization.api";
 import { orgKeys } from "./organization-query-keys";
 import type {
@@ -441,5 +442,23 @@ export function useDeleteOrganizationRelationship() {
         queryKey: orgKeys.parents(input.childOrganizationId),
       });
     },
+  });
+}
+
+// -------- Public branding (by slug) --------
+
+export function useOrganizationBrandBySlug(
+  slug: string | null,
+  enabled = true
+) {
+  return useQuery({
+    queryKey: ["organizations", "brand-by-slug", slug || "-"],
+    queryFn: async () => {
+      if (!slug) throw new Error("No slug provided");
+      const res = await getOrganizationBySlugPublic(slug);
+      return (res as any)?.data ? (res as any).data : (res as any);
+    },
+    enabled: !!slug && enabled,
+    staleTime: 5 * 60 * 1000,
   });
 }

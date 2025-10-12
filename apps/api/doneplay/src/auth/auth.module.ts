@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { resolveAccessSecret } from './auth.constants';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -15,9 +15,11 @@ import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { OptionalJwtGuard } from '../common/optional-jwt.guard';
 import { SmsService } from '../common/sms/sms.service';
+import { OrganizationModule } from '../organization/organization.module';
 
 @Module({
   imports: [
+    forwardRef(() => OrganizationModule),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     // Use registerAsync so that .env is loaded by ConfigModule BEFORE we read secret
     JwtModule.registerAsync({
