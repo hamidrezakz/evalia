@@ -18,6 +18,7 @@ import {
 import { Roles } from '../../common/roles.decorator';
 import { OrgContextGuard } from '../../common/org-context.guard';
 import { OrgId } from '../../common/org-id.decorator';
+import { OrgContext } from '../../common/org-context.decorator';
 
 @Controller('assignments')
 @UseGuards(OrgContextGuard)
@@ -28,17 +29,29 @@ export class AssignmentController {
   @Roles({
     any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER', 'ORG:OWNER', 'ORG:MANAGER'],
   })
-  add(@Body() dto: AddAssignmentDto, @OrgId() orgId: number, @Req() _req: any) {
+  @OrgContext({ requireOrgRoles: ['OWNER', 'MANAGER'] })
+  async add(
+    @Body() dto: AddAssignmentDto,
+    @OrgId() orgId: number,
+    @Req() _req: any,
+  ) {
     // orgId validated by guard; session organization consistency validated indirectly via service.ensureSession
-    return this.service.add(dto);
+    const created = await this.service.add(dto);
+    return { data: created, message: 'تخصیص انجام شد' } as any;
   }
 
   @Post('bulk')
   @Roles({
     any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER', 'ORG:OWNER', 'ORG:MANAGER'],
   })
-  bulk(@Body() dto: BulkAssignDto, @OrgId() _orgId: number, @Req() _req: any) {
-    return this.service.bulkAssign(dto);
+  @OrgContext({ requireOrgRoles: ['OWNER', 'MANAGER'] })
+  async bulk(
+    @Body() dto: BulkAssignDto,
+    @OrgId() _orgId: number,
+    @Req() _req: any,
+  ) {
+    const res = await this.service.bulkAssign(dto);
+    return { data: res, message: 'تخصیص‌ها ثبت شدند' } as any;
   }
 
   @Get('session/:sessionId')
@@ -59,19 +72,23 @@ export class AssignmentController {
   @Roles({
     any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER', 'ORG:OWNER', 'ORG:MANAGER'],
   })
-  update(
+  @OrgContext({ requireOrgRoles: ['OWNER', 'MANAGER'] })
+  async update(
     @Param('id') id: string,
     @Body() dto: UpdateAssignmentDto,
     @OrgId() _orgId: number,
   ) {
-    return this.service.update(Number(id), dto);
+    const updated = await this.service.update(Number(id), dto);
+    return { data: updated, message: 'تخصیص بروزرسانی شد' } as any;
   }
 
   @Delete(':id')
   @Roles({
     any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER', 'ORG:OWNER', 'ORG:MANAGER'],
   })
-  remove(@Param('id') id: string, @OrgId() _orgId: number) {
-    return this.service.remove(Number(id));
+  @OrgContext({ requireOrgRoles: ['OWNER', 'MANAGER'] })
+  async remove(@Param('id') id: string, @OrgId() _orgId: number) {
+    const res = await this.service.remove(Number(id));
+    return { data: res, message: 'تخصیص حذف شد' } as any;
   }
 }

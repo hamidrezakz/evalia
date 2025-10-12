@@ -23,6 +23,7 @@ import { ForbiddenException } from '@nestjs/common';
 import { OrgContextGuard } from '../../common/org-context.guard';
 import { OrgId } from '../../common/org-id.decorator';
 import { Request } from 'express';
+import { OrgContext } from '../../common/org-context.decorator';
 
 @Controller('sessions')
 @UseGuards(OrgContextGuard)
@@ -33,12 +34,17 @@ export class SessionController {
   @Roles({
     any: ['ORG:OWNER', 'ORG:MANAGER', 'ANALYSIS_MANAGER', 'SUPER_ADMIN'],
   })
-  create(
+  @OrgContext({ requireOrgRoles: ['OWNER', 'MANAGER'] })
+  async create(
     @Body() dto: CreateSessionDto,
     @OrgId() orgId: number,
     @Req() req: any,
   ) {
-    return this.service.create({ ...dto, organizationId: orgId } as any);
+    const created = await this.service.create({
+      ...dto,
+      organizationId: orgId,
+    } as any);
+    return { data: created, message: 'جلسه ایجاد شد' } as any;
   }
 
   // Optional scoring service interface
@@ -73,15 +79,17 @@ export class SessionController {
   @Roles({
     any: ['ORG:OWNER', 'ORG:MANAGER', 'ANALYSIS_MANAGER', 'SUPER_ADMIN'],
   })
-  update(
+  @OrgContext({ requireOrgRoles: ['OWNER', 'MANAGER'] })
+  async update(
     @Param('id') id: string,
     @Body() dto: UpdateSessionDto,
     @OrgId() orgId: number,
   ) {
-    return this.service.update(Number(id), {
+    const updated = await this.service.update(Number(id), {
       ...dto,
       organizationId: orgId,
     } as any);
+    return { data: updated, message: 'جلسه بروزرسانی شد' } as any;
   }
 
   @Delete(':id')
@@ -89,8 +97,10 @@ export class SessionController {
   @Roles({
     any: ['ANALYSIS_MANAGER', 'ORG:OWNER', 'ORG:MANAGER', 'SUPER_ADMIN'],
   })
-  remove(@Param('id') id: string) {
-    return this.service.softDelete(Number(id));
+  @OrgContext({ requireOrgRoles: ['OWNER', 'MANAGER'] })
+  async remove(@Param('id') id: string, @OrgId() _orgId: number) {
+    const res = await this.service.softDelete(Number(id));
+    return { data: res, message: 'جلسه حذف شد' } as any;
   }
 
   // --- User-centric endpoints ---

@@ -19,13 +19,15 @@ export class ResponseController {
   constructor(private readonly service: ResponseService) {}
 
   @Post()
-  upsert(@Body() dto: CreateOrUpsertResponseDto) {
-    return this.service.upsert(dto);
+  async upsert(@Body() dto: CreateOrUpsertResponseDto) {
+    const res = await this.service.upsert(dto);
+    return { data: res, message: 'پاسخ ثبت شد' } as any;
   }
 
   @Post('bulk')
-  bulk(@Body() dto: BulkUpsertResponsesDto) {
-    return this.service.bulkUpsert(dto);
+  async bulk(@Body() dto: BulkUpsertResponsesDto) {
+    const res = await this.service.bulkUpsert(dto);
+    return { data: res, message: 'پاسخ‌ها ثبت شدند' } as any;
   }
 
   @Get()
@@ -44,7 +46,8 @@ export class ResponseController {
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.service.remove(Number(id));
+  async remove(@Param('id') id: string) {
+    const res = await this.service.remove(Number(id));
+    return { data: res, message: 'پاسخ حذف شد' } as any;
   }
 }

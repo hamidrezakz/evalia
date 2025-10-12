@@ -7,3 +7,5 @@ export * from "./SessionStateBadge";
 export * from "./PlatformRoleBadge";
 export * from "./OrgRoleBadge";
 export * from "./OrganizationCapabilityBadge";
+export * from "./QuestionTypeBadge";
+export * from "./TemplateStateBadge";

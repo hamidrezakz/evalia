@@ -17,6 +17,7 @@ import {
 import { Roles } from '../../common/roles.decorator';
 import { OrgContextGuard } from '../../common/org-context.guard';
 import { OrgId } from '../../common/org-id.decorator';
+import { OrgContext } from '../../common/org-context.decorator';
 
 @Controller('question-banks')
 @UseGuards(OrgContextGuard)
@@ -27,13 +28,15 @@ export class QuestionBankController {
   @Roles({
     any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER', 'ORG:OWNER', 'ORG:MANAGER'],
   })
-  create(
+  @OrgContext({ requireOrgRoles: ['OWNER', 'MANAGER'] })
+  async create(
     @Body() dto: CreateQuestionBankDto,
     @OrgId() orgId: number,
     @Req() req: any,
   ) {
     const userId = req?.user?.userId;
-    return this.service.create(dto, orgId, userId);
+    const created = await this.service.create(dto, orgId, userId);
+    return { data: created, message: 'بانک سوال ایجاد شد' } as any;
   }
 
   @Get()
@@ -53,23 +56,31 @@ export class QuestionBankController {
   @Roles({
     any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER', 'ORG:OWNER', 'ORG:MANAGER'],
   })
-  update(
+  @OrgContext({ requireOrgRoles: ['OWNER', 'MANAGER'] })
+  async update(
     @Param('id') id: string,
     @Body() dto: UpdateQuestionBankDto,
     @OrgId() orgId: number,
     @Req() req: any,
   ) {
     const userId = req?.user?.userId;
-    return this.service.update(Number(id), dto, orgId, userId);
+    const updated = await this.service.update(Number(id), dto, orgId, userId);
+    return { data: updated, message: 'بانک سوال بروزرسانی شد' } as any;
   }
 
   @Delete(':id')
   @Roles({
     any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER', 'ORG:OWNER', 'ORG:MANAGER'],
   })
-  remove(@Param('id') id: string, @OrgId() orgId: number, @Req() req: any) {
+  @OrgContext({ requireOrgRoles: ['OWNER', 'MANAGER'] })
+  async remove(
+    @Param('id') id: string,
+    @OrgId() orgId: number,
+    @Req() req: any,
+  ) {
     const userId = req?.user?.userId;
-    return this.service.softDelete(Number(id), orgId, userId);
+    const res = await this.service.softDelete(Number(id), orgId, userId);
+    return { data: res, message: 'بانک سوال حذف شد' } as any;
   }
 
   @Get(':id/questions-count')

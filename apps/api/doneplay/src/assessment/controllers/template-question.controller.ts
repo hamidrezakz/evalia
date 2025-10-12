@@ -23,6 +23,7 @@ import {
   TemplateAccessGuard,
   TemplateAccess,
 } from '../guards/template-access.guard';
+import { OrgContext } from '../../common/org-context.decorator';
 
 @Controller('template-questions')
 @UseGuards(OrgContextGuard, TemplateAccessGuard)
@@ -34,8 +35,10 @@ export class TemplateQuestionController {
     any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER', 'ORG:OWNER', 'ORG:MANAGER'],
   })
   @TemplateAccess('EDIT')
-  add(@Body() dto: AddTemplateQuestionDto, @OrgId() _orgId: number) {
-    return this.service.add(dto);
+  @OrgContext({ requireOrgRoles: ['OWNER', 'MANAGER'] })
+  async add(@Body() dto: AddTemplateQuestionDto, @OrgId() _orgId: number) {
+    const created = await this.service.add(dto);
+    return { data: created, message: 'سوال به الگو اضافه شد' } as any;
   }
 
   @Get(':sectionId')
@@ -49,12 +52,14 @@ export class TemplateQuestionController {
     any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER', 'ORG:OWNER', 'ORG:MANAGER'],
   })
   @TemplateAccess('EDIT')
-  update(
+  @OrgContext({ requireOrgRoles: ['OWNER', 'MANAGER'] })
+  async update(
     @Param('id') id: string,
     @Body() dto: UpdateTemplateQuestionDto,
     @OrgId() _orgId: number,
   ) {
-    return this.service.update(Number(id), dto);
+    const updated = await this.service.update(Number(id), dto);
+    return { data: updated, message: 'سوال الگو بروزرسانی شد' } as any;
   }
 
   @Post(':sectionId/bulk-set')
@@ -62,12 +67,14 @@ export class TemplateQuestionController {
     any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER', 'ORG:OWNER', 'ORG:MANAGER'],
   })
   @TemplateAccess('EDIT')
-  bulk(
+  @OrgContext({ requireOrgRoles: ['OWNER', 'MANAGER'] })
+  async bulk(
     @Param('sectionId') sectionId: string,
     @Body() dto: BulkSetSectionQuestionsDto,
     @OrgId() _orgId: number,
   ) {
-    return this.service.bulkSet(Number(sectionId), dto.items);
+    const res = await this.service.bulkSet(Number(sectionId), dto.items);
+    return { data: res, message: 'سوال‌های بخش تنظیم شدند' } as any;
   }
 
   @Delete(':id')
@@ -75,8 +82,10 @@ export class TemplateQuestionController {
     any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER', 'ORG:OWNER', 'ORG:MANAGER'],
   })
   @TemplateAccess('EDIT')
-  remove(@Param('id') id: string, @OrgId() _orgId: number) {
-    return this.service.remove(Number(id));
+  @OrgContext({ requireOrgRoles: ['OWNER', 'MANAGER'] })
+  async remove(@Param('id') id: string, @OrgId() _orgId: number) {
+    const res = await this.service.remove(Number(id));
+    return { data: res, message: 'سوال الگو حذف شد' } as any;
   }
 
   @Put(':id/restore')
@@ -84,7 +93,9 @@ export class TemplateQuestionController {
     any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER', 'ORG:OWNER', 'ORG:MANAGER'],
   })
   @TemplateAccess('EDIT')
-  restore(@Param('id') id: string, @OrgId() _orgId: number) {
-    return this.service.restore(Number(id));
+  @OrgContext({ requireOrgRoles: ['OWNER', 'MANAGER'] })
+  async restore(@Param('id') id: string, @OrgId() _orgId: number) {
+    const res = await this.service.restore(Number(id));
+    return { data: res, message: 'سوال الگو بازیابی شد' } as any;
   }
 }
