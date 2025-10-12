@@ -70,7 +70,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
             disableTransitionOnChange>
             {children}
           </ThemeProvider>
-          <Toaster richColors position="top-center" dir="rtl" />
+          <Toaster richColors position="bottom-right" dir="rtl" />
         </QueryProvider>
       </body>
     </html>

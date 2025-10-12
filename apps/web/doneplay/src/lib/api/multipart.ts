@@ -87,21 +87,21 @@ export async function apiRequestMultipart<TData = unknown>(
       ...(envelope.data as any),
       data: parsed.data,
     } as ApiResponse<TData>;
-    try {
-      const serverMsg = (envelope.data as any)?.message as
-        | string
-        | null
-        | undefined;
-      notifySuccess(String(serverMsg || "با موفقیت آپلود شد"));
-    } catch {}
-    return result;
-  }
-  try {
     const serverMsg = (envelope.data as any)?.message as
       | string
       | null
       | undefined;
-    notifySuccess(String(serverMsg || "با موفقیت آپلود شد"));
-  } catch {}
+    if (typeof serverMsg === "string" && serverMsg.trim().length > 0) {
+      notifySuccess(serverMsg);
+    }
+    return result;
+  }
+  const serverMsg = (envelope.data as any)?.message as
+    | string
+    | null
+    | undefined;
+  if (typeof serverMsg === "string" && serverMsg.trim().length > 0) {
+    notifySuccess(serverMsg);
+  }
   return envelope.data as ApiResponse<TData>;
 }

@@ -15,11 +15,6 @@ export interface RequestOptions<TBody> {
   auth?: boolean; // send Authorization header (default true)
   refreshOn401?: boolean; // auto refresh & retry once on 401 (default true)
   retry?: boolean; // internal flag to prevent infinite loops
-  // Auto success toast behavior for non-GET:
-  //  - true/undefined: show toast (uses server message if present, else a sensible default)
-  //  - false: suppress
-  //  - string: override message
-  successToast?: boolean | string;
 }
 
 // Pagination meta info for list endpoints

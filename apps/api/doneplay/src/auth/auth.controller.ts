@@ -19,26 +19,42 @@ export class AuthController {
 
   @Public()
   @Post('check-identifier')
-  checkIdentifier(@Body() dto: CheckIdentifierDto) {
-    return this.auth.checkIdentifier(dto);
+  async checkIdentifier(@Body() dto: CheckIdentifierDto) {
+    const res = await this.auth.checkIdentifier(dto);
+    return {
+      data: res,
+      message: res.exists ? 'کاربر موجود است' : 'کاربر موجود نیست',
+    };
   }
 
   @Public()
   @Post('login/password')
-  loginPassword(@Body() dto: LoginPasswordDto) {
-    return this.auth.loginPassword(dto);
+  async loginPassword(@Body() dto: LoginPasswordDto) {
+    const res = await this.auth.loginPassword(dto);
+    return {
+      data: res,
+      message: 'ورود با موفقیت انجام شد',
+    };
   }
 
   @Public()
   @Post('otp/request')
-  requestOtp(@Body() dto: RequestOtpDto) {
-    return this.auth.requestOtp(dto);
+  async requestOtp(@Body() dto: RequestOtpDto) {
+    const res = await this.auth.requestOtp(dto);
+    return {
+      data: res,
+      message: 'کد تایید ارسال شد',
+    };
   }
 
   @Public()
   @Post('otp/verify')
-  verifyOtp(@Body() dto: VerifyOtpDto) {
-    return this.auth.verifyOtp(dto);
+  async verifyOtp(@Body() dto: VerifyOtpDto) {
+    const res = await this.auth.verifyOtp(dto);
+    return {
+      data: res,
+      message: res?.mode === 'LOGIN' ? 'ورود با موفقیت انجام شد' : null,
+    };
   }
 
   @Public()

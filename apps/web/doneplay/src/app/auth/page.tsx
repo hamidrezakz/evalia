@@ -34,6 +34,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { LoadingDots } from "@/components/ui/loading-dots";
+// Notification preferences removed; success toasts are shown only when server sends message
 
 function LoginPage() {
   const router = useRouter();
@@ -47,6 +48,8 @@ function LoginPage() {
   useEffect(() => {
     focusRef.current?.focus();
   }, [state.phase]);
+
+  // No page-level notification overrides: UI relies solely on server-provided messages
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -122,7 +125,7 @@ function LoginPage() {
     <div className="flex items-center min-h-[100svh] max-h-[100svh] p-4 relative overflow-hidden">
       {/* Unified decorative background */}
       <div className="pointer-events-none absolute inset-0" aria-hidden>
-         <HeroBackground variant="signal" showMasks={false} />
+        <HeroBackground variant="signal" showMasks={false} />
         {/* Auth specific center glow */}
         <RadialGlow className="opacity-40 md:opacity-60" />
         <BlurBlob
@@ -157,7 +160,7 @@ function LoginPage() {
                     دآن‌پلی
                   </div>
                   <div className="text-[9px] text-muted-foreground leading-snug">
-                    پلتفرم ارزیابی و توسعه عملکرد تیم‌ها
+                    doneplay{" "}
                   </div>
                 </div>
               </div>

@@ -25,3 +25,24 @@ export function notifySuccess(
     // noop
   }
 }
+
+export function notifyWarning(
+  message: string,
+  opts?: { description?: string }
+) {
+  try {
+    toast.warning(message || "هشدار", {
+      description: opts?.description,
+      duration: 3500,
+    });
+  } catch {}
+}
+
+export function notifyInfo(message: string, opts?: { description?: string }) {
+  try {
+    toast.info(message || "اطلاع", {
+      description: opts?.description,
+      duration: 2500,
+    });
+  } catch {}
+}
