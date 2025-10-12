@@ -3,6 +3,7 @@ import * as React from "react";
 import { Combobox } from "@/components/ui/combobox";
 import { HelpCircle, ChevronsUpDownIcon } from "lucide-react";
 import { QuestionTypeEnum } from "@/lib/enums";
+import { QuestionTypeBadge } from "@/components/status-badges";
 
 interface QuestionTypeComboboxProps {
   value: string | null;
@@ -50,6 +51,18 @@ export const QuestionTypeCombobox: React.FC<QuestionTypeComboboxProps> = ({
       leadingIcon={HelpCircle}
       trailingIcon={ChevronsUpDownIcon}
       emptyText="موردی یافت نشد"
+      renderItem={({ item, selected }) => (
+        <div className="flex items-center gap-2">
+          <QuestionTypeBadge
+            type={item.value as any}
+            size="xs"
+            tone={selected ? "solid" : "soft"}
+          />
+        </div>
+      )}
+      renderValue={({ item }) => (
+        <QuestionTypeBadge type={item.value as any} size="xs" tone="soft" />
+      )}
     />
   );
 };

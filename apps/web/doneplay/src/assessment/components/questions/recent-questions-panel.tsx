@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useQuestions } from "../../api/hooks";
 import { useOrgState } from "@/organizations/organization/context/org-context";
 import Link from "next/link";
+import { QuestionTypeBadge } from "@/components/status-badges";
 
 interface RecentQuestionsPanelProps {
   limit?: number;
@@ -52,9 +53,7 @@ export const RecentQuestionsPanel: React.FC<RecentQuestionsPanelProps> = ({
                 <span className="flex-1 truncate" title={q.text}>
                   {q.text}
                 </span>
-                <code className="px-1 rounded bg-muted text-[10px]">
-                  {q.type}
-                </code>
+                <QuestionTypeBadge type={q.type as any} size="xs" tone="soft" />
               </li>
             ))}
           </ul>
