@@ -12,6 +12,7 @@ import { UsersModule } from './users/users.module';
 import { AssessmentModule } from './assessment/assessment.module';
 import { AssetsModule } from './assets/assets.module';
 import { HealthModule } from './health/health.module';
+import { AvatarModule } from './avatar/avatar.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { HealthModule } from './health/health.module';
     AssessmentModule,
     AssetsModule,
     HealthModule,
+    AvatarModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],

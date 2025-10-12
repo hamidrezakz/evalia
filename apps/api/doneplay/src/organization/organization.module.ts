@@ -9,9 +9,12 @@ import { MembershipController } from './membership.controller';
 import { TeamMembershipService } from './team-membership.service';
 import { TeamMembershipController } from './team-membership.controller';
 import { AuthModule } from '../auth/auth.module';
+import { AssetsModule } from '../assets/assets.module';
+import { R2Service } from '../cloud/r2.service';
+import { OrgCapabilityGuard } from '../common/org-capability.guard';
 
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, AssetsModule],
   controllers: [
     OrganizationController,
     MembershipController,
@@ -24,6 +27,8 @@ import { AuthModule } from '../auth/auth.module';
     MembershipService,
     TeamService,
     TeamMembershipService,
+    OrgCapabilityGuard,
+    R2Service,
   ],
   exports: [
     OrganizationService,

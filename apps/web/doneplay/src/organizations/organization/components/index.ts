@@ -1,1 +1,1 @@
-export * from "./OrgSelectCombobox";
+export * from "../../../globalcomboxs/OrgSelectCombobox";

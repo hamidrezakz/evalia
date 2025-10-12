@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useAddMembersToTeam } from "@/organizations/team/api/team-members-hooks";
-import UserSelectCombobox from "@/users/components/UserSelectCombobox";
+import UserSelectCombobox from "@/globalcomboxs/UserSelectCombobox";
 import { Loader2, UserPlus, Trash2, Check, X } from "lucide-react";
 import { useUsersByIds } from "@/users/api/users-hooks";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";

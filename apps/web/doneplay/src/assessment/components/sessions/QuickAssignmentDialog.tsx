@@ -16,7 +16,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Users } from "lucide-react";
-import UserSelectCombobox from "@/users/components/UserSelectCombobox";
+import UserSelectCombobox from "@/globalcomboxs/UserSelectCombobox";
 import { ResponsePerspectiveEnum, type ResponsePerspective } from "@/lib/enums";
 import { useAddAssignment } from "@/assessment/api/sessions-hooks";
 

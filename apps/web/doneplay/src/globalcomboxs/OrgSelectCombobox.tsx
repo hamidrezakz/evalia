@@ -4,10 +4,6 @@ import { Combobox } from "@/components/ui/combobox";
 import { useOrganizations } from "@/organizations/organization/api/organization-hooks";
 import { Organization } from "@/organizations/organization/types/organization.types";
 import { Building2 } from "lucide-react";
-import {
-  OrganizationStatusBadge,
-  OrgPlanBadge,
-} from "@/components/status-badges";
 import { cn } from "@/lib/utils";
 
 /**

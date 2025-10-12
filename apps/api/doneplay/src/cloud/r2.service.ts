@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PutObjectCommand } from '@aws-sdk/client-s3';
+import { PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getR2Client, r2IsConfigured } from './r2.client';
 import * as crypto from 'crypto';
 
@@ -58,6 +58,54 @@ export class R2Service {
 
     const url = `${this.publicBase}/${key}`;
     return { key, url, size: buffer.length, contentType: mimeType };
+  }
+
+  /**
+   * Upload (or overwrite) an organization avatar at deterministic key: org-avatars/<slug>.<ext>
+   */
+  async uploadOrgAvatar(
+    buffer: Buffer,
+    opts: { slug: string; mimeType: string; extHint?: string },
+  ): Promise<R2UploadResult> {
+    if (!this.isActive()) throw new Error('R2 not configured');
+    const { slug, mimeType } = opts;
+    const ext = this.pickExt(opts.extHint, mimeType);
+    const safeSlug = String(slug)
+      .replace(/[^a-z0-9-]/gi, '')
+      .toLowerCase();
+    const key = `org-avatars/${safeSlug}.${ext}`;
+    try {
+      await getR2Client().send(
+        new PutObjectCommand({
+          Bucket: this.bucket,
+          Key: key,
+          Body: buffer,
+          ContentType: mimeType,
+          CacheControl: 'public, max-age=31536000, immutable',
+        }),
+      );
+    } catch (e: any) {
+      this.logger.error(
+        `R2 PutObject failed: bucket=${this.bucket} key=${key} code=${e?.name || e?.code} msg=${e?.message}`,
+      );
+      throw e;
+    }
+    const url = `${this.publicBase}/${key}`;
+    return { key, url, size: buffer.length, contentType: mimeType };
+  }
+
+  /** Delete an object by its key (e.g., avatars/123.jpg or org-avatars/acme.jpg). */
+  async deleteObject(key: string): Promise<void> {
+    if (!this.isActive()) return;
+    try {
+      await getR2Client().send(
+        new DeleteObjectCommand({ Bucket: this.bucket, Key: key }),
+      );
+    } catch (e: any) {
+      this.logger.warn(
+        `R2 DeleteObject failed (ignored): bucket=${this.bucket} key=${key} code=${e?.name || e?.code} msg=${e?.message}`,
+      );
+    }
   }
 
   private pickExt(extHint: string | undefined, mimeType: string): string {

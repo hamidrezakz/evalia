@@ -22,7 +22,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { parseJalali, formatJalali } from "@/lib/jalali-date";
 import { Button } from "@/components/ui/button";
 import { UserStatusBadge } from "@/components/status-badges/UserStatusBadge";
-import { uploadAvatar, updateUserAvatar } from "@/users/api/avatar.api";
+import { uploadMyAvatar } from "@/users/api/user-avatar.api";
 import { useQueryClient } from "@tanstack/react-query";
 import { usersKeys } from "@/users/api/users-query-keys";
 import { useAvatarImage } from "@/users/api/useAvatarImage";
@@ -140,9 +140,8 @@ export function DashboardUserHeaderPanel({
     );
     (async () => {
       try {
-        const asset = await uploadAvatar(file);
+        const asset = await uploadMyAvatar(file);
         if (typeof userId === "number") {
-          await updateUserAvatar(userId, asset.id as any);
           toast.success("تصویر پروفایل با موفقیت ذخیره شد.");
           await qc.invalidateQueries({ queryKey: usersKeys.byId(userId) });
         }

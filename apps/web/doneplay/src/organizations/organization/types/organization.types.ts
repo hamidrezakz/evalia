@@ -33,6 +33,8 @@ export const OrganizationSchema = z.object({
   createdAt: z.string(),
   deletedAt: z.string().nullable().optional(),
   membership: OrganizationMembershipSchema.optional().nullable(),
+  // Avatar URL (optional; provided when available)
+  avatarUrl: z.string().nullable().optional(),
   // --- fields from backend response ---
   primaryOwnerId: z.number().nullable().optional(),
   settings: z.record(z.string(), z.any()).optional().nullable(),
