@@ -159,7 +159,7 @@ function LoginPage() {
           <Card className="w-full max-w-sm bg-accent/65 transition-all py-8">
             <CardHeader className="space-y-3 justify-between flex items-top">
               <div className="flex items-center justify-center p-0 m-0 mt-[-0.8rem] gap-2">
-                <Avatar className="size-11 rounded-lg">
+                <Avatar className="size-10 rounded-lg">
                   {brandQ.isLoading ? (
                     <AvatarFallback className="bg-muted animate-pulse" />
                   ) : orgAvatarSrc ? (
