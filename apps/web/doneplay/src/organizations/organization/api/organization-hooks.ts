@@ -380,12 +380,19 @@ export function useRemoveOrganizationCapability(orgId: number) {
 
 // -------- Relationships --------
 
-export function useOrganizationChildren(orgId: number | null, enabled = true) {
+export function useOrganizationChildren(
+  orgId: number | null,
+  enabled = true,
+  params?: Partial<Record<string, unknown>>
+) {
   return useQuery({
-    queryKey: orgKeys.children(orgId || -1),
+    queryKey: [
+      ...orgKeys.children(orgId || -1),
+      params ? JSON.stringify(params) : "all",
+    ],
     queryFn: () => {
       if (!orgId) throw new Error("No organization id");
-      return listOrganizationChildren(orgId);
+      return listOrganizationChildren(orgId, (params || {}) as any);
     },
     enabled: !!orgId && enabled,
     staleTime: STALE_TIME_DETAIL,

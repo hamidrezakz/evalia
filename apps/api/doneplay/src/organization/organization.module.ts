@@ -11,7 +11,6 @@ import { TeamMembershipController } from './team-membership.controller';
 import { AuthModule } from '../auth/auth.module';
 import { AssetsModule } from '../assets/assets.module';
 import { R2Service } from '../cloud/r2.service';
-import { OrgCapabilityGuard } from '../common/org-capability.guard';
 
 @Module({
   imports: [AuthModule, AssetsModule],
@@ -27,7 +26,6 @@ import { OrgCapabilityGuard } from '../common/org-capability.guard';
     MembershipService,
     TeamService,
     TeamMembershipService,
-    OrgCapabilityGuard,
     R2Service,
   ],
   exports: [

@@ -1,4 +1,4 @@
-import { IsIn, IsInt, Min } from 'class-validator';
+import { IsIn, IsInt, Min, IsBoolean, IsOptional } from 'class-validator';
 
 const REL_TYPES = [
   'PARENT_CHILD',
@@ -21,6 +21,8 @@ export class CreateRelationshipDto {
   relationshipType!: RelationshipTypeLiteral;
 
   // Optional toggle whether child inherits resources operationally (defaults true at DB)
+  @IsOptional()
+  @IsBoolean()
   cascadeResources?: boolean;
 }
 

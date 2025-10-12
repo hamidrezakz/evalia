@@ -28,7 +28,8 @@ import {
   CreateRelationshipDto,
   DeleteRelationshipDto,
 } from './dto/relationship.dto';
-import { RequireOrgCapability } from '../common/require-org-capability.decorator';
+import { UseGuards } from '@nestjs/common';
+import { OrgCapabilityGuardFor } from '../common/org-capability.guard.factory';
 
 @Controller('organizations')
 export class OrganizationController {
@@ -103,22 +104,34 @@ export class OrganizationController {
 
   // ---------- Relationships ----------
   // Requires parent to have MASTER capability
-  @Roles({ any: ['SUPER_ADMIN'] })
+  @UseGuards(
+    OrgCapabilityGuardFor('MASTER', {
+      source: 'body',
+      key: 'parentOrganizationId',
+    }),
+  )
   @Post('relationships')
   createRelationship(@Body() dto: CreateRelationshipDto) {
-    // Optionally guard can verify parent capability if we pass id via body; do in service-level checks for now
     return this.service.createRelationship(dto);
   }
 
-  @Roles({ any: ['SUPER_ADMIN'] })
+  @UseGuards(
+    OrgCapabilityGuardFor('MASTER', {
+      source: 'body',
+      key: 'parentOrganizationId',
+    }),
+  )
   @Delete('relationships')
   deleteRelationship(@Body() dto: DeleteRelationshipDto) {
     return this.service.deleteRelationship(dto);
   }
 
   @Get(':id/children')
-  listChildren(@Param('id') id: string) {
-    return this.service.listChildren(Number(id));
+  listChildren(
+    @Param('id') id: string,
+    @Query() query: ListOrganizationsQueryDto,
+  ) {
+    return this.service.listChildren(Number(id), query);
   }
 
   @Get(':id/parents')

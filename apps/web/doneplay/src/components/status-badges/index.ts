@@ -6,3 +6,4 @@ export * from "./AssessmentStateBadge";
 export * from "./SessionStateBadge";
 export * from "./PlatformRoleBadge";
 export * from "./OrgRoleBadge";
+export * from "./OrganizationCapabilityBadge";

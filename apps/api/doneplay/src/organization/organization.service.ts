@@ -368,13 +368,74 @@ export class OrganizationService {
     return { data: { id: existing.id }, message: 'رابطه حذف شد' };
   }
 
-  async listChildren(parentOrganizationId: number) {
+  async listChildren(
+    parentOrganizationId: number,
+    query?: ListOrganizationsQueryDto,
+  ) {
     await this.findById(parentOrganizationId);
-    const items = await this.prisma.organizationRelationship.findMany({
-      where: { parentOrganizationId },
+    const { q, status, plan } = (query || {}) as ListOrganizationsQueryDto;
+    const childWhere: Prisma.OrganizationWhereInput = {
+      deletedAt: null,
+      ...(status ? { status } : {}),
+      ...(plan ? { plan } : {}),
+      ...(q
+        ? {
+            OR: [
+              { name: { contains: q, mode: 'insensitive' } },
+              { slug: { contains: q, mode: 'insensitive' } },
+            ],
+          }
+        : {}),
+    };
+    const rels = (await this.prisma.organizationRelationship.findMany({
+      where: { parentOrganizationId, child: childWhere as any },
       orderBy: { createdAt: 'asc' },
-      include: { child: true },
-    } as any);
+      include: {
+        child: {
+          include: { avatarAsset: { select: { url: true } } },
+        },
+      },
+    } as any)) as any[];
+
+    const childIds = rels
+      .map((r) => r.child?.id)
+      .filter((v): v is number => typeof v === 'number');
+    if (childIds.length === 0) return { data: rels, message: null };
+
+    // Aggregate counts for child organizations
+    const [memberCounts, teamCounts] = await Promise.all([
+      this.prisma.organizationMembership.groupBy({
+        by: ['organizationId'],
+        where: { organizationId: { in: childIds }, deletedAt: null },
+        _count: { organizationId: true },
+      }),
+      this.prisma.team.groupBy({
+        by: ['organizationId'],
+        where: { organizationId: { in: childIds }, deletedAt: null },
+        _count: { organizationId: true },
+      }),
+    ]);
+    const memberCountMap = new Map<number, number>();
+    memberCounts.forEach((r: any) =>
+      memberCountMap.set(r.organizationId, r._count.organizationId),
+    );
+    const teamCountMap = new Map<number, number>();
+    teamCounts.forEach((r: any) =>
+      teamCountMap.set(r.organizationId, r._count.organizationId),
+    );
+
+    const items = rels.map((rel) => ({
+      ...rel,
+      child: rel.child
+        ? {
+            ...rel.child,
+            avatarUrl: (rel.child as any).avatarAsset?.url ?? null,
+            membersCount: memberCountMap.get(rel.child.id) || 0,
+            teamsCount: teamCountMap.get(rel.child.id) || 0,
+          }
+        : null,
+    }));
+
     return { data: items, message: null };
   }
 
@@ -402,15 +463,15 @@ export class OrganizationService {
       orderBy,
       orderDir,
     } = query;
-    // Get distinct parentOrganizationId values
-    const distinctParents = await this.prisma.organizationRelationship.findMany(
-      {
-        distinct: ['parentOrganizationId'],
-        select: { parentOrganizationId: true },
-      },
-    );
-    const parentIds = distinctParents
-      .map((r) => r.parentOrganizationId)
+    // Determine parent organizations by capability (MASTER)
+    const parentCaps =
+      await this.prisma.organizationCapabilityAssignment.findMany({
+        where: { capability: 'MASTER' as any, active: true },
+        distinct: ['organizationId'],
+        select: { organizationId: true },
+      });
+    const parentIds = parentCaps
+      .map((r) => r.organizationId)
       .filter((v): v is number => typeof v === 'number');
     if (parentIds.length === 0) {
       return {
@@ -440,18 +501,59 @@ export class OrganizationService {
         : {}),
     };
     const total = await this.prisma.organization.count({ where });
-    const items = await this.prisma.organization.findMany({
+    const itemsRaw = await this.prisma.organization.findMany({
       where,
       skip: (page - 1) * pageSize,
       take: pageSize,
       orderBy: { [orderBy || 'createdAt']: orderDir || 'desc' },
       include: { avatarAsset: { select: { url: true } } },
     });
+    // Aggregate counts like list()
+    const orgIds = itemsRaw.map((o) => o.id);
+    const [memberCounts, teamCounts] = await Promise.all([
+      this.prisma.organizationMembership.groupBy({
+        by: ['organizationId'],
+        where: { organizationId: { in: orgIds }, deletedAt: null },
+        _count: { organizationId: true },
+      }),
+      this.prisma.team.groupBy({
+        by: ['organizationId'],
+        where: { organizationId: { in: orgIds }, deletedAt: null },
+        _count: { organizationId: true },
+      }),
+    ]);
+    const memberCountMap = new Map<number, number>();
+    memberCounts.forEach((r: any) =>
+      memberCountMap.set(r.organizationId, r._count.organizationId),
+    );
+    const teamCountMap = new Map<number, number>();
+    teamCounts.forEach((r: any) =>
+      teamCountMap.set(r.organizationId, r._count.organizationId),
+    );
+    const items = itemsRaw.map((o) => ({
+      id: o.id,
+      name: (o as any).name,
+      slug: (o as any).slug,
+      plan: (o as any).plan,
+      status: (o as any).status,
+      locale: (o as any).locale,
+      timezone: (o as any).timezone,
+      billingEmail: (o as any).billingEmail,
+      createdAt: (o as any).createdAt,
+      deletedAt: (o as any).deletedAt,
+      updatedAt: (o as any).updatedAt,
+      primaryOwnerId: (o as any).primaryOwnerId,
+      settings: (o as any).settings,
+      trialEndsAt: (o as any).trialEndsAt,
+      lockedAt: (o as any).lockedAt,
+      createdById: (o as any).createdById,
+      avatarUrl: (o as any).avatarAsset?.url ?? null,
+      membersCount: memberCountMap.get(o.id) || 0,
+      teamsCount: teamCountMap.get(o.id) || 0,
+    }));
+
     return {
-      data: items.map((o) => ({
-        ...o,
-        avatarUrl: (o as any).avatarAsset?.url ?? null,
-      })),
+      data: items,
       meta: {
         total,
         page,

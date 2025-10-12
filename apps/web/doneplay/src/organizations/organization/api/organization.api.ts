@@ -163,9 +163,16 @@ export async function listParentOrganizations(
   const res = await apiRequest(
     `/organizations/parents-only/list${qs ? `?${qs}` : ""}`,
     null,
-    organizationListEnvelopeSchema
+    null
   );
-  return res; // envelope { data, meta }
+  const validated = organizationListEnvelopeSchema.safeParse(res);
+  if (!validated.success) {
+    throw new Error(
+      "Parent organizations list response validation failed: " +
+        validated.error.message
+    );
+  }
+  return validated.data; // { data, meta }
 }
 
 // ------------------------------
@@ -309,9 +316,15 @@ export async function deleteOrganizationRelationship(
   );
 }
 
-export async function listOrganizationChildren(parentOrganizationId: number) {
+export async function listOrganizationChildren(
+  parentOrganizationId: number,
+  params: Partial<ListOrganizationsQuery> = {}
+) {
+  const parsed = ListOrganizationsQuerySchema.partial().safeParse(params);
+  if (!parsed.success) throw parsed.error;
+  const qs = buildQuery(params);
   const res = await apiRequest<OrganizationRelationship[]>(
-    `/organizations/${parentOrganizationId}/children`,
+    `/organizations/${parentOrganizationId}/children${qs ? `?${qs}` : ""}`,
     null,
     z.array(OrganizationRelationshipSchema)
   );

@@ -9,13 +9,25 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useCreateOrganization } from "../api/organization-hooks";
-import { OrgPlanEnum, LocaleEnum, OrganizationStatusEnum } from "@/lib/enums";
+import {
+  useCreateOrganization,
+  useCreateOrganizationRelationship,
+  useOrganizationCapabilities,
+} from "../api/organization-hooks";
+import {
+  OrgPlanEnum,
+  LocaleEnum,
+  OrganizationStatusEnum,
+  OrganizationCapabilityEnum,
+} from "@/lib/enums";
 import {
   OrgPlanBadge,
   OrganizationStatusBadge,
 } from "@/components/status-badges";
+import { OrganizationCapabilityBadge } from "@/components/status-badges";
 import { cn } from "@/lib/utils";
+import { useOrgState } from "../context/org-context";
+import { Badge } from "@/components/ui/badge";
 
 interface AddOrganizationDialogProps {
   open: boolean;
@@ -36,6 +48,21 @@ export default function AddOrganizationDialog({
   onOpenChange,
 }: AddOrganizationDialogProps) {
   const createMut = useCreateOrganization();
+  const relMut = useCreateOrganizationRelationship();
+  const { activeOrganizationId, organizations } = useOrgState();
+  const parentOrg = organizations.find(
+    (o: any) => o?.id === activeOrganizationId
+  );
+  const capsQ = useOrganizationCapabilities(
+    activeOrganizationId ?? null,
+    !!activeOrganizationId
+  );
+  const capabilities = (capsQ.data as any[]) || [];
+  const hasMasterCapability = !activeOrganizationId
+    ? true
+    : capabilities.some(
+        (c) => c?.capability === "MASTER" && (c?.active ?? true)
+      );
   const [form, setForm] = React.useState(initialState);
 
   React.useEffect(() => {
@@ -54,8 +81,24 @@ export default function AddOrganizationDialog({
         // status intentionally omitted unless backend later supports custom initial status
       },
       {
-        onSuccess: () => {
-          onOpenChange(false);
+        onSuccess: (res) => {
+          const newOrgId = (res as any)?.data?.id;
+          if (activeOrganizationId && newOrgId) {
+            // Create parent-child relationship automatically
+            relMut.mutate(
+              {
+                parentOrganizationId: activeOrganizationId,
+                childOrganizationId: newOrgId,
+                relationshipType: "PARENT_CHILD" as any,
+                cascadeResources: true,
+              },
+              {
+                onSettled: () => onOpenChange(false),
+              }
+            );
+          } else {
+            onOpenChange(false);
+          }
         },
       }
     );
@@ -72,6 +115,69 @@ export default function AddOrganizationDialog({
           <DialogTitle className="text-sm">افزودن سازمان جدید</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 text-right">
+          {/* Parent organization info */}
+          {activeOrganizationId ? (
+            <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-[11px]">
+              این سازمان به عنوان زیرمجموعه «
+              <span className="font-medium">
+                {parentOrg?.name || `#${activeOrganizationId}`}
+              </span>
+              » ثبت خواهد شد.
+            </div>
+          ) : (
+            <div className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-[11px] text-muted-foreground">
+              نکته: با انتخاب یک «سازمان فعال»، سازمان جدید به صورت خودکار به
+              عنوان زیرمجموعه آن ثبت می‌شود.
+            </div>
+          )}
+
+          {/* Active org capabilities status */}
+          {activeOrganizationId && (
+            <div className="rounded-md border p-3 text-[11px]">
+              <div className="mb-1 flex items-center justify-between">
+                <span className="font-medium">قابلیت‌های سازمان فعال</span>
+                {capsQ.isLoading && (
+                  <span className="text-muted-foreground">در حال دریافت…</span>
+                )}
+                {capsQ.error && (
+                  <span className="text-rose-600">خطا در دریافت قابلیت‌ها</span>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {capabilities.length > 0 ? (
+                  capabilities
+                    .slice()
+                    .sort(
+                      (a, b) =>
+                        Number(b?.active ?? true) - Number(a?.active ?? true)
+                    )
+                    .map((cap) => {
+                      const active = cap?.active ?? true;
+                      return (
+                        <OrganizationCapabilityBadge
+                          key={cap.capability}
+                          capability={cap.capability as any}
+                          active={active}
+                          tone={active ? "soft" : "outline"}
+                          size="xs"
+                        />
+                      );
+                    })
+                ) : (
+                  <span className="text-muted-foreground">
+                    قابلیتی ثبت نشده است
+                  </span>
+                )}
+              </div>
+              {!hasMasterCapability && !capsQ.isLoading && !capsQ.error && (
+                <div className="mt-2 rounded-md bg-rose-50 text-rose-700 border border-rose-200 px-2 py-1.5">
+                  سازمان فعال شما قابلیت «سازمان مادر (MASTER)» را ندارد. برای
+                  افزودن زیرسازمان، ابتدا این قابلیت را برای سازمان فعال فعال
+                  کنید.
+                </div>
+              )}
+            </div>
+          )}
           <div className="space-y-1">
             <label className="text-xs font-medium">نام *</label>
             <Input
@@ -230,15 +336,22 @@ export default function AddOrganizationDialog({
         <DialogFooter className="justify-start gap-2 pt-2">
           <Button
             size="sm"
-            disabled={!form.name.trim() || createMut.isPending}
+            disabled={
+              !form.name.trim() ||
+              createMut.isPending ||
+              relMut.isPending ||
+              (!!activeOrganizationId && !hasMasterCapability)
+            }
             onClick={handleSubmit}>
-            {createMut.isPending ? "در حال ثبت..." : "ایجاد"}
+            {createMut.isPending || relMut.isPending
+              ? "در حال ثبت..."
+              : "ایجاد"}
           </Button>
           <Button
             size="sm"
             variant="ghost"
             onClick={() => onOpenChange(false)}
-            disabled={createMut.isPending}>
+            disabled={createMut.isPending || relMut.isPending}>
             انصراف
           </Button>
         </DialogFooter>

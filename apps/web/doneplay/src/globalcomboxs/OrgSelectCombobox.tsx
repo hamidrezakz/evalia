@@ -1,10 +1,15 @@
 "use client";
 import * as React from "react";
 import { Combobox } from "@/components/ui/combobox";
-import { useOrganizations } from "@/organizations/organization/api/organization-hooks";
+import {
+  useOrganizations,
+  useParentOrganizations,
+} from "@/organizations/organization/api/organization-hooks";
 import { Organization } from "@/organizations/organization/types/organization.types";
 import { Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useAvatarImage } from "@/users/api/useAvatarImage";
 
 /**
  * Centralized Organization selector.
@@ -30,6 +35,12 @@ export interface OrgSelectComboboxProps {
   className?: string;
   /** Extra raw params passed to useOrganizations (e.g., { plan: 'PRO' }) */
   extraParams?: Partial<Record<string, unknown>>;
+  /** Show avatar/logo for each organization item (default true) */
+  showAvatar?: boolean;
+  /** Map an organization to its avatar URL (default uses org.avatarUrl) */
+  getAvatarUrl?: (org: Organization) => string | null | undefined;
+  /** When true, fetches only parent organizations and does NOT call useOrganizations */
+  parentsOnly?: boolean;
 }
 
 const DEBOUNCE = 300;
@@ -42,6 +53,9 @@ export function OrgSelectCombobox({
   pageSize = 50,
   className,
   extraParams,
+  showAvatar = true,
+  getAvatarUrl,
+  parentsOnly = false,
 }: OrgSelectComboboxProps) {
   const [search, setSearch] = React.useState("");
   const [debounced, setDebounced] = React.useState("");
@@ -57,12 +71,44 @@ export function OrgSelectCombobox({
     return p;
   }, [debounced, pageSize, extraParams]);
 
-  const { data, isLoading } = useOrganizations(params);
+  // Conditionally fetch either all organizations or only parent organizations (never both)
+  const { data: allData, isLoading: isLoadingAll } = useOrganizations(params, {
+    enabled: !parentsOnly,
+  });
+  const { data: parentsData, isLoading: isLoadingParents } =
+    useParentOrganizations(params, { enabled: !!parentsOnly });
+  const data = parentsOnly ? parentsData : allData;
+  const isLoading = parentsOnly ? isLoadingParents : isLoadingAll;
   const items: Organization[] = React.useMemo(() => {
     if (!data) return [];
     const arr = (data as any).data || data; // support envelope or direct array
     return Array.isArray(arr) ? (arr as Organization[]) : [];
   }, [data]);
+
+  // Small presentational row to render org with avatar
+  const OrgRow: React.FC<{ org: Organization }> = ({ org }) => {
+    const raw =
+      (getAvatarUrl ? getAvatarUrl(org) : (org as any).avatarUrl) || null;
+    const { src } = useAvatarImage(raw);
+    const initials = (org.name || "?")
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((p) => p[0])
+      .join("")
+      .toUpperCase();
+    return (
+      <span className="flex items-center gap-2 min-w-0">
+        <Avatar className="h-6 w-6 rounded-md border">
+          {src ? <AvatarImage src={src} alt={org.name} /> : null}
+          <AvatarFallback className="rounded-md text-[10px]">
+            {initials}
+          </AvatarFallback>
+        </Avatar>
+        <span className="truncate">{org.name}</span>
+      </span>
+    );
+  };
 
   return (
     <Combobox<Organization>
@@ -77,7 +123,7 @@ export function OrgSelectCombobox({
       searchable
       searchValue={search}
       onSearchChange={setSearch}
-      leadingIcon={Building2}
+      leadingIcon={showAvatar ? undefined : Building2}
       loading={isLoading}
       emptyText={debounced ? "یافت نشد" : "سازمانی وجود ندارد"}
       filter={(o, q) => {
@@ -85,6 +131,12 @@ export function OrgSelectCombobox({
         const hay = `${o.name}`.toLowerCase();
         return hay.includes(q.toLowerCase());
       }}
+      renderItem={showAvatar ? ({ item }) => <OrgRow org={item} /> : undefined}
+      renderValue={
+        showAvatar && value != null
+          ? ({ item }) => <OrgRow org={item} />
+          : undefined
+      }
     />
   );
 }
