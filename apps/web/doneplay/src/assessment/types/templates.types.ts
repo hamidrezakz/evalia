@@ -21,6 +21,7 @@ export const templateSchema = z.object({
   name: z.string(),
   description: z.string().nullable().optional(),
   state: templateStateEnum,
+  createdByOrganizationId: z.number().int().positive(),
   meta: z.any().optional(),
   createdAt: z.string(),
   updatedAt: z.string().optional(),

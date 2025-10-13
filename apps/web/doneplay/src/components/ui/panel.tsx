@@ -25,7 +25,7 @@ function Panel({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="panel"
       className={cn(
-        "bg-muted/60 dark:bg-muted/50 text-card-foreground flex flex-col gap-6 rounded-xl py-5",
+        "bg-muted/60 dark:bg-muted/50 text-card-foreground flex flex-col gap-6 rounded-xl py-5 overflow-hidden",
         className
       )}
       {...props}
@@ -86,7 +86,7 @@ function PanelContent({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="panel-content"
-      className={cn("px-5 text-sm flex", className)}
+      className={cn("px-5 text-sm flex flex-wrap", className)}
       {...props}
     />
   );

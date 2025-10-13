@@ -154,7 +154,7 @@ export function useCreateTemplateSection(orgId: number | null) {
       if (previous && Array.isArray(previous)) {
         const optimistic = {
           id: Math.random() * -1000000, // temp negative-ish id
-          name: vars.name || "بخش جدید",
+          title: vars.title || "بخش جدید",
           templateId: vars.templateId,
           description: vars.description || null,
           order: previous.length,

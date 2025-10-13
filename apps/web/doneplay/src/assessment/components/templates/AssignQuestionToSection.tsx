@@ -1,10 +1,9 @@
 "use client";
 import * as React from "react";
 import { useForm } from "react-hook-form";
-import { Plus, Edit2, CheckCircle2 } from "lucide-react";
+import { Plus, CheckCircle2, Hash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
   Panel,
@@ -30,6 +29,7 @@ import type {
 } from "@/assessment/types/templates.types";
 import type { Question } from "@/assessment/types/question-banks.types";
 import { ResponsePerspectiveEnum, type ResponsePerspective } from "@/lib/enums";
+import { ResponsePerspectiveBadge } from "@/components/status-badges";
 
 type FormVals = {
   sectionId: number | null;
@@ -39,21 +39,12 @@ type FormVals = {
   order: number | null;
 };
 
-function getZodEnumOptions(z: unknown): string[] {
-  const anyEnum: any = z as any;
-  if (Array.isArray(anyEnum?.options)) return anyEnum.options as string[];
-  if (anyEnum?.enum && typeof anyEnum.enum === "object") {
-    return Object.values(anyEnum.enum as Record<string, string>);
-  }
-  return [];
-}
+//
 
 import SectionCombobox from "../combobox/SectionCombobox";
 import QuestionSearchCombobox from "../combobox/QuestionSearchCombobox";
 import { QuestionBankCombobox } from "@/assessment/components/questions/create/question-bank-combobox";
-import { useQuestions, useUpdateQuestion } from "@/assessment/api/hooks";
 import { useOrgState } from "@/organizations/organization/context/org-context";
-import BankQuestionsPreview from "@/assessment/components/questions/bank-questions-preview";
 // Edit2 imported above with Plus
 
 export default function AssignQuestionToSection({
@@ -89,7 +80,6 @@ export default function AssignQuestionToSection({
 
   const addMut = useAddTemplateQuestion(activeOrganizationId);
   const [justAdded, setJustAdded] = React.useState(false);
-  const updateQuestion = useUpdateQuestion(activeOrganizationId);
   const { handleSubmit, setValue, watch, reset } = useForm<FormVals>({
     defaultValues: {
       sectionId: null,
@@ -102,6 +92,11 @@ export default function AssignQuestionToSection({
 
   const sectionId = watch("sectionId");
   const questionId = watch("questionId");
+  // Clear previously selected question when bank changes
+  React.useEffect(() => {
+    setValue("questionId", null);
+  }, [bankId, setValue]);
+
   const perspectives = watch("perspectives");
   const required = watch("required");
   const order = watch("order");
@@ -195,13 +190,17 @@ export default function AssignQuestionToSection({
               onChange={(id) => setBankId(id)}
               placeholder="انتخاب بانک سوال"
             />
-            <Label className="text-[11px] font-medium mt-2">سوال</Label>
-            <QuestionSearchCombobox
-              value={questionId}
-              onChange={(id) => setValue("questionId", id)}
-              placeholder="جستجو و انتخاب سوال"
-              bankId={bankId}
-            />
+            {bankId ? (
+              <>
+                <Label className="text-[11px] font-medium mt-2">سوال</Label>
+                <QuestionSearchCombobox
+                  value={questionId}
+                  onChange={(id) => setValue("questionId", id)}
+                  placeholder="جستجو و انتخاب سوال"
+                  bankId={bankId}
+                />
+              </>
+            ) : null}
           </div>
         </div>
 
@@ -211,14 +210,50 @@ export default function AssignQuestionToSection({
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Perspectives */}
-          <div className="md:col-span-2 space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
+          {/* Meta & ordering (right side on RTL) */}
+          <div className="md:col-span-4 space-y-5 order-1 md:order-none">
+            <div className="space-y-2">
+              <Label className="text-[11px] font-medium">الزامی بودن</Label>
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={required}
+                  onCheckedChange={(v) => setValue("required", Boolean(v))}
+                />
+                <span className="text-[10px] text-muted-foreground">
+                  اگر فعال باشد پاسخ ضروری است.
+                </span>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[11px] font-medium">ترتیب نمایش</Label>
+              <div className="relative">
+                <Hash className="h-3.5 w-3.5 text-muted-foreground absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  className="h-8 text-xs pr-7"
+                  value={order ?? ""}
+                  onChange={(e) => {
+                    const n = Number(e.target.value);
+                    setValue("order", Number.isFinite(n) ? n : null);
+                  }}
+                  placeholder="مثلا 0 یا 1"
+                />
+              </div>
+              <p className="text-[10px] text-muted-foreground leading-snug">
+                خالی = افزودن در انتهای لیست
+              </p>
+            </div>
+          </div>
+
+          {/* Perspectives (left side on RTL) */}
+          <div className="md:col-span-8 space-y-3">
             <div className="flex flex-col md:flex-row md:items-center md:gap-4 gap-2">
               <Label className="text-[11px] font-medium mb-1 md:mb-0">
                 نقش‌های پاسخ‌دهی
               </Label>
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex flex-wrap gap-1.5">
                 <Button
                   variant="outline"
                   size="sm"
@@ -259,56 +294,17 @@ export default function AssignQuestionToSection({
                       }}
                       className="h-4 w-4"
                     />
-                    <span>{ResponsePerspectiveEnum.t(p as any)}</span>
+                    <ResponsePerspectiveBadge
+                      value={p as ResponsePerspective}
+                    />
                   </label>
                 );
               })}
             </div>
           </div>
-
-          {/* Meta & ordering */}
-          <div className="space-y-5">
-            <div className="space-y-2">
-              <Label className="text-[11px] font-medium">الزامی بودن</Label>
-              <div className="flex items-center gap-2">
-                <Switch
-                  checked={required}
-                  onCheckedChange={(v) => setValue("required", Boolean(v))}
-                />
-                <span className="text-[10px] text-muted-foreground">
-                  اگر فعال باشد پاسخ ضروری است.
-                </span>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-[11px] font-medium">ترتیب نمایش</Label>
-              <Input
-                type="number"
-                inputMode="numeric"
-                className="h-8 text-xs"
-                value={order ?? ""}
-                onChange={(e) => {
-                  const n = Number(e.target.value);
-                  setValue("order", Number.isFinite(n) ? n : null);
-                }}
-                placeholder="مثلا 0 یا 1"
-              />
-              <p className="text-[10px] text-muted-foreground leading-snug">
-                خالی = افزودن در انتهای لیست
-              </p>
-            </div>
-          </div>
         </div>
 
-        {bankId ? (
-          <div className="mt-4">
-            <BankQuestionsPreview
-              bankId={bankId}
-              editable
-              onPick={(qid) => setValue("questionId", qid)}
-            />
-          </div>
-        ) : null}
+        {/* Removed external bank questions preview to keep selection within combobox */}
       </PanelContent>
     </Panel>
   );

@@ -9,3 +9,4 @@ export * from "./OrgRoleBadge";
 export * from "./OrganizationCapabilityBadge";
 export * from "./QuestionTypeBadge";
 export * from "./TemplateStateBadge";
+export * from "./ResponsePerspectiveBadge";

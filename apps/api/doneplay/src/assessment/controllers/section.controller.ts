@@ -32,7 +32,7 @@ export class SectionController {
   @Roles({
     any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER', 'ORG:OWNER', 'ORG:MANAGER'],
   })
-  @TemplateAccess('EDIT')
+  @TemplateAccess(['EDIT', 'ADMIN'])
   @OrgContext({ requireOrgRoles: ['OWNER', 'MANAGER'] })
   async create(@Body() dto: CreateSectionDto, @OrgId() _orgId: number) {
     const created = await this.service.create(dto);
@@ -49,7 +49,7 @@ export class SectionController {
   @Roles({
     any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER', 'ORG:OWNER', 'ORG:MANAGER'],
   })
-  @TemplateAccess('EDIT')
+  @TemplateAccess(['EDIT', 'ADMIN'])
   @OrgContext({ requireOrgRoles: ['OWNER', 'MANAGER'] })
   async update(
     @Param('id') id: string,
@@ -64,7 +64,7 @@ export class SectionController {
   @Roles({
     any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER', 'ORG:OWNER', 'ORG:MANAGER'],
   })
-  @TemplateAccess('EDIT')
+  @TemplateAccess(['EDIT', 'ADMIN'])
   @OrgContext({ requireOrgRoles: ['OWNER', 'MANAGER'] })
   async reorder(
     @Param('templateId') templateId: string,
@@ -79,7 +79,7 @@ export class SectionController {
   @Roles({
     any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER', 'ORG:OWNER', 'ORG:MANAGER'],
   })
-  @TemplateAccess('EDIT')
+  @TemplateAccess(['EDIT', 'ADMIN'])
   @OrgContext({ requireOrgRoles: ['OWNER', 'MANAGER'] })
   async remove(@Param('id') id: string, @OrgId() _orgId: number) {
     const res = await this.service.softDelete(Number(id));

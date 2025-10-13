@@ -34,7 +34,7 @@ export class TemplateQuestionController {
   @Roles({
     any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER', 'ORG:OWNER', 'ORG:MANAGER'],
   })
-  @TemplateAccess('EDIT')
+  @TemplateAccess(['EDIT', 'ADMIN'])
   @OrgContext({ requireOrgRoles: ['OWNER', 'MANAGER'] })
   async add(@Body() dto: AddTemplateQuestionDto, @OrgId() _orgId: number) {
     const created = await this.service.add(dto);
@@ -51,7 +51,7 @@ export class TemplateQuestionController {
   @Roles({
     any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER', 'ORG:OWNER', 'ORG:MANAGER'],
   })
-  @TemplateAccess('EDIT')
+  @TemplateAccess(['EDIT', 'ADMIN'])
   @OrgContext({ requireOrgRoles: ['OWNER', 'MANAGER'] })
   async update(
     @Param('id') id: string,
@@ -66,7 +66,7 @@ export class TemplateQuestionController {
   @Roles({
     any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER', 'ORG:OWNER', 'ORG:MANAGER'],
   })
-  @TemplateAccess('EDIT')
+  @TemplateAccess(['EDIT', 'ADMIN'])
   @OrgContext({ requireOrgRoles: ['OWNER', 'MANAGER'] })
   async bulk(
     @Param('sectionId') sectionId: string,
@@ -81,7 +81,7 @@ export class TemplateQuestionController {
   @Roles({
     any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER', 'ORG:OWNER', 'ORG:MANAGER'],
   })
-  @TemplateAccess('EDIT')
+  @TemplateAccess(['EDIT', 'ADMIN'])
   @OrgContext({ requireOrgRoles: ['OWNER', 'MANAGER'] })
   async remove(@Param('id') id: string, @OrgId() _orgId: number) {
     const res = await this.service.remove(Number(id));
@@ -92,7 +92,7 @@ export class TemplateQuestionController {
   @Roles({
     any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER', 'ORG:OWNER', 'ORG:MANAGER'],
   })
-  @TemplateAccess('EDIT')
+  @TemplateAccess(['EDIT', 'ADMIN'])
   @OrgContext({ requireOrgRoles: ['OWNER', 'MANAGER'] })
   async restore(@Param('id') id: string, @OrgId() _orgId: number) {
     const res = await this.service.restore(Number(id));

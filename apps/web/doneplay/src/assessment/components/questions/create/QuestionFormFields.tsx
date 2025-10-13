@@ -17,6 +17,8 @@ import {
   ListPlus,
   Minimize2,
   Maximize2,
+  Tag,
+  MessageSquare,
 } from "lucide-react";
 import { QuestionTypeCombobox } from "./question-type-combobox";
 import { Separator } from "@/components/ui/separator";
@@ -76,14 +78,19 @@ export function QuestionFormFields(props: QuestionFormFieldsProps) {
   const needsScale = draftType === "SCALE";
 
   function moveInline(idx: number, dir: -1 | 1) {
+    const next = ((arr) => {
+      const n = [...arr];
+      const t = n[idx];
+      n[idx] = n[idx + dir];
+      n[idx + dir] = t;
+      return n;
+    })(inlineOptions);
+    // If all labels are numeric, renumber them according to new order
+    const allNumeric = next.every((o) =>
+      /^\d+$/.test(String(o.label || "").trim())
+    );
     onInlineOptionsChange(
-      ((arr) => {
-        const next = [...arr];
-        const t = next[idx];
-        next[idx] = next[idx + dir];
-        next[idx + dir] = t;
-        return next;
-      })(inlineOptions)
+      allNumeric ? next.map((o, i) => ({ ...o, label: String(i + 1) })) : next
     );
   }
 
@@ -93,12 +100,15 @@ export function QuestionFormFields(props: QuestionFormFieldsProps) {
         <Label className="text-[11px] font-medium flex items-center gap-2">
           <FileText className="w-4 h-4 text-muted-foreground" /> صورت سؤال
         </Label>
-        <Textarea
-          placeholder="متن سؤال..."
-          className="min-h-[90px] resize-y text-xs"
-          value={draftText}
-          onChange={(e) => onTextChange(e.target.value)}
-        />
+        <div className="relative">
+          <Textarea
+            placeholder="متن سؤال..."
+            className="min-h-[90px] resize-y text-xs pl-8 placeholder:text-[10px]"
+            value={draftText}
+            onChange={(e) => onTextChange(e.target.value)}
+          />
+          <FileText className="absolute left-2 top-2 w-4 h-4 text-muted-foreground pointer-events-none" />
+        </div>
       </div>
 
       <div className="space-y-1.5 md:col-span-2">
@@ -200,7 +210,12 @@ export function QuestionFormFields(props: QuestionFormFieldsProps) {
                       onClick={() =>
                         onInlineOptionsChange([
                           ...inlineOptions,
-                          { id: crypto.randomUUID(), value: "", label: "" },
+                          {
+                            id: crypto.randomUUID(),
+                            value: "",
+                            // Auto-fill label sequentially by order (1..N)
+                            label: String(inlineOptions.length + 1),
+                          },
                         ])
                       }>
                       افزودن
@@ -234,38 +249,44 @@ export function QuestionFormFields(props: QuestionFormFieldsProps) {
                           {idx + 1}
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-[9px]">Label</Label>
-                          <Input
-                            placeholder="مثلاً: بسیار خوب"
-                            className="h-8 text-[11px]"
-                            value={opt.label}
-                            onChange={(e) =>
-                              onInlineOptionsChange(
-                                inlineOptions.map((o) =>
-                                  o.id === opt.id
-                                    ? { ...o, label: e.target.value }
-                                    : o
+                          <Label className="text-[9px]">نماد گزینه</Label>
+                          <div className="relative">
+                            <Input
+                              placeholder="مثلاً: excellent (اختیاری است)"
+                              className="h-8 text-[10px] placeholder:text-[10px] pl-8"
+                              value={opt.label}
+                              onChange={(e) =>
+                                onInlineOptionsChange(
+                                  inlineOptions.map((o) =>
+                                    o.id === opt.id
+                                      ? { ...o, label: e.target.value }
+                                      : o
+                                  )
                                 )
-                              )
-                            }
-                          />
+                              }
+                            />
+                            <Tag className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
+                          </div>
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-[9px]">Value</Label>
-                          <Input
-                            placeholder="مثلاً: excellent"
-                            className="h-8 text-[11px]"
-                            value={opt.value}
-                            onChange={(e) =>
-                              onInlineOptionsChange(
-                                inlineOptions.map((o) =>
-                                  o.id === opt.id
-                                    ? { ...o, value: e.target.value }
-                                    : o
+                          <Label className="text-[9px]">مقدار گزینه</Label>
+                          <div className="relative">
+                            <Input
+                              placeholder="مثلاً: بسیار خوب (نمایش به کاربر)"
+                              className="h-8 text-[10px] placeholder:text-[10px] pl-8"
+                              value={opt.value}
+                              onChange={(e) =>
+                                onInlineOptionsChange(
+                                  inlineOptions.map((o) =>
+                                    o.id === opt.id
+                                      ? { ...o, value: e.target.value }
+                                      : o
+                                  )
                                 )
-                              )
-                            }
-                          />
+                              }
+                            />
+                            <MessageSquare className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
+                          </div>
                         </div>
                         <div className="flex items-center justify-end gap-1">
                           {idx > 0 && (
@@ -296,11 +317,22 @@ export function QuestionFormFields(props: QuestionFormFieldsProps) {
                             variant="ghost"
                             className="h-7 w-7 text-destructive"
                             icon={<Trash2 className="size-3" />}
-                            onClick={() =>
+                            onClick={() => {
+                              const next = inlineOptions.filter(
+                                (o) => o.id !== opt.id
+                              );
+                              const allNumeric = next.every((o) =>
+                                /^\d+$/.test(String(o.label || "").trim())
+                              );
                               onInlineOptionsChange(
-                                inlineOptions.filter((o) => o.id !== opt.id)
-                              )
-                            }
+                                allNumeric
+                                  ? next.map((o, i) => ({
+                                      ...o,
+                                      label: String(i + 1),
+                                    }))
+                                  : next
+                              );
+                            }}
                             aria-label="حذف"
                           />
                         </div>
@@ -327,12 +359,15 @@ export function QuestionFormFields(props: QuestionFormFieldsProps) {
             <Label className="text-[11px] font-medium flex items-center gap-2">
               <Minimize2 className="w-4 h-4 text-muted-foreground" /> کمینه
             </Label>
-            <Input
-              type="number"
-              className="h-8 text-xs"
-              value={draftMinScale}
-              onChange={(e) => onMinScaleChange(Number(e.target.value || 1))}
-            />
+            <div className="relative">
+              <Input
+                type="number"
+                className="h-8 text-xs pl-7"
+                value={draftMinScale}
+                onChange={(e) => onMinScaleChange(Number(e.target.value || 1))}
+              />
+              <Minimize2 className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+            </div>
             <p className="text-[9px] text-muted-foreground pr-0.5">
               عدد شروع مقیاس (پیشفرض 1)
             </p>
@@ -341,12 +376,15 @@ export function QuestionFormFields(props: QuestionFormFieldsProps) {
             <Label className="text-[11px] font-medium flex items-center gap-2">
               <Maximize2 className="w-4 h-4 text-muted-foreground" /> بیشینه
             </Label>
-            <Input
-              type="number"
-              className="h-8 text-xs"
-              value={draftMaxScale}
-              onChange={(e) => onMaxScaleChange(Number(e.target.value || 5))}
-            />
+            <div className="relative">
+              <Input
+                type="number"
+                className="h-8 text-xs pl-7"
+                value={draftMaxScale}
+                onChange={(e) => onMaxScaleChange(Number(e.target.value || 5))}
+              />
+              <Maximize2 className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+            </div>
             <p className="text-[9px] text-muted-foreground pr-0.5">
               آخرین عدد (باید بزرگ‌تر یا مساوی کمینه باشد)
             </p>
