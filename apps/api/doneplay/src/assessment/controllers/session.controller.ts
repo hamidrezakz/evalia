@@ -156,6 +156,15 @@ export class SessionController {
     return this.service.getUserPerspectives(Number(id), Number(userId));
   }
 
+  // List available perspectives plus subjects per perspective for a user (member-safe)
+  @Get(':id/user/:userId/perspectives-detailed')
+  listUserPerspectivesDetailed(
+    @Param('id') id: string,
+    @Param('userId') userId: string,
+  ) {
+    return this.service.getUserPerspectivesDetailed(Number(id), Number(userId));
+  }
+
   // Get ordered questions (by section, then question order) for a user in a session for a chosen perspective
   @Get(':id/user/:userId/questions')
   getUserQuestions(

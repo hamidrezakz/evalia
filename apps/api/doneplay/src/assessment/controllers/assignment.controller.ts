@@ -53,7 +53,7 @@ export class AssignmentController {
     const res = await this.service.bulkAssign(dto);
     return { data: res, message: 'تخصیص‌ها ثبت شدند' } as any;
   }
-
+  @OrgContext({ requireOrgRoles: ['OWNER', 'MANAGER'] })
   @Get('session/:sessionId')
   @Roles({
     any: [
@@ -61,13 +61,12 @@ export class AssignmentController {
       'ANALYSIS_MANAGER',
       'ORG:OWNER',
       'ORG:MANAGER',
-      'ORG:MEMBER', // allow members to view who is assigned
     ],
   })
   list(@Param('sessionId') sessionId: string, @OrgId() _orgId: number) {
     return this.service.list(Number(sessionId));
   }
-
+  
   @Patch(':id')
   @Roles({
     any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER', 'ORG:OWNER', 'ORG:MANAGER'],

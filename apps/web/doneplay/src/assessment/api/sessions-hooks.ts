@@ -17,6 +17,7 @@ import {
   deleteResponse,
   listUserSessions,
   getUserPerspectives,
+  getUserPerspectivesDetailed,
   getUserSessionQuestions,
   getUserProgress,
   getSessionQuestionCount,
@@ -77,6 +78,14 @@ export const sessionsKeys = {
       userId,
       "questions",
       perspective,
+    ] as const,
+  userPerspectivesDetailed: (sessionId: number, userId: number) =>
+    [
+      ...sessionsKeys.byId(sessionId),
+      "user",
+      userId,
+      "perspectives",
+      "detailed",
     ] as const,
   progressByAssignment: (assignmentId: number) =>
     ["responses", "progress", "assignment", assignmentId] as const,
@@ -521,6 +530,24 @@ export function useUserPerspectives(
       return getUserPerspectives(sessionId, userId, orgId || undefined);
     },
     enabled: !!sessionId && !!userId && !!orgId,
+  });
+}
+export function useUserPerspectivesDetailed(
+  orgId: number | null,
+  sessionId: number | null,
+  userId: number | null
+) {
+  return useQuery({
+    queryKey:
+      sessionId && userId && orgId
+        ? [...sessionsKeys.userPerspectivesDetailed(sessionId, userId), orgId]
+        : ["sessions", "user", "perspectives", "detailed", "disabled"],
+    queryFn: () => {
+      if (!sessionId || !userId) throw new Error("no ids");
+      return getUserPerspectivesDetailed(sessionId, userId, orgId || undefined);
+    },
+    enabled: !!sessionId && !!userId && !!orgId,
+    staleTime: 30 * 1000,
   });
 }
 export function useUserSessionQuestions(

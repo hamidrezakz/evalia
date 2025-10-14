@@ -5,7 +5,7 @@ import {
   useUserSessionQuestions,
   useResponses,
   useBulkUpsertResponses,
-  useAssignmentsDetailed,
+  useUserPerspectivesDetailed,
 } from "@/assessment/api/sessions-hooks";
 import { useOrgState } from "@/organizations/organization/context";
 import type {
@@ -67,7 +67,9 @@ export function useTakeAssessment(): UseTakeAssessmentResult {
   } = useAssessmentUserSessions();
   const orgCtx = useOrgState();
   const activeOrgId =
-    orgCtx.activeOrganizationId || (activeSession as any)?.organizationId || null;
+    orgCtx.activeOrganizationId ||
+    (activeSession as any)?.organizationId ||
+    null;
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -123,24 +125,21 @@ export function useTakeAssessment(): UseTakeAssessmentResult {
     setActivePerspective,
   ]);
 
-  const assignmentsDetailed = useAssignmentsDetailed(
+  const perspDetailed = useUserPerspectivesDetailed(
     activeOrgId,
-    previewMode ? null : activeSessionId ?? null
+    previewMode ? null : activeSessionId ?? null,
+    previewMode ? null : userId ?? null
   );
   const allowedSubjectIds = useMemo(() => {
-    if (!assignmentsDetailed.data || !activePerspective || !userId)
-      return [] as number[];
-    const list = assignmentsDetailed.data as any[];
-    const mine = list.filter(
-      (a) =>
-        (a.respondentUserId ?? a.userId) === userId &&
-        a.perspective === activePerspective
+    if (!perspDetailed.data || !activePerspective) return [] as number[];
+    const sbp = (perspDetailed.data as any).subjectsByPerspective || {};
+    const arr = Array.isArray(sbp[activePerspective])
+      ? (sbp[activePerspective] as number[])
+      : [];
+    return Array.from(
+      new Set(arr.filter((n) => typeof n === "number" && n > 0))
     );
-    const subjIds = mine
-      .map((a) => a.subjectUserId)
-      .filter((v) => typeof v === "number" && v > 0) as number[];
-    return Array.from(new Set(subjIds));
-  }, [assignmentsDetailed.data, activePerspective, userId]);
+  }, [perspDetailed.data, activePerspective]);
 
   useEffect(() => {
     if (subjectUserId && !allowedSubjectIds.includes(subjectUserId)) {
@@ -152,16 +151,10 @@ export function useTakeAssessment(): UseTakeAssessmentResult {
     if (previewMode) return;
     if (!activeSessionId || !activePerspective || activePerspective === "SELF")
       return;
-    const list = (assignmentsDetailed.data || []) as any[];
-    if (!list.length) return;
-    const mine = list.filter(
-      (a) =>
-        (a.respondentUserId ?? a.userId) === userId &&
-        a.perspective === activePerspective
-    );
-    const subjectIds = mine
-      .map((a) => a.subjectUserId)
-      .filter((v) => v != null) as number[];
+    const sbp = (perspDetailed.data as any)?.subjectsByPerspective || {};
+    const subjectIds: number[] = Array.isArray(sbp[activePerspective])
+      ? sbp[activePerspective]
+      : [];
     if (!subjectIds.length) return;
     if (subjectUserId && subjectIds.includes(subjectUserId)) return;
     const pick = [...new Set(subjectIds)].sort((a, b) => a - b)[0];
@@ -171,8 +164,7 @@ export function useTakeAssessment(): UseTakeAssessmentResult {
     activeSessionId,
     activePerspective,
     subjectUserId,
-    assignmentsDetailed.data,
-    userId,
+    perspDetailed.data,
   ]);
 
   useEffect(() => {

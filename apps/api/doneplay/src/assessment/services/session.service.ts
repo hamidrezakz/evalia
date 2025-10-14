@@ -292,6 +292,30 @@ export class SessionService {
     return { sessionId, userId, perspectives };
   }
 
+  // Return perspectives plus subject user IDs per perspective for a user
+  async getUserPerspectivesDetailed(sessionId: number, userId: number) {
+    await this.getById(sessionId);
+    const assigns = await this.prisma.assessmentAssignment.findMany({
+      where: { sessionId, respondentUserId: userId },
+      select: { perspective: true, subjectUserId: true },
+    });
+    const perspectives = Array.from(new Set(assigns.map((a) => a.perspective)));
+    const subjectsByPerspective = perspectives.reduce(
+      (acc: any, p) => {
+        const subs = assigns
+          .filter((a) => a.perspective === p)
+          .map((a) => a.subjectUserId)
+          .filter(
+            (v): v is number => typeof v === 'number' && Number.isFinite(v),
+          );
+        acc[p] = Array.from(new Set(subs));
+        return acc;
+      },
+      {} as Record<string, number[]>,
+    );
+    return { sessionId, userId, perspectives, subjectsByPerspective } as any;
+  }
+
   // Fetch questions for a user in a session for the chosen perspective, ordered by section and question order
   async getQuestionsForUserPerspective(
     sessionId: number,

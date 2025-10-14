@@ -10,7 +10,7 @@ import {
   useUserSessionQuestions,
   useResponses,
   useBulkUpsertResponses,
-  useAssignmentsDetailed,
+  useUserPerspectivesDetailed,
 } from "@/assessment/api/sessions-hooks";
 import { useOrgState } from "@/organizations/organization/context";
 import { ResponsePerspectiveEnum, SessionStateEnum } from "@/lib/enums";
@@ -158,25 +158,22 @@ export default function TakeAssessmentPage() {
   ]);
 
   // Load assignments to help auto-pick a subject when a unique one exists
-  const assignmentsDetailed = useAssignmentsDetailed(
+  const perspDetailedQ = useUserPerspectivesDetailed(
     activeOrgId,
-    previewMode ? null : activeSessionId ?? null
+    previewMode ? null : activeSessionId ?? null,
+    previewMode ? null : userId ?? null
   );
   // Derive allowed subject user IDs based on assignments for the active respondent & perspective
   const allowedSubjectIds = React.useMemo(() => {
-    if (!assignmentsDetailed.data || !activePerspective || !userId)
-      return [] as number[];
-    const list = assignmentsDetailed.data as any[];
-    const mine = list.filter(
-      (a) =>
-        (a.respondentUserId ?? a.userId) === userId &&
-        a.perspective === activePerspective
+    if (!perspDetailedQ.data || !activePerspective) return [] as number[];
+    const sbp = (perspDetailedQ.data as any).subjectsByPerspective || {};
+    const arr = Array.isArray(sbp[activePerspective])
+      ? (sbp[activePerspective] as number[])
+      : [];
+    return Array.from(
+      new Set(arr.filter((n) => typeof n === "number" && n > 0))
     );
-    const subjIds = mine
-      .map((a) => a.subjectUserId)
-      .filter((v) => typeof v === "number" && v > 0) as number[];
-    return Array.from(new Set(subjIds));
-  }, [assignmentsDetailed.data, activePerspective, userId]);
+  }, [perspDetailedQ.data, activePerspective]);
 
   // Ensure currently selected subject remains valid
   React.useEffect(() => {
@@ -189,16 +186,10 @@ export default function TakeAssessmentPage() {
     if (previewMode) return;
     if (!activeSessionId || !activePerspective || activePerspective === "SELF")
       return;
-    const list = (assignmentsDetailed.data || []) as any[];
-    if (!list.length) return;
-    const mine = list.filter(
-      (a) =>
-        (a.respondentUserId ?? a.userId) === userId &&
-        a.perspective === activePerspective
-    );
-    const subjectIds = mine
-      .map((a) => a.subjectUserId)
-      .filter((v) => v != null) as number[];
+    const sbp = (perspDetailedQ.data as any)?.subjectsByPerspective || {};
+    const subjectIds: number[] = Array.isArray(sbp[activePerspective])
+      ? sbp[activePerspective]
+      : [];
     if (!subjectIds.length) return;
     // Prefer previously selected if still valid
     if (subjectUserId && subjectIds.includes(subjectUserId)) return;
@@ -210,8 +201,7 @@ export default function TakeAssessmentPage() {
     activeSessionId,
     activePerspective,
     subjectUserId,
-    assignmentsDetailed.data,
-    userId,
+    perspDetailedQ.data,
   ]);
 
   // Clear subject when perspective becomes SELF
@@ -530,7 +520,7 @@ export default function TakeAssessmentPage() {
 
   // Unified skeleton condition with hydration stabilization
   const loadingHeader =
-    (!previewMode && assignmentsDetailed.isLoading) ||
+    (!previewMode && perspDetailedQ.isLoading) ||
     respondentQ.isLoading ||
     (needsSubject && subjectUserId && subjectQ.isLoading);
   const loadingQuestions = uq.isLoading; // or (canLoad && !uq.data && uq.isFetching)
@@ -560,7 +550,7 @@ export default function TakeAssessmentPage() {
               allowedSubjectIds={allowedSubjectIds.map(String)}
               value={subjectUserId ? String(subjectUserId) : null}
               onChange={(id) => setSubjectUserId(id ? Number(id) : null)}
-              disabled={assignmentsDetailed.isLoading}
+              disabled={perspDetailedQ.isLoading}
             />
           </div>
         ) : null}
@@ -674,7 +664,7 @@ export default function TakeAssessmentPage() {
                   setActiveSubjectId={(id) =>
                     setSubjectUserId(id ? Number(id) : null)
                   }
-                  loadingSubjects={assignmentsDetailed.isLoading}
+                  loadingSubjects={perspDetailedQ.isLoading}
                 />
               </div>
             )}

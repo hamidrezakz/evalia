@@ -436,6 +436,33 @@ export async function getUserPerspectives(
   return (res as any)?.data as UserPerspectives;
 }
 
+// Perspectives plus subjects per perspective for a user
+const userPerspectivesDetailedSchema = z.object({
+  sessionId: z.number().int().positive(),
+  userId: z.number().int().positive(),
+  perspectives: z.array(responsePerspectiveEnum).default([]),
+  subjectsByPerspective: z
+    .record(z.string(), z.array(z.number().int().positive()))
+    .default({}),
+});
+export type UserPerspectivesDetailed = z.infer<
+  typeof userPerspectivesDetailedSchema
+>;
+export async function getUserPerspectivesDetailed(
+  sessionId: number,
+  userId: number,
+  orgId?: number | null
+) {
+  const res = await apiRequest(
+    `/sessions/${sessionId}/user/${userId}/perspectives-detailed${
+      orgId ? `?organizationId=${orgId}` : ""
+    }`,
+    null,
+    userPerspectivesDetailedSchema
+  );
+  return (res as any)?.data as UserPerspectivesDetailed;
+}
+
 // Get ordered questions for a user in a session for a chosen perspective
 import {
   questionSchema,
