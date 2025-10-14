@@ -31,12 +31,14 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
-import { Trash2, Loader2, ChevronDown } from "lucide-react";
+import { Trash2, Loader2, ChevronDown, Users, PlusCircle } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { getUser } from "@/users/api/users.api";
 import { AssignmentProgressBadge } from "@/components/status-badges/AssignmentProgressBadge";
 import { useRouter } from "next/navigation";
 import { useOrgState } from "@/organizations/organization/context";
+import { ResponsePerspectiveBadge } from "@/components/status-badges";
+import { PhoneBadge } from "@/components/status-badges";
 // Removed inline user creation per design feedback
 
 /**
@@ -125,20 +127,15 @@ export function SessionParticipantsMenu({
   const selfItems = assignments.filter(
     (a) => (a.perspective as any) === "SELF"
   );
-  const facilitatorItems = assignments.filter(
-    (a) => (a.perspective as any) === "FACILITATOR"
-  );
-  const otherItems = assignments.filter(
-    (a) => !["SELF", "FACILITATOR"].includes(a.perspective as any)
-  );
 
-  // Fetch missing subject details only for facilitator subjects
+  // Fetch missing subject details for non-SELF perspectives
   const [subjectCache, setSubjectCache] = React.useState<Map<number, any>>(
     () => new Map()
   );
   React.useEffect(() => {
     const needed = new Set<number>();
-    for (const a of facilitatorItems) {
+    for (const a of assignments) {
+      if ((a.perspective as any) === "SELF") continue;
       const sid = a.subjectUserId;
       if (!sid) continue;
       if (a.subject && a.subject.id === sid) continue;
@@ -161,10 +158,10 @@ export function SessionParticipantsMenu({
     return () => {
       alive = false;
     };
-  }, [facilitatorItems, subjectCache]);
+  }, [assignments, subjectCache]);
 
   // Group facilitators -> subjects summary
-  interface FacGroup {
+  interface RespGroup {
     respondentUserId: number;
     respondentName: string;
     respondentPhone?: string | null;
@@ -176,19 +173,20 @@ export function SessionParticipantsMenu({
       count: number;
     }[];
   }
-  const facilitatorGroups: FacGroup[] = React.useMemo(() => {
+  function buildGroupsForPerspective(p: string): RespGroup[] {
+    const items = assignments.filter((a) => (a.perspective as any) === p);
     const map = new Map<
       number,
       { respondentName: string; respondentPhone?: string | null; items: any[] }
     >();
-    for (const a of facilitatorItems) {
+    for (const a of items) {
       const rid = (a.respondentUserId ?? a.userId ?? 0) as number;
       const rName =
         a.respondent?.fullName ||
-        a.respondent?.name ||
-        a.respondent?.email ||
         a.user?.fullName ||
+        a.respondent?.name ||
         a.user?.name ||
+        a.respondent?.email ||
         a.user?.email ||
         `کاربر`;
       const rPhone = a.respondent?.phone || a.user?.phone || null;
@@ -200,7 +198,7 @@ export function SessionParticipantsMenu({
         });
       map.get(rid)!.items.push(a);
     }
-    const groups: FacGroup[] = [];
+    const groups: RespGroup[] = [];
     for (const [rid, v] of map.entries()) {
       const subjMap = new Map<
         number,
@@ -232,36 +230,38 @@ export function SessionParticipantsMenu({
       });
     }
     return groups;
-  }, [facilitatorItems, subjectCache]);
-
-  // Perspective badge component
-  function PerspectiveBadge({ p }: { p: string }) {
-    return (
-      <Badge variant="outline" className="text-[10px] h-4 px-1">
-        {ResponsePerspectiveEnum.t(p as any)}
-      </Badge>
-    );
   }
 
-  const participantsCount = assignments.length;
+  const perspectiveOrder = ["FACILITATOR", "PEER", "MANAGER", "SYSTEM"];
+  const groupsByPerspective = React.useMemo(() => {
+    const obj: Record<string, RespGroup[]> = {};
+    for (const p of perspectiveOrder) {
+      obj[p] = buildGroupsForPerspective(p);
+    }
+    return obj;
+  }, [assignments, subjectCache]);
+  // Total unique participants (respondents) across all assignments
+  const totalParticipants = React.useMemo(() => {
+    const set = new Set<number>();
+    for (const a of assignments) {
+      const uid = Number(a.respondentUserId ?? a.userId ?? 0);
+      if (uid > 0) set.add(uid);
+    }
+    return set.size;
+  }, [assignments]);
+  // Hover-controlled open state
   const [open, setOpen] = React.useState(false);
-  // Hover close delay handling so menu properly closes when pointer leaves both trigger & content
   const closeTimerRef = React.useRef<number | null>(null);
-
   const clearCloseTimer = React.useCallback(() => {
     if (closeTimerRef.current) {
       window.clearTimeout(closeTimerRef.current);
       closeTimerRef.current = null;
     }
   }, []);
-
   const scheduleClose = React.useCallback(() => {
     clearCloseTimer();
-    closeTimerRef.current = window.setTimeout(() => {
-      setOpen(false);
-    }, 180); // small delay so moving between trigger & content doesn't instantly close
+    closeTimerRef.current = window.setTimeout(() => setOpen(false), 180);
   }, [clearCloseTimer]);
-
   React.useEffect(() => () => clearCloseTimer(), [clearCloseTimer]);
 
   // Deletion handling
@@ -313,8 +313,7 @@ export function SessionParticipantsMenu({
     setOpen(false);
   }
 
-  // Progress chip components
-  // Standardized progress badge wrappers
+  // Progress badge helpers
   function ProgressByAssignment({ id }: { id: number }) {
     const { data } = useAssignmentProgress(activeOrgId, id);
     if (!data) return null;
@@ -386,47 +385,38 @@ export function SessionParticipantsMenu({
             clearCloseTimer();
             setOpen((prev) => !prev);
           }}>
-          <span>اعضا: {participantsCount}</span>
-          <ChevronDown
-            className={cn(
-              "h-3 w-3 text-muted-foreground/70 transition-transform duration-200",
-              open && "rotate-180"
-            )}
-          />
+          <Users className="h-3 w-3 opacity-80" />
+          شرکت‌کنندگان ({totalParticipants})
+          <ChevronDown className="h-3 w-3 opacity-70" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
-        align="center"
-        className="min-w-80 max-h-[440px] w-fit p-0 text-[11px] mx-2"
-        onMouseEnter={clearCloseTimer}
-        onMouseLeave={scheduleClose}>
-        <DropdownMenuLabel className="flex items-center justify-between text-[12px] font-semibold mt-0.5">
-          <span>اختصاص‌ها</span>
-          <Button
-            size="sm"
-            className="h-6 text-[12px] leading-none px-2"
-            onClick={(e) => {
-              e.preventDefault();
-              onQuickAssign(session);
-            }}>
-            اختصاص جدید +
-          </Button>
+        onMouseEnter={() => clearCloseTimer()}
+        onMouseLeave={scheduleClose}
+        className="m-2 sm:w-auto sm:min-w-[520px] max-h-[60vh] sm:max-h-[54vh] 2xl:max-h-[70vh] overflow-y-auto">
+        {/* Title */}
+        <DropdownMenuLabel className="flex mt-0.5 items-center gap-2 text-[11px] opacity-80">
+          <Users className="h-3.5 w-3.5 text-primary" />
+          شرکت‌کنندگان جلسه ({totalParticipants})
         </DropdownMenuLabel>
-        {/* Inline add user action removed */}
         <DropdownMenuSeparator />
-        {assignments.length === 0 && (
-          <DropdownMenuItem
-            disabled
-            className="text-muted-foreground text-[10px]">
-            موردی ثبت نشده
-          </DropdownMenuItem>
-        )}
-
+        {/* New assignment quick action */}
+        <DropdownMenuItem
+          className="cursor-pointer text-[12px] gap-2"
+          onClick={(e) => {
+            e.preventDefault();
+            onQuickAssign?.(session);
+            setOpen(false);
+          }}>
+          <PlusCircle className="h-3.5 w-3.5 text-primary" />
+          افزودن اختصاص جدید
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
         {/* SELF */}
         {selfItems.length > 0 && (
           <>
-            <DropdownMenuLabel className="text-[10px] opacity-70 mt-1">
-              خودارزیابی ({selfItems.length})
+            <DropdownMenuLabel className="text-[10px] opacity-70">
+              خود ({selfItems.length})
             </DropdownMenuLabel>
             {selfItems.map((a) => {
               const name =
@@ -437,270 +427,24 @@ export function SessionParticipantsMenu({
                 a.respondent?.email ||
                 a.user?.email ||
                 "کاربر";
-              const phoneRaw = a.respondent?.phone || a.user?.phone;
+              const uid = Number(a.respondentUserId ?? a.userId ?? 0);
+              const userMeta = (uid && userCache.get(uid)) || null;
+              const rawAvatar =
+                userMeta?.avatarUrl ||
+                userMeta?.avatar ||
+                a.respondent?.avatarUrl ||
+                a.user?.avatarUrl ||
+                a.respondent?.avatar ||
+                a.user?.avatar ||
+                null;
+              const initials = name
+                .split(/\s+/)
+                .slice(0, 2)
+                .map((p: string) => p[0])
+                .join("")
+                .toUpperCase();
+              const phoneRaw = a.respondent?.phone || a.user?.phone || null;
               const phone = phoneRaw ? formatIranPhone(phoneRaw) : null;
-              const uid = Number(a.respondentUserId ?? a.userId ?? 0);
-              const userMeta = (uid && userCache.get(uid)) || null;
-              const rawAvatar =
-                userMeta?.avatarUrl ||
-                userMeta?.avatar ||
-                a.respondent?.avatarUrl ||
-                a.user?.avatarUrl ||
-                a.respondent?.avatar ||
-                a.user?.avatar ||
-                null;
-              const initials = name
-                .split(/\s+/)
-                .slice(0, 2)
-                .map((p: string) => p[0])
-                .join("")
-                .toUpperCase();
-              return (
-                <DropdownMenuItem
-                  key={a.id}
-                  className="pr-2 py-2 cursor-pointer group relative"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    goPreview({
-                      sessionId: session.id,
-                      userId: (a.respondentUserId ?? a.userId) as number,
-                      perspective: "SELF",
-                    });
-                  }}>
-                  <div className="flex items-center gap-2 w-full">
-                    <UserAvatar
-                      url={rawAvatar}
-                      alt={name}
-                      fallback={initials}
-                      className="h-6 w-6"
-                    />
-                    <div className="flex flex-col min-w-0">
-                      <span
-                        className="truncate text-[10px] font-medium"
-                        title={name}>
-                        {name}
-                      </span>
-                      {phone && (
-                        <span className="text-[10px] text-muted-foreground ltr:font-mono">
-                          {phone}
-                        </span>
-                      )}
-                    </div>
-                    {/* progress: self assignment */}
-                    <ProgressByAssignment id={a.id} />
-                    <PerspectiveBadge p={a.perspective} />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-5 w-5 ml-auto opacity-100 md:opacity-0 md:group-hover:opacity-100 transition"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setPendingDelete({ mode: "single", id: a.id });
-                      }}
-                      title="حذف">
-                      {delMut.isPending &&
-                      pendingDelete?.mode === "single" &&
-                      pendingDelete.id === a.id ? (
-                        <Loader2 className="h-3 w-3 animate-spin text-destructive" />
-                      ) : (
-                        <Trash2 className="h-3 w-3 text-destructive" />
-                      )}
-                    </Button>
-                  </div>
-                </DropdownMenuItem>
-              );
-            })}
-            <DropdownMenuSeparator />
-          </>
-        )}
-
-        {/* FACILITATORS */}
-        {facilitatorGroups.length > 0 && (
-          <>
-            <DropdownMenuLabel className="text-[10px] opacity-70">
-              تسهیلگران ({facilitatorGroups.length})
-            </DropdownMenuLabel>
-            {facilitatorGroups.map((g) => {
-              const initials = g.respondentName
-                .split(/\s+/)
-                .slice(0, 2)
-                .map((p: string) => p[0])
-                .join("")
-                .toUpperCase();
-              const uDet = userCache.get(g.respondentUserId) || null;
-              const firstItem = g.items?.[0];
-              const rawAvatar =
-                uDet?.avatarUrl ||
-                uDet?.avatar ||
-                firstItem?.respondent?.avatarUrl ||
-                firstItem?.respondent?.avatar ||
-                null;
-              return (
-                <DropdownMenuItem
-                  key={g.respondentUserId}
-                  className="cursor-pointer py-2 group relative">
-                  <div className="flex flex-col gap-1 w-full">
-                    <div className="flex items-center gap-2">
-                      <UserAvatar
-                        url={rawAvatar}
-                        alt={g.respondentName}
-                        fallback={initials}
-                        className="h-6 w-6"
-                      />
-                      <span
-                        className="text-[10px] font-medium truncate"
-                        title={g.respondentName}>
-                        {g.respondentName}
-                      </span>
-                      {g.respondentPhone && (
-                        <span className="text-[10px] text-muted-foreground ltr:font-mono">
-                          {formatIranPhone(g.respondentPhone)}
-                        </span>
-                      )}
-                      <Badge
-                        variant="outline"
-                        className="text-[10px] h-4 px-1 ms-auto">
-                        {g.items.length}
-                      </Badge>
-                      <PerspectiveBadge p="FACILITATOR" />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-5 w-5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition"
-                        title="حذف همه"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setPendingDelete({
-                            mode: "multi",
-                            ids: g.items.map((i) => i.id),
-                          });
-                        }}>
-                        {delMut.isPending &&
-                        pendingDelete?.mode === "multi" &&
-                        pendingDelete.ids.length === g.items.length ? (
-                          <Loader2 className="h-3 w-3 animate-spin text-destructive" />
-                        ) : (
-                          <Trash2 className="h-3 w-3 text-destructive" />
-                        )}
-                      </Button>
-                    </div>
-                    {g.subjects.length > 0 && (
-                      <div className="flex flex-col gap-1 mt-1 mx-6">
-                        {g.subjects.map((subj) => {
-                          const subInit = subj.name
-                            .split(/\s+/)
-                            .slice(0, 2)
-                            .map((p: string) => p[0])
-                            .join("")
-                            .toUpperCase();
-                          const subjDet = subjectCache.get(subj.id) || null;
-                          const subjRawAvatar =
-                            subjDet?.avatarUrl || subjDet?.avatar || null;
-                          return (
-                            <div
-                              key={subj.id}
-                              className="group/subject relative flex items-center gap-2 rounded-md bg-muted/40 px-2 py-1 text-[10px] cursor-pointer"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                goPreview({
-                                  sessionId: session.id,
-                                  userId: g.respondentUserId,
-                                  perspective: "FACILITATOR",
-                                  subjectUserId: subj.id,
-                                });
-                              }}>
-                              <UserAvatar
-                                url={subjRawAvatar}
-                                alt={subj.name}
-                                fallback={subInit}
-                                className="h-5 w-5"
-                                fallbackClassName="text-[9px]"
-                              />
-                              <span
-                                className="truncate flex-1"
-                                title={subj.name}>
-                                {subj.name}
-                              </span>
-                              {/* progress for facilitator answering about subject */}
-                              <ProgressByUserSession
-                                sessionId={session.id}
-                                userId={g.respondentUserId}
-                                perspective="FACILITATOR"
-                                subjectUserId={subj.id}
-                              />
-                              {subj.count > 1 && (
-                                <Badge
-                                  variant="outline"
-                                  className="text-[9px] px-1">
-                                  x{subj.count}
-                                </Badge>
-                              )}
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  setPendingDelete({
-                                    mode: "multi",
-                                    ids: g.items
-                                      .filter(
-                                        (it) => it.subjectUserId === subj.id
-                                      )
-                                      .map((it) => it.id),
-                                  });
-                                }}
-                                className="h-5 w-5 rounded-md hover:bg-destructive/10 flex items-center justify-center opacity-100 md:opacity-0 md:group-hover/subject:opacity-100 transition"
-                                title="حذف سوژه">
-                                <Trash2 className="h-3 w-3 text-destructive" />
-                              </button>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </DropdownMenuItem>
-              );
-            })}
-            <DropdownMenuSeparator />
-          </>
-        )}
-
-        {/* OTHER perspectives (PEER / MANAGER / SYSTEM) */}
-        {otherItems.length > 0 && (
-          <>
-            <DropdownMenuLabel className="text-[10px] opacity-70">
-              سایر ({otherItems.length})
-            </DropdownMenuLabel>
-            {otherItems.map((a) => {
-              const name =
-                a.respondent?.fullName ||
-                a.user?.fullName ||
-                a.respondent?.name ||
-                a.user?.name ||
-                a.respondent?.email ||
-                a.user?.email ||
-                "کاربر";
-              const uid = Number(a.respondentUserId ?? a.userId ?? 0);
-              const userMeta = (uid && userCache.get(uid)) || null;
-              const rawAvatar =
-                userMeta?.avatarUrl ||
-                userMeta?.avatar ||
-                a.respondent?.avatarUrl ||
-                a.user?.avatarUrl ||
-                a.respondent?.avatar ||
-                a.user?.avatar ||
-                null;
-              const initials = name
-                .split(/\s+/)
-                .slice(0, 2)
-                .map((p: string) => p[0])
-                .join("")
-                .toUpperCase();
               return (
                 <DropdownMenuItem
                   key={a.id}
@@ -711,7 +455,6 @@ export function SessionParticipantsMenu({
                       sessionId: session.id,
                       userId: (a.respondentUserId ?? a.userId) as number,
                       perspective: a.perspective,
-                      subjectUserId: a.subjectUserId,
                     });
                   }}>
                   <div className="flex items-center gap-2 w-full">
@@ -726,9 +469,14 @@ export function SessionParticipantsMenu({
                       title={name}>
                       {name}
                     </span>
-                    {/* progress: other perspectives by assignment */}
+                    {phone && (
+                      <span className="hidden sm:inline-flex">
+                        <PhoneBadge phone={phone} size="xs" tone="soft" />
+                      </span>
+                    )}
+                    {/* progress: self assignment */}
                     <ProgressByAssignment id={a.id} />
-                    <PerspectiveBadge p={a.perspective} />
+                    <ResponsePerspectiveBadge value={a.perspective as any} />
                     <Button
                       type="button"
                       variant="ghost"
@@ -752,8 +500,176 @@ export function SessionParticipantsMenu({
                 </DropdownMenuItem>
               );
             })}
+            <DropdownMenuSeparator />
           </>
         )}
+
+        {/* Non-SELF grouped perspectives */}
+        {perspectiveOrder.map((p, idx) => {
+          const groups = groupsByPerspective[p] || [];
+          if (groups.length === 0) return null;
+          return (
+            <React.Fragment key={p}>
+              <DropdownMenuLabel className="text-[10px] opacity-70">
+                {ResponsePerspectiveEnum.t(p as any)} ({groups.length})
+              </DropdownMenuLabel>
+              {groups.map((g) => {
+                const initials = g.respondentName
+                  .split(/\s+/)
+                  .slice(0, 2)
+                  .map((pp: string) => pp[0])
+                  .join("")
+                  .toUpperCase();
+                const uDet = userCache.get(g.respondentUserId) || null;
+                const firstItem = g.items?.[0];
+                const rawAvatar =
+                  uDet?.avatarUrl ||
+                  uDet?.avatar ||
+                  firstItem?.respondent?.avatarUrl ||
+                  firstItem?.respondent?.avatar ||
+                  null;
+                return (
+                  <DropdownMenuItem
+                    key={`${p}-${g.respondentUserId}`}
+                    className="cursor-pointer py-2 group relative">
+                    <div className="flex flex-col gap-1 w-full">
+                      <div className="flex items-center gap-2">
+                        <UserAvatar
+                          url={rawAvatar}
+                          alt={g.respondentName}
+                          fallback={initials}
+                          className="h-6 w-6"
+                        />
+                        <span
+                          className="text-[10px] font-medium truncate"
+                          title={g.respondentName}>
+                          {g.respondentName}
+                        </span>
+                        {g.respondentPhone && (
+                          <PhoneBadge
+                            phone={g.respondentPhone}
+                            size="xs"
+                            tone="soft"
+                          />
+                        )}
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] h-4 px-1 ms-auto">
+                          {g.items.length}
+                        </Badge>
+                        <ResponsePerspectiveBadge value={p as any} />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-5 w-5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition"
+                          title="حذف همه"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setPendingDelete({
+                              mode: "multi",
+                              ids: g.items.map((i) => i.id),
+                            });
+                          }}>
+                          {delMut.isPending &&
+                          pendingDelete?.mode === "multi" &&
+                          pendingDelete.ids.length === g.items.length ? (
+                            <Loader2 className="h-3 w-3 animate-spin text-destructive" />
+                          ) : (
+                            <Trash2 className="h-3 w-3 text-destructive" />
+                          )}
+                        </Button>
+                      </div>
+                      {g.subjects.length > 0 && (
+                        <div className="flex flex-col gap-1 mt-1 mx-6">
+                          {g.subjects.map((subj) => {
+                            const subInit = subj.name
+                              .split(/\s+/)
+                              .slice(0, 2)
+                              .map((pp: string) => pp[0])
+                              .join("")
+                              .toUpperCase();
+                            const subjDet = subjectCache.get(subj.id) || null;
+                            const subjRawAvatar =
+                              subjDet?.avatarUrl || subjDet?.avatar || null;
+                            return (
+                              <div
+                                key={`${p}-${g.respondentUserId}-${subj.id}`}
+                                className="group/subject relative flex items-center gap-2 rounded-md bg-muted/40 px-2 py-1 text-[10px] cursor-pointer"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  goPreview({
+                                    sessionId: session.id,
+                                    userId: g.respondentUserId,
+                                    perspective: p,
+                                    subjectUserId: subj.id,
+                                  });
+                                }}>
+                                <UserAvatar
+                                  url={subjRawAvatar}
+                                  alt={subj.name}
+                                  fallback={subInit}
+                                  className="h-5 w-5"
+                                  fallbackClassName="text-[9px]"
+                                />
+                                <span
+                                  className="truncate flex-1"
+                                  title={subj.name}>
+                                  {subj.name}
+                                </span>
+                                <ProgressByUserSession
+                                  sessionId={session.id}
+                                  userId={g.respondentUserId}
+                                  perspective={p}
+                                  subjectUserId={subj.id}
+                                />
+                                {subj.count > 1 && (
+                                  <Badge
+                                    variant="outline"
+                                    className="text-[9px] px-1">
+                                    x{subj.count}
+                                  </Badge>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setPendingDelete({
+                                      mode: "multi",
+                                      ids: g.items
+                                        .filter(
+                                          (it) => it.subjectUserId === subj.id
+                                        )
+                                        .map((it) => it.id),
+                                    });
+                                  }}
+                                  className="h-5 w-5 rounded-md hover:bg-destructive/10 flex items-center justify-center opacity-100 md:opacity-0 md:group-hover/subject:opacity-100 transition"
+                                  title="حذف سوژه">
+                                  <Trash2 className="h-3 w-3 text-destructive" />
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </DropdownMenuItem>
+                );
+              })}
+              {/* Add a separator between sections except after last rendered section */}
+              {(() => {
+                const hasNext = perspectiveOrder.slice(idx + 1).some((np) => {
+                  const ng = groupsByPerspective[np] || [];
+                  return ng.length > 0;
+                });
+                return hasNext ? <DropdownMenuSeparator /> : null;
+              })()}
+            </React.Fragment>
+          );
+        })}
+
         <AlertDialog
           open={!!pendingDelete}
           onOpenChange={(o) => {

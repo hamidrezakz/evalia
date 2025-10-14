@@ -1,9 +1,32 @@
-/* import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { decodeJwtRaw } from "@/lib/jwt-utils";
 
+/**
+ * Professional Auth Middleware (Edge)
+ * --------------------------------------------------
+ * Responsibilities:
+ * 1. Enforce auth for protected routes before any application code executes.
+ * 2. Parse + minimally validate access token structure (presence of sub & exp, non-expired).
+ * 3. Attempt a single silent refresh (using refreshToken) when token is expired or nearing expiry.
+ * 4. Redirect anonymous / invalid sessions to /auth?redirect=original-path.
+ * 5. Fail closed: malformed / tampered tokens are treated as unauthenticated (never passed through).
+ *
+ * Design Principles:
+ * - Edge runtime must stay fast: only one network call (refresh) per request at most.
+ * - Defensive parsing: decode WITHOUT trusting payload claims for authorization (server still re-verifies).
+ * - Avoid infinite loops: on refresh failure we clear cookies before redirecting.
+ * - Keep logic deterministic and side-effect minimal.
+ *
+ * Future Hardening (Recommended):
+ * - Issue httpOnly; Secure; SameSite=Strict cookies from backend (remove any localStorage coupling).
+ * - Add a lightweight /auth/session endpoint for tokenVersion / revocation checks (conditional revalidate).
+ * - Enforce role / scope pre-checks here only if they can be derived cheaply & safely.
+ * - Introduce anomaly detection (e.g., missing exp/sub frequency logging) via telemetry.
+ */
+
 // Public (unauthenticated) routes; everything else is guarded.
-const PUBLIC_ROUTES = ["/", "/auth"];
+const PUBLIC_ROUTES = ["/", "/auth"]; // note: /auth/* and /invite/* handled specially below
 
 // Proactive refresh threshold (seconds before actual exp)
 const REFRESH_LEEWAY_SECONDS = 60; // 1 minute
@@ -48,8 +71,10 @@ function validateAccessToken(raw?: string): {
   if (!raw) return { valid: false };
   const decoded = decodeJwtRaw<Partial<MinimalAccessPayload>>(raw) || {};
   const exp = typeof decoded.exp === "number" ? decoded.exp : undefined;
-  const sub = typeof decoded.sub === "string" ? decoded.sub : undefined;
-  if (!exp || !sub) return { valid: false };
+  const hasSub =
+    typeof (decoded as any).sub === "string" ||
+    typeof (decoded as any).sub === "number";
+  if (!exp || !hasSub) return { valid: false };
   const now = Math.floor(Date.now() / 1000);
   const expired = exp <= now;
   return { valid: !expired, payload: decoded as MinimalAccessPayload, expired };
@@ -60,6 +85,7 @@ async function attemptServerRefresh(
 ): Promise<{ accessToken?: string; refreshToken?: string } | null> {
   const refreshToken = req.cookies.get("refreshToken")?.value;
   if (!refreshToken) return null;
+  // Keep default aligned with client apiRequest default
   let rawBase = process.env.NEXT_PUBLIC_API_BASE || "api.doneplay.site";
   if (!/^https?:\/\//i.test(rawBase))
     rawBase = "https://" + rawBase.replace(/^\/+/, "");
@@ -112,12 +138,21 @@ export async function middleware(req: NextRequest) {
     pathname.startsWith("/fonts") ||
     pathname.startsWith("/images")
   ) {
-    return NextResponse.next();
+    const res = NextResponse.next();
+    res.headers.set("x-auth", "public-assets");
+    return res;
   }
 
-  // 2. Allow explicitly public routes.
-  if (PUBLIC_ROUTES.includes(pathname)) {
-    return NextResponse.next();
+  // 2. Allow explicitly public routes and auth/invite pages.
+  if (
+    pathname === "/" ||
+    pathname === "/auth" ||
+    pathname.startsWith("/auth/") ||
+    pathname.startsWith("/invite/")
+  ) {
+    const res = NextResponse.next();
+    res.headers.set("x-auth", "public-route");
+    return res;
   }
 
   // 3. Structural validation of access token.
@@ -128,6 +163,7 @@ export async function middleware(req: NextRequest) {
   if (!accessValidation.valid && !accessValidation.expired) {
     // Invalid structure (e.g., missing sub/exp) -> treat as anonymous
     const res = buildLoginRedirect(req);
+    res.headers.set("x-auth", "no-or-malformed-token");
     clearAuthCookies(res);
     return res;
   }
@@ -137,10 +173,12 @@ export async function middleware(req: NextRequest) {
     const refreshed = await attemptServerRefresh(req);
     if (!refreshed) {
       const res = buildLoginRedirect(req);
+      res.headers.set("x-auth", "expired-refresh-failed");
       clearAuthCookies(res); // prevent redirect loop with stale cookies
       return res;
     }
     const res = NextResponse.next();
+    res.headers.set("x-auth", "expired-refresh-success");
     setAuthCookies(res, refreshed.accessToken!, refreshed.refreshToken!);
     return res;
   }
@@ -154,16 +192,18 @@ export async function middleware(req: NextRequest) {
     const refreshed = await attemptServerRefresh(req);
     if (refreshed) {
       const res = NextResponse.next();
+      res.headers.set("x-auth", "proactive-refresh-success");
       setAuthCookies(res, refreshed.accessToken!, refreshed.refreshToken!);
       return res;
     }
   }
 
   // 6. Pass through for valid session.
-  return NextResponse.next();
+  const res = NextResponse.next();
+  res.headers.set("x-auth", "valid-pass");
+  return res;
 }
 
 export const config = {
   matcher: ["/((?!api|fonts|images).*)"],
 };
- */

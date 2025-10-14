@@ -21,6 +21,8 @@ import { QuestionBankController } from './controllers/question-bank.controller';
 import { QuestionController } from './controllers/question.controller';
 import { OptionSetController } from './controllers/option-set.controller';
 import { OptionSetOptionController } from './controllers/option-set-option.controller';
+import { InviteLinkController } from './controllers/invite-link.controller';
+import { InviteLinkService } from './services/invite-link.service';
 
 @Module({
   imports: [],
@@ -35,6 +37,7 @@ import { OptionSetOptionController } from './controllers/option-set-option.contr
     SessionController,
     AssignmentController,
     ResponseController,
+    InviteLinkController,
   ],
   providers: [
     PrismaService,
@@ -49,6 +52,7 @@ import { OptionSetOptionController } from './controllers/option-set-option.contr
     AiExportService,
     AssignmentService,
     ResponseService,
+    InviteLinkService,
   ],
   exports: [
     QuestionBankService,
@@ -62,6 +66,7 @@ import { OptionSetOptionController } from './controllers/option-set-option.contr
     AiExportService,
     AssignmentService,
     ResponseService,
+    InviteLinkService,
   ],
 })
 export class AssessmentModule {}

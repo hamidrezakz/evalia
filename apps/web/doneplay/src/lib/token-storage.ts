@@ -24,10 +24,25 @@ export const tokenStorage = {
     if (typeof window === "undefined") return;
     localStorage.setItem(ACCESS_KEY, tokens.accessToken);
     localStorage.setItem(REFRESH_KEY, tokens.refreshToken);
+    // Keep cookies in sync so Edge middleware can read them
+    try {
+      // JWTs are base64url-safe and can be stored as-is in cookies
+      document.cookie = `${ACCESS_KEY}=${tokens.accessToken}; path=/; SameSite=Lax`;
+      document.cookie = `${REFRESH_KEY}=${tokens.refreshToken}; path=/; SameSite=Lax`;
+    } catch {
+      // ignore cookie write errors in non-browser contexts
+    }
   },
   clear() {
     if (typeof window === "undefined") return;
     localStorage.removeItem(ACCESS_KEY);
     localStorage.removeItem(REFRESH_KEY);
+    try {
+      // Expire cookies so middleware stops seeing stale auth
+      document.cookie = `${ACCESS_KEY}=; path=/; Max-Age=0; SameSite=Lax`;
+      document.cookie = `${REFRESH_KEY}=; path=/; Max-Age=0; SameSite=Lax`;
+    } catch {
+      // ignore
+    }
   },
 };

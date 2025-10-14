@@ -15,9 +15,10 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Users } from "lucide-react";
+import { Users, PlusCircle, CheckCircle2, XCircle } from "lucide-react";
 import UserSelectCombobox from "@/globalcomboxs/UserSelectCombobox";
 import { ResponsePerspectiveEnum, type ResponsePerspective } from "@/lib/enums";
+import { ResponsePerspectiveBadge } from "@/components/status-badges";
 import { useAddAssignment } from "@/assessment/api/sessions-hooks";
 
 interface QuickAssignmentDialogProps {
@@ -77,8 +78,11 @@ export default function QuickAssignmentDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md" dir="rtl">
         <DialogHeader>
-          <DialogTitle className="text-base">افزودن اختصاص جدید</DialogTitle>
-          <DialogDescription className="text-xs">
+          <DialogTitle className="flex items-center gap-2 text-base font-bold text-primary">
+            <PlusCircle className="h-5 w-5 text-primary" />
+            افزودن اختصاص جدید
+          </DialogTitle>
+          <DialogDescription className="text-xs text-muted-foreground mt-1">
             یک کاربر را انتخاب و در صورت نیاز پرسپکتیو و سوژه را تعیین کنید.
           </DialogDescription>
         </DialogHeader>
@@ -101,16 +105,16 @@ export default function QuickAssignmentDialog({
               {perspectives.map((p) => (
                 <label
                   key={p}
-                  className={`flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs cursor-pointer ${
+                  className={`flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs cursor-pointer transition-all ${
                     perspective === p
-                      ? "border-primary/60 bg-primary/5"
+                      ? "border-primary/60 bg-primary/5 shadow-sm"
                       : "hover:bg-muted/40"
                   }`}>
                   <Checkbox
                     checked={perspective === p}
                     onCheckedChange={() => setPerspective(p)}
                   />
-                  <span>{ResponsePerspectiveEnum.t(p)}</span>
+                  <ResponsePerspectiveBadge value={p} size="sm" />
                 </label>
               ))}
             </div>
@@ -129,20 +133,22 @@ export default function QuickAssignmentDialog({
               />
             </div>
           )}
-          <div className="flex justify-end gap-2 pt-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onOpenChange(false)}
-              disabled={addMut.isPending}>
-              انصراف
-            </Button>
+          <div className="flex justify-start gap-2 pt-2">
             <Button
               size="sm"
               onClick={submit}
               disabled={addMut.isPending || !userId || !sessionId}
-              isLoading={addMut.isPending}>
+              isLoading={addMut.isPending}
+              icon={<CheckCircle2/>}>
               ثبت
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onOpenChange(false)}
+              disabled={addMut.isPending}
+              icon={<XCircle />}>
+              انصراف
             </Button>
           </div>
         </div>

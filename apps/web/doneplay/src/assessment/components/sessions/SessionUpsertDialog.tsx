@@ -19,6 +19,8 @@ import {
   CheckCircle2,
   Pencil,
   AlertTriangle,
+  CalendarCheck2,
+  Building2,
 } from "lucide-react";
 import { useOrganization } from "@/organizations/organization/api/organization-hooks";
 import TeamSelectCombobox from "@/organizations/team/components/TeamSelectCombobox";
@@ -203,23 +205,28 @@ export function SessionUpsertDialog(props: {
       {trigger}
       <DialogContent className="sm:max-w-3xl p-4 md:p-6 rounded-xl border border-border/60 bg-background/95 backdrop-blur">
         <DialogHeader>
-          <DialogTitle className="text-base font-semibold tracking-tight">
+          <DialogTitle className="flex items-center gap-2 text-base font-bold text-primary tracking-tight">
+            <CalendarCheck2 className="h-5 w-5 text-primary" />
             {isEdit ? "ویرایش جلسه" : "ایجاد جلسه جدید"}
           </DialogTitle>
-          <DialogDescription className="text-xs text-muted-foreground">
+          <DialogDescription className="text-xs text-muted-foreground mt-1">
             {isEdit ? "ویرایش اطلاعات جلسه" : "تمپلیت، محدوده و جزئیات جلسه"}
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-5 mt-2">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div className="space-y-1 text-xs md:col-span-3 p-3 rounded-md border border-border/50 bg-muted/20 flex flex-col gap-1">
+            <div className="space-y-1 text-xs md:col-span-3 p-3 rounded-md border border-border/50 bg-muted/20 flex flex-col gap-2">
               {effectiveOrgId ? (
                 <>
+                  <div className="flex items-center gap-2 text-[11px] font-medium">
+                    <Building2 className="h-3.5 w-3.5 text-primary" />
+                    <span>سازمان جلسه</span>
+                  </div>
                   <span>
-                    این جلسه به صورت خودکار در سازمان{" "}
-                    <strong className="font-semibold text-foreground">
-                      «{activeOrgQ.data?.name || "..."}»
-                    </strong>{" "}
+                    این جلسه به صورت خودکار در سازمان
+                    <span className="font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-md mx-1 inline-flex items-center whitespace-normal break-words">
+                      {activeOrgQ.data?.name || "..."}
+                    </span>
                     ثبت می‌شود.
                   </span>
                   <span className="text-[10px] text-muted-foreground">
@@ -304,18 +311,7 @@ export function SessionUpsertDialog(props: {
             </div>
           </div>
           <div className="flex items-center justify-between pt-2 border-t border-border/60 mt-2">
-            <span className="text-[11px] text-muted-foreground">
-              {isEdit ? "ویرایش رکورد موجود" : "رکورد جدید"}
-            </span>
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 px-3 text-xs"
-                onClick={() => onOpenChange(false)}
-                disabled={createMut.isPending || updateMut.isPending}>
-                انصراف
-              </Button>
               <Button
                 size="sm"
                 className="h-8 px-4 text-xs"
@@ -326,18 +322,28 @@ export function SessionUpsertDialog(props: {
                   updateMut.isPending ||
                   invalidRange ||
                   !effectiveOrgId
+                }
+                icon={
+                  isEdit ? (
+                    <Pencil className="h-4 w-4" />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4" />
+                  )
                 }>
-                {isEdit ? (
-                  <>
-                    <Pencil className="h-4 w-4 ms-1" /> ذخیره تغییرات
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="h-4 w-4 ms-1" /> ثبت جلسه
-                  </>
-                )}
+                {isEdit ? "ذخیره تغییرات" : "ثبت جلسه"}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-3 text-xs"
+                onClick={() => onOpenChange(false)}
+                disabled={createMut.isPending || updateMut.isPending}>
+                انصراف
               </Button>
             </div>
+            <span className="text-[11px] text-muted-foreground">
+              {isEdit ? "ویرایش رکورد موجود" : "رکورد جدید"}
+            </span>
           </div>
         </div>
       </DialogContent>
