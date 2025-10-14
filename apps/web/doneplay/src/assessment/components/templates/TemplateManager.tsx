@@ -17,6 +17,7 @@ import {
   Search,
   Hash,
   CalendarClock,
+  LayoutTemplate,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -149,6 +150,7 @@ export default function TemplateManager({ onSelect }: TemplateManagerProps) {
       <Panel>
         <PanelHeader className="flex-row items-center justify-between gap-2">
           <PanelTitle className="text-sm flex items-center gap-2 font-semibold">
+            <LayoutTemplate className="h-4 w-4 text-primary" />
             قالب‌های آزمون
           </PanelTitle>
           <PanelAction>

@@ -180,7 +180,7 @@ export default function TemplateSectionsPanel({
     <Panel key={templateId ?? "no-template"}>
       <PanelHeader className="flex-row items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
-          <LayoutList className="h-4 w-4 text-muted-foreground shrink-0" />
+          <LayoutList className="h-4 w-4 text-primary shrink-0" />
           <PanelTitle className="text-sm font-semibold tracking-tight truncate">
             سکشن‌ها
           </PanelTitle>

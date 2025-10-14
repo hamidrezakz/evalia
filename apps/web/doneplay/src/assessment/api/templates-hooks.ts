@@ -300,10 +300,18 @@ export function useAddTemplateQuestion(orgId: number | null) {
       if (!orgId) throw new Error("orgId required");
       return addTemplateQuestion(body, orgId);
     },
-    onSuccess: (link: any) =>
+    onSuccess: (link: any) => {
+      // Refresh the questions list for this section
       qc.invalidateQueries({
         queryKey: templatesKeys.sectionQuestions(link.sectionId),
-      }),
+      });
+      // Also refresh any full template queries so preview/editors update without hard refresh
+      const cache = qc.getQueryCache().getAll();
+      const fullKeys = cache
+        .map((q) => q.queryKey)
+        .filter((k: any) => Array.isArray(k) && k.includes("full"));
+      for (const k of fullKeys) qc.invalidateQueries({ queryKey: k as any });
+    },
   });
 }
 export function useUpdateTemplateQuestion(orgId: number | null) {

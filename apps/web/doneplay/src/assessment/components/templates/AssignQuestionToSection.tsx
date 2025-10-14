@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import { useForm } from "react-hook-form";
-import { Plus, CheckCircle2, Hash } from "lucide-react";
+import { Plus, CheckCircle2, Hash, SquarePlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -150,6 +150,7 @@ export default function AssignQuestionToSection({
         dir="rtl">
         <div className="space-y-1">
           <PanelTitle className="text-sm font-semibold flex items-center gap-2 tracking-tight">
+            <SquarePlus className="h-3.5 w-3.5 text-primary" />
             اختصاص سوال به سکشن
           </PanelTitle>
           <PanelDescription className="text-[11px] leading-relaxed">
@@ -163,7 +164,7 @@ export default function AssignQuestionToSection({
             onClick={onSubmit}
             isLoading={addMut.isPending}
             disabled={!sectionId || !questionId || perspectives.length === 0}
-            icon={<Plus className="h-4 w-4" />}>
+            icon={<Plus className="h-3.5 w-3.5" />}>
             افزودن
           </Button>
         </PanelAction>
@@ -206,7 +207,7 @@ export default function AssignQuestionToSection({
 
         {justAdded && (
           <div className="flex items-center gap-2 text-[11px] text-green-600 dark:text-green-400">
-            <CheckCircle2 className="h-4 w-4" /> سوال با موفقیت افزوده شد.
+            <CheckCircle2 className="h-3.5 w-3.5" /> سوال با موفقیت افزوده شد.
           </div>
         )}
 

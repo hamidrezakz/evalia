@@ -83,11 +83,34 @@ export class ResponseService {
           throw new BadRequestException(
             'optionValue required ("TRUE" or "FALSE")',
           );
-        if (!['TRUE', 'FALSE'].includes(dto.optionValue))
+        // Normalize various truthy/falsy inputs (including Persian) to canonical TRUE/FALSE
+        const raw = String(dto.optionValue).trim();
+        const lower = raw.toLowerCase();
+        const truthy = new Set([
+          'true',
+          '1',
+          'yes',
+          'y',
+          'on',
+          'بله',
+          'بلی',
+          'اره',
+          'آره',
+        ]);
+        const falsy = new Set(['false', '0', 'no', 'n', 'off', 'خیر', 'نه']);
+        let normalized: 'TRUE' | 'FALSE' | null = null;
+        if (raw === 'TRUE' || raw === 'FALSE') {
+          normalized = raw as 'TRUE' | 'FALSE';
+        } else if (truthy.has(lower)) {
+          normalized = 'TRUE';
+        } else if (falsy.has(lower)) {
+          normalized = 'FALSE';
+        }
+        if (!normalized)
           throw new BadRequestException('optionValue must be TRUE or FALSE');
         return {
           scaleValue: null as number | null,
-          optionValue: dto.optionValue as string,
+          optionValue: normalized,
           optionValues: [] as string[],
           textValue: null as string | null,
         };
