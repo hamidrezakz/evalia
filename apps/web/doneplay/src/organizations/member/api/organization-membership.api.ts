@@ -50,33 +50,16 @@ export async function updateOrganizationMemberRoles(
   membershipId: number,
   input: UpdateOrganizationMemberRolesInput
 ) {
-  try {
-    const res = await apiRequest<
-      OrganizationMembership,
-      UpdateOrganizationMemberRolesInput
-    >(
-      `/organizations/${orgId}/members/${membershipId}/roles`,
-      UpdateOrganizationMemberRolesInputSchema,
-      OrganizationMembershipSchema,
-      { method: "PATCH", body: input }
-    );
-    return unwrap(res);
-  } catch (err: any) {
-    // Fallback: some backends might expose userId-based role update: /organizations/:orgId/members/:userId
-    if (err && err.status === 404) {
-      const alt = await apiRequest<
-        OrganizationMembership,
-        UpdateOrganizationMemberRolesInput
-      >(
-        `/organizations/${orgId}/members/${membershipId}`,
-        UpdateOrganizationMemberRolesInputSchema,
-        OrganizationMembershipSchema,
-        { method: "PATCH", body: input }
-      );
-      return unwrap(alt);
-    }
-    throw err;
-  }
+  const res = await apiRequest<
+    OrganizationMembership,
+    UpdateOrganizationMemberRolesInput
+  >(
+    `/organizations/${orgId}/members/${membershipId}`,
+    UpdateOrganizationMemberRolesInputSchema,
+    OrganizationMembershipSchema,
+    { method: "PATCH", body: input }
+  );
+  return unwrap(res);
 }
 
 export async function removeOrganizationMember(

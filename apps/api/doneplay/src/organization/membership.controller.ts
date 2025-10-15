@@ -7,22 +7,25 @@ import {
   Param,
   Body,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { MembershipService } from './membership.service';
 import { AddMemberDto } from './dto/add-member.dto';
 import { UpdateMemberRoleDto } from './dto/update-member-role.dto';
 import { OrgRole } from '@prisma/client';
-import { Roles } from '../common/roles.decorator';
+import { OrgContext } from '../common/org-context.decorator';
+import { OrgContextGuard } from '../common/org-context.guard';
 
 @Controller('organizations/:orgId/members')
+@UseGuards(OrgContextGuard)
+@OrgContext({
+  sources: { paramKey: 'orgId' },
+  requireOrgRoles: ['OWNER', 'MANAGER'],
+})
 export class MembershipController {
   constructor(private service: MembershipService) {}
 
   @Get()
-  @Roles({
-    any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER'],
-    orgAny: ['OWNER', 'MANAGER'],
-  })
   list(
     @Param('orgId') orgId: string,
     @Query('page') page?: string,
@@ -40,30 +43,36 @@ export class MembershipController {
   }
 
   @Post()
-  @Roles({
-    any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER'],
-    orgAny: ['OWNER', 'MANAGER'],
-  })
   add(@Param('orgId') orgId: string, @Body() dto: AddMemberDto) {
-    return this.service.add(Number(orgId), dto);
+    const out = this.service.add(Number(orgId), dto);
+    return Promise.resolve(out).then((data) => ({
+      message: 'عضو جدید به سازمان اضافه شد',
+      data,
+    }));
   }
 
   @Patch(':membershipId')
-  @Roles({ any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER'] })
   update(
     @Param('orgId') orgId: string,
     @Param('membershipId') membershipId: string,
     @Body() dto: UpdateMemberRoleDto,
   ) {
-    return this.service.update(Number(orgId), Number(membershipId), dto);
+    const out = this.service.update(Number(orgId), Number(membershipId), dto);
+    return Promise.resolve(out).then((data) => ({
+      message: 'نقش عضو سازمان بروزرسانی شد',
+      data,
+    }));
   }
 
   @Delete(':membershipId')
-  @Roles({ any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER'] })
   remove(
     @Param('orgId') orgId: string,
     @Param('membershipId') membershipId: string,
   ) {
-    return this.service.remove(Number(orgId), Number(membershipId));
+    const out = this.service.remove(Number(orgId), Number(membershipId));
+    return Promise.resolve(out).then((data) => ({
+      message: 'عضویت کاربر از سازمان حذف شد',
+      data,
+    }));
   }
 }

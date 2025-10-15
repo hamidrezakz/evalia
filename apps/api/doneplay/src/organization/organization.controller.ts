@@ -39,7 +39,11 @@ export class OrganizationController {
   @Roles({ any: ['SUPER_ADMIN'] })
   @Post()
   create(@Body() dto: CreateOrganizationDto) {
-    return this.service.create(dto);
+    const out = this.service.create(dto);
+    return Promise.resolve(out).then((data) => ({
+      message: 'سازمان جدید ایجاد شد',
+      data,
+    }));
   }
   @Roles({ any: ['SUPER_ADMIN'] })
   @Get()
@@ -70,17 +74,29 @@ export class OrganizationController {
   @Roles({ any: ['SUPER_ADMIN'] })
   @Patch(':id')
   update(@Param('id') id: string, @Body() dto: UpdateOrganizationDto) {
-    return this.service.update(Number(id), dto);
+    const out = this.service.update(Number(id), dto);
+    return Promise.resolve(out).then((data) => ({
+      message: 'اطلاعات سازمان بروزرسانی شد',
+      data,
+    }));
   }
   @Roles({ any: ['SUPER_ADMIN'] })
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.service.softDelete(Number(id));
+    const out = this.service.softDelete(Number(id));
+    return Promise.resolve(out).then((data) => ({
+      message: 'سازمان حذف شد (قابل بازیابی)',
+      data,
+    }));
   }
   @Roles({ any: ['SUPER_ADMIN'] })
   @Post(':id/restore')
   restore(@Param('id') id: string) {
-    return this.service.restore(Number(id));
+    const out = this.service.restore(Number(id));
+    return Promise.resolve(out).then((data) => ({
+      message: 'سازمان بازیابی شد',
+      data,
+    }));
   }
   @Roles({ any: ['SUPER_ADMIN'] })
   @Post(':id/status')
@@ -88,11 +104,18 @@ export class OrganizationController {
     @Param('id') id: string,
     @Body() dto: ChangeOrganizationStatusDto,
   ) {
-    return this.service.changeStatus(Number(id), dto);
+    const out = this.service.changeStatus(Number(id), dto);
+    return Promise.resolve(out).then((data) => ({
+      message: 'وضعیت سازمان بروزرسانی شد',
+      data,
+    }));
   }
 
   // ---------- Capabilities ----------
-  @Roles({ any: ['SUPER_ADMIN'] })
+  @Roles({
+    any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER'],
+    orgAny: ['OWNER', 'MANAGER'],
+  })
   @Get(':id/capabilities')
   listCapabilities(@Param('id') id: string) {
     return this.service.listCapabilities(Number(id));
@@ -101,13 +124,21 @@ export class OrganizationController {
   @Roles({ any: ['SUPER_ADMIN'] })
   @Post(':id/capabilities')
   addCapability(@Param('id') id: string, @Body() dto: AddCapabilityDto) {
-    return this.service.addCapability(Number(id), dto);
+    const out = this.service.addCapability(Number(id), dto);
+    return Promise.resolve(out).then((data) => ({
+      message: 'قابلیت به سازمان اضافه شد',
+      data,
+    }));
   }
 
   @Roles({ any: ['SUPER_ADMIN'] })
   @Delete(':id/capabilities')
   removeCapability(@Param('id') id: string, @Body() dto: RemoveCapabilityDto) {
-    return this.service.removeCapability(Number(id), dto);
+    const out = this.service.removeCapability(Number(id), dto);
+    return Promise.resolve(out).then((data) => ({
+      message: 'قابلیت از سازمان حذف شد',
+      data,
+    }));
   }
 
   // ---------- Relationships ----------
@@ -120,7 +151,11 @@ export class OrganizationController {
   )
   @Post('relationships')
   createRelationship(@Body() dto: CreateRelationshipDto) {
-    return this.service.createRelationship(dto);
+    const out = this.service.createRelationship(dto);
+    return Promise.resolve(out).then((data) => ({
+      message: 'ارتباط سازمانی ثبت شد',
+      data,
+    }));
   }
 
   @UseGuards(
@@ -131,7 +166,11 @@ export class OrganizationController {
   )
   @Delete('relationships')
   deleteRelationship(@Body() dto: DeleteRelationshipDto) {
-    return this.service.deleteRelationship(dto);
+    const out = this.service.deleteRelationship(dto);
+    return Promise.resolve(out).then((data) => ({
+      message: 'ارتباط سازمانی حذف شد',
+      data,
+    }));
   }
 
   @Get(':id/children')

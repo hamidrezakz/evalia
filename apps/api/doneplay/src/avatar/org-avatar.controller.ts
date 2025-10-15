@@ -5,6 +5,7 @@ import {
   Param,
   Post,
   UploadedFile,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -14,6 +15,8 @@ import { PrismaService } from '../prisma.service';
 import { R2Service } from '../cloud/r2.service';
 import { AssetsService } from '../assets/assets.service';
 import { OrgAvatarService } from './org-avatar.service';
+import { OrgContext } from '../common/org-context.decorator';
+import { OrgContextGuard } from '../common/org-context.guard';
 
 @Controller('avatars/organizations')
 export class OrgAvatarController {
@@ -25,6 +28,11 @@ export class OrgAvatarController {
   ) {}
 
   @Post(':id')
+  @UseGuards(OrgContextGuard)
+  @OrgContext({
+    sources: { paramKey: 'id' },
+    requireOrgRoles: ['OWNER', 'MANAGER'],
+  })
   @UseInterceptors(
     FileInterceptor('file', {
       storage: memoryStorage(),
@@ -35,9 +43,9 @@ export class OrgAvatarController {
     @Param('id') id: string,
     @UploadedFile() file: Express.Multer.File,
   ) {
-    if (!file) throw new BadRequestException('No file uploaded');
+    if (!file) throw new BadRequestException('هیچ فایلی ارسال نشده است');
     if (!this.r2?.isActive())
-      throw new BadRequestException('Avatar remote storage not configured');
+      throw new BadRequestException('ذخیره‌ساز آواتار پیکربندی نشده است');
     const orgId = Number(id);
     const org = await this.prisma.organization.findUnique({
       where: { id: orgId },
@@ -48,9 +56,9 @@ export class OrgAvatarController {
         avatarAsset: { select: { url: true } },
       },
     });
-    if (!org) throw new BadRequestException('Organization not found');
+    if (!org) throw new BadRequestException('سازمان یافت نشد');
     const buffer: Buffer | undefined = file.buffer as Buffer | undefined;
-    if (!buffer) throw new BadRequestException('Empty upload buffer');
+    if (!buffer) throw new BadRequestException('محتوای فایل خالی است');
     const original = file.originalname || `${org.slug}.jpg`;
     const ext = (
       original.match(/\.([a-zA-Z0-9]+)$/)?.[1] || 'jpg'
