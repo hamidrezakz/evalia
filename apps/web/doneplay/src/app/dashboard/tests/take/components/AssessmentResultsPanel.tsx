@@ -52,25 +52,25 @@ export const AssessmentResultsPanel: React.FC<AssessmentResultsPanelProps> = ({
 
   return (
     <Panel className={className}>
-      <PanelHeader className="relative border-b border-border/60 pb-4">
-        <div className="flex items-start justify-between gap-4 w-full">
-          <div className="flex items-start gap-3">
+      <PanelHeader className="border-b border-border/60 pb-4">
+        <div className="flex flex-wrap items-start justify-between gap-3 sm:gap-4 w-full">
+          <div className="flex items-start gap-3 min-w-0 flex-1">
             <div className="size-9 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/30 text-primary shadow-sm">
               <BarChart3 className="size-4" />
             </div>
             <div className="space-y-1 min-w-0">
               <PanelTitle className="text-sm font-semibold tracking-tight flex items-center gap-2">
-                تحلیل نهایی آزمون
+                تحلیل آزمون
                 {analysesQ.isFetching && (
                   <Activity className="size-3.5 animate-pulse text-muted-foreground" />
                 )}
               </PanelTitle>
-              <PanelDescription className="text-[11px] truncate w-35 sm:w-fit items-center gap-1 pr-0">
-                نتایج محاسبه‌شده و خروجی ویژه برای مدل‌های زبانی (AI)
+              <PanelDescription className="text-[11px] truncate max-w-[36ch] sm:max-w-none flex items-center gap-1 pr-0">
+                نتایج AI
               </PanelDescription>
             </div>
           </div>
-          <PanelAction className="row-auto col-auto self-start">
+          <PanelAction className="order-last sm:order-none w-full sm:w-auto flex-shrink-0 flex justify-stretch sm:justify-end">
             {sessionId != null && userId != null && perspective && (
               <AiAssessmentExportButton
                 sessionId={sessionId}
@@ -108,11 +108,13 @@ export const AssessmentResultsPanel: React.FC<AssessmentResultsPanelProps> = ({
                 تحلیل نیازها (Glasser)
               </h4>
             </div>
-            <div className="rounded-xl bg-muted/30 p-2 sm:p-3 border border-border/50">
-              <GlasserNeedsRadarChart
-                analysis={glasser}
-                className="max-w-md dark:bg-transparent mx-auto"
-              />
+            <div className="w-full rounded-xl bg-muted/30 p-2 sm:p-3 border border-border/50">
+              <div className="flex w-full items-center justify-center">
+                <GlasserNeedsRadarChart
+                  analysis={glasser}
+                  className="w-full max-w-[320px] sm:max-w-md dark:bg-transparent"
+                />
+              </div>
             </div>
           </div>
         )}

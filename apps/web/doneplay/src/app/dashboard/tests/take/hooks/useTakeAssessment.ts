@@ -21,6 +21,7 @@ export interface UseTakeAssessmentResult {
   effSessionId: number | null;
   effUserId: number | null;
   effPerspective: string | null;
+  effSubjectUserId: number | null;
   subjectUserId: number | null;
   setSubjectUserId: (id: number | null) => void;
   activePerspective: string | null;
@@ -31,6 +32,8 @@ export interface UseTakeAssessmentResult {
   data: UserSessionQuestions | null;
   answers: AnswerMap;
   serverAnswers: AnswerMap;
+  // Expose question refs so the page can attach DOM nodes for auto-scrolling
+  questionRefs: React.RefObject<Record<number, HTMLDivElement | null>>;
   setAnswer: (
     linkId: number,
     v: AnswerMap[number],
@@ -47,6 +50,12 @@ export interface UseTakeAssessmentResult {
   respondentQ: ReturnType<typeof useUser>;
   subjectQ: ReturnType<typeof useUser>;
   allowedSubjectIds: number[];
+  // Loading/error states for consumers
+  uqLoading: boolean;
+  uqError: unknown;
+  perspDetailedLoading: boolean;
+  // UI helpers
+  activeLinkId: number | null;
 }
 
 export function useTakeAssessment(): UseTakeAssessmentResult {
@@ -130,6 +139,7 @@ export function useTakeAssessment(): UseTakeAssessmentResult {
     previewMode ? null : activeSessionId ?? null,
     previewMode ? null : userId ?? null
   );
+  const perspDetailedLoading = !!perspDetailed.isLoading;
   const allowedSubjectIds = useMemo(() => {
     if (!perspDetailed.data || !activePerspective) return [] as number[];
     const sbp = (perspDetailed.data as any).subjectsByPerspective || {};
@@ -181,6 +191,8 @@ export function useTakeAssessment(): UseTakeAssessmentResult {
       ? effSubjectUserId ?? undefined
       : undefined
   );
+  const uqLoading = !!uq.isLoading;
+  const uqError = uq.error as unknown;
   const hasEmbedded = !!(uq.data as any)?.responses?.length;
   const respQ = useResponses(
     activeOrgId,
@@ -346,11 +358,67 @@ export function useTakeAssessment(): UseTakeAssessmentResult {
   const setAnswer = useCallback(
     (linkId: number, v: AnswerMap[number], opts?: { autoScroll?: boolean }) => {
       setAnswers((prev) => ({ ...prev, [linkId]: v }));
-      if (opts?.autoScroll) autoScrollToNext(linkId);
-      else scrollQuestionIntoCenter(linkId);
+      if (opts?.autoScroll) {
+        // pre-select next as active to keep ring in sync with programmatic scroll
+        const idx = flatQuestions.findIndex((q: any) => q.linkId === linkId);
+        const next = idx >= 0 ? (flatQuestions as any[])[idx + 1] : null;
+        if (next?.linkId) setActiveLinkId(next.linkId);
+        autoScrollToNext(linkId);
+      } else {
+        setActiveLinkId(linkId);
+        scrollQuestionIntoCenter(linkId);
+      }
     },
     [flatQuestions]
   );
+
+  // Track active question based on scroll position (closest to viewport center)
+  const [activeLinkId, setActiveLinkId] = useState<number | null>(null);
+  useEffect(() => {
+    let raf = 0;
+    const compute = () => {
+      let bestId: number | null = null;
+      let bestTop = Infinity; // minimal positive top (primary)
+      let fbId: number | null = null;
+      let fbTop = -Infinity; // largest negative top (fallback)
+      const offset = 60; // top offset to align with perceived active area
+      for (const q of flatQuestions as any[]) {
+        const el = questionRefs.current[q.linkId];
+        if (!el) continue;
+        const rect = el.getBoundingClientRect();
+        // Only consider elements at least partially visible
+        if (rect.bottom <= offset || rect.top >= window.innerHeight) continue;
+        // Primary: first element whose top is at/under the top threshold
+        if (rect.top >= offset) {
+          if (rect.top < bestTop) {
+            bestTop = rect.top;
+            bestId = q.linkId;
+          }
+        } else {
+          // Fallback: closest element above the threshold (largest negative top)
+          if (rect.top > fbTop) {
+            fbTop = rect.top;
+            fbId = q.linkId;
+          }
+        }
+      }
+      const chosen = bestId != null ? bestId : fbId;
+      if (chosen != null) setActiveLinkId(chosen);
+    };
+    const onScroll = () => {
+      if (raf) cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(compute);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll, { passive: true } as any);
+    // initial compute
+    onScroll();
+    return () => {
+      if (raf) cancelAnimationFrame(raf);
+      window.removeEventListener("scroll", onScroll as any);
+      window.removeEventListener("resize", onScroll as any);
+    };
+  }, [flatQuestions]);
 
   const handleSaveAll = useCallback(async () => {
     if (!data) return;
@@ -431,6 +499,7 @@ export function useTakeAssessment(): UseTakeAssessmentResult {
     effSessionId,
     effUserId,
     effPerspective,
+    effSubjectUserId,
     subjectUserId,
     setSubjectUserId,
     activePerspective,
@@ -441,6 +510,7 @@ export function useTakeAssessment(): UseTakeAssessmentResult {
     data,
     answers,
     serverAnswers,
+    questionRefs,
     setAnswer,
     answeredCount,
     flatQuestions,
@@ -453,5 +523,9 @@ export function useTakeAssessment(): UseTakeAssessmentResult {
     respondentQ,
     subjectQ,
     allowedSubjectIds,
+    uqLoading,
+    uqError,
+    perspDetailedLoading,
+    activeLinkId,
   };
 }

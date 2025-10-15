@@ -68,7 +68,9 @@ export function TakeHeader({
     ? subjectMap[Number(activeSubjectId)]
     : null;
   const { src: activeAvatarSrc } = useAvatarImage(
-    (activeData?.avatarUrl as string | null) || null
+    ((activeData?.avatarUrl as string | null) ||
+      (activeData as any)?.avatar ||
+      null) as string | null
   );
   const anyLoading = loadingIds.length > 0 && !hasAny;
   const anyFetched = hasAny;
@@ -98,8 +100,8 @@ export function TakeHeader({
                 disabled={
                   !allowedSubjectIds?.length || (anyLoading && !anyFetched)
                 }
-                className="h-8 inline-flex items-center gap-2 min-w-[200px] justify-between">
-                <span className="flex items-center gap-2 min-w-0">
+                className="h-8 inline-flex items-center gap-2 justify-between min-w-0 max-w-full">
+                <span className="flex items-center gap-2 min-w-0 max-w-full">
                   {activeData ? (
                     <Avatar className="h-5 w-5">
                       <AvatarImage
@@ -118,7 +120,9 @@ export function TakeHeader({
                   ) : (
                     <Users2 className="size-4 text-muted-foreground" />
                   )}
-                  <span className="truncate text-xs" suppressHydrationWarning>
+                  <span
+                    className="truncate text-xs max-w-[52vw] sm:max-w-[240px]"
+                    suppressHydrationWarning>
                     {subjectButtonLabel}
                   </span>
                 </span>
@@ -137,58 +141,15 @@ export function TakeHeader({
                   const d = subjectMap[id];
                   const load = loadingIds.includes(id) && !d;
                   const err = errorIds[id];
-                  const avatarPath = d?.avatarUrl || (d as any)?.avatar || null;
-                  const avatarSrc = avatarPath
-                    ? avatarPath.startsWith("/")
-                      ? resolveApiBase() + avatarPath
-                      : avatarPath
-                    : undefined;
                   return (
-                    <DropdownMenuItem
+                    <SubjectDropdownItem
                       key={id}
-                      disabled={load && !d}
-                      className="text-[12px] flex items-center gap-2"
-                      onClick={() => setActiveSubjectId(String(id))}>
-                      {d ? (
-                        <Avatar className="h-6 w-6">
-                          <AvatarImage
-                            src={avatarSrc || undefined}
-                            alt={d.fullName || d.email || String(d.id)}
-                          />
-                          <AvatarFallback className="text-[10px]">
-                            {(d.fullName || d.email || "?")
-                              .split(" ")
-                              .map((w: string) => w[0])
-                              .filter(Boolean)
-                              .slice(0, 2)
-                              .join("")}
-                          </AvatarFallback>
-                        </Avatar>
-                      ) : (
-                        <span className="flex items-center justify-center h-6 w-6 rounded bg-muted/40 text-[10px] text-muted-foreground">
-                          …
-                        </span>
-                      )}
-                      <div className="flex flex-col min-w-0">
-                        <span className="truncate font-medium">
-                          {d
-                            ? d.fullName || d.email || d.phone || `#${d.id}`
-                            : load
-                            ? "در حال بارگذاری…"
-                            : err
-                            ? `#${id}`
-                            : `#${id}`}
-                        </span>
-                        {d?.phone && (
-                          <span className="text-[10px] text-muted-foreground truncate">
-                            {formatIranPhone(String(d.phone))}
-                          </span>
-                        )}
-                        {!d && !load && err && (
-                          <span className="text-[9px] text-rose-500">خطا</span>
-                        )}
-                      </div>
-                    </DropdownMenuItem>
+                      id={id}
+                      user={d}
+                      loading={load && !d}
+                      error={err}
+                      onSelect={() => setActiveSubjectId(String(id))}
+                    />
                   );
                 })
               ) : (
@@ -200,11 +161,87 @@ export function TakeHeader({
           </DropdownMenu>
         ) : null}
         {allowedSubjectIds && showSubject && (
-          <Badge variant="secondary" className="text-[10px] h-5">
-            {allowedSubjectIds.length} سوژه مجاز
+          <Badge
+            variant="outline"
+            className="h-6 px-2 text-[10px] rounded-full bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/15 dark:text-emerald-300 dark:border-emerald-800/60 inline-flex items-center gap-1 min-w-0 whitespace-nowrap">
+            {/* ShieldCheck icon */}
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              className="size-3.5">
+              <path d="M12 2c-1.7 1.3-3.7 2-6 2v6c0 5.5 3.8 10.4 9 12 5.2-1.6 9-6.5 9-12V4c-2.3 0-4.3-.7-6-2-1.7 1.3-3.7 2-6 2V2z"></path>
+              <path d="M10.9 13.5l-1.9-1.9-1.4 1.4 3.3 3.3 6-6-1.4-1.4-4.6 4.6z"></path>
+            </svg>
+            <span className="tabular-nums">{allowedSubjectIds.length}</span>
+            <span>سوژه مجاز</span>
           </Badge>
         )}
       </div>
     </div>
+  );
+}
+
+function SubjectDropdownItem({
+  id,
+  user,
+  loading,
+  error,
+  onSelect,
+}: {
+  id: number;
+  user: any | null | undefined;
+  loading: boolean;
+  error: any;
+  onSelect: () => void;
+}) {
+  const avatarRaw =
+    (user?.avatarUrl as string | null) || (user as any)?.avatar || null;
+  const { src } = useAvatarImage(avatarRaw);
+  return (
+    <DropdownMenuItem
+      disabled={loading && !user}
+      className="text-[12px] flex items-center gap-2"
+      onClick={onSelect}>
+      {user ? (
+        <Avatar className="h-6 w-6">
+          <AvatarImage
+            src={src || undefined}
+            alt={user.fullName || user.email || String(user.id)}
+          />
+          <AvatarFallback className="text-[10px]">
+            {(user.fullName || user.email || "?")
+              .split(" ")
+              .map((w: string) => w[0])
+              .filter(Boolean)
+              .slice(0, 2)
+              .join("")}
+          </AvatarFallback>
+        </Avatar>
+      ) : (
+        <span className="flex items-center justify-center h-6 w-6 rounded bg-muted/40 text-[10px] text-muted-foreground">
+          …
+        </span>
+      )}
+      <div className="flex flex-col min-w-0">
+        <span className="truncate font-medium">
+          {user
+            ? user.fullName || user.email || user.phone || `#${user.id}`
+            : loading
+            ? "در حال بارگذاری…"
+            : error
+            ? `#${id}`
+            : `#${id}`}
+        </span>
+        {user?.phone && (
+          <span className="text-[10px] text-muted-foreground truncate">
+            {formatIranPhone(String(user.phone))}
+          </span>
+        )}
+        {!user && !loading && error && (
+          <span className="text-[9px] text-rose-500">خطا</span>
+        )}
+      </div>
+    </DropdownMenuItem>
   );
 }
