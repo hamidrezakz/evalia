@@ -35,6 +35,7 @@ export class ResponseService {
     });
     if (
       !tq ||
+      tq.deletedAt ||
       tq.section.deletedAt ||
       tq.section.template.deletedAt ||
       tq.question.deletedAt
@@ -293,6 +294,7 @@ export class ResponseService {
     // Total questions for this perspective in the session's template
     const total = await this.prisma.assessmentTemplateQuestion.count({
       where: {
+        deletedAt: null,
         section: {
           templateId,
           deletedAt: null,
@@ -303,7 +305,14 @@ export class ResponseService {
       },
     });
     const answered = await this.prisma.assessmentResponse.count({
-      where: { assignmentId: a.id },
+      where: {
+        assignmentId: a.id,
+        templateQuestion: {
+          deletedAt: null,
+          section: { deletedAt: null, template: { deletedAt: null } },
+          question: { deletedAt: null },
+        },
+      },
     });
     return {
       total,
@@ -402,6 +411,7 @@ export class ResponseService {
     for (const p of uniquePersp) {
       const t = await this.prisma.assessmentTemplateQuestion.count({
         where: {
+          deletedAt: null,
           section: {
             templateId,
             deletedAt: null,
@@ -418,7 +428,14 @@ export class ResponseService {
       0,
     );
     const answered = await this.prisma.assessmentResponse.count({
-      where: { assignmentId: { in: assignments.map((a) => a.id) } },
+      where: {
+        assignmentId: { in: assignments.map((a) => a.id) },
+        templateQuestion: {
+          deletedAt: null,
+          section: { deletedAt: null, template: { deletedAt: null } },
+          question: { deletedAt: null },
+        },
+      },
     });
     const status = !total
       ? 'NO_QUESTIONS'

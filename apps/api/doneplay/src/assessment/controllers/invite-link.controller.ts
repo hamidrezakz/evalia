@@ -12,6 +12,7 @@ import { OrgContextGuard } from '../../common/org-context.guard';
 import { OrgContext } from '../../common/org-context.decorator';
 import { Roles } from '../../common/roles.decorator';
 import { InviteLinkService } from '../services/invite-link.service';
+import { Public } from '../../common/public.decorator';
 
 @Controller('invite-links')
 export class InviteLinkController {
@@ -83,6 +84,7 @@ export class InviteLinkController {
 
   // Resolve token without authentication to fetch org slug/name and session id
   // Useful for redirecting anonymous users to /auth/[slug]?redirect=/invite/[token]
+  @Public()
   @Get('resolve/:token')
   resolve(@Param('token') token: string) {
     return this.service.resolve(token);
