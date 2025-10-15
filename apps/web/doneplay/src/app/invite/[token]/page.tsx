@@ -1,7 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { resolveInviteLink, consumeInviteLink } from "@/assessment/api/invite-links.api";
+import {
+  resolveInviteLink,
+  consumeInviteLink,
+} from "@/assessment/api/invite-links.api";
 import { useAuthSession } from "@/app/auth/hooks/useAuthSession";
 import { LoadingDots } from "@/components/ui/loading-dots";
 
@@ -25,7 +28,9 @@ export default function InviteTokenPage() {
         setOrgSlug((data?.organizationSlug as string) || null);
         setSessionId((data?.sessionId as number) || null);
       } catch (e: any) {
-        setError(typeof e?.message === "string" ? e.message : "لینک نامعتبر است");
+        setError(
+          typeof e?.message === "string" ? e.message : "لینک نامعتبر است"
+        );
       }
     }
     if (token) run();
@@ -36,7 +41,8 @@ export default function InviteTokenPage() {
 
   // Step 2: if not authenticated, bounce to /auth/[slug]?redirect=current
   useEffect(() => {
-    if (!orgSlug) return;
+    // If user is not authenticated, redirect to auth immediately.
+    // Prefer org-specific auth route when orgSlug is available; otherwise fallback to generic /auth.
     if (!session.isAuthenticated) {
       const redirect = encodeURIComponent(`/invite/${token}`);
       const path = orgSlug
@@ -52,12 +58,18 @@ export default function InviteTokenPage() {
       try {
         const res = await consumeInviteLink(token);
         const data: any = res.data || {};
-        const next = (data.redirectTo as string) || `/dashboard/tests/take${
-          sessionId ? `?sessionId=${sessionId}&perspective=SELF` : ""
-        }`;
+        const next =
+          (data.redirectTo as string) ||
+          `/dashboard/tests/take${
+            sessionId ? `?sessionId=${sessionId}&perspective=SELF` : ""
+          }`;
         router.replace(next);
       } catch (e: any) {
-        setError(typeof e?.message === "string" ? e.message : "عدم امکان استفاده از لینک");
+        setError(
+          typeof e?.message === "string"
+            ? e.message
+            : "عدم امکان استفاده از لینک"
+        );
       }
     }
     if (session.isAuthenticated && token) consume();

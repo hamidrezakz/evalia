@@ -666,13 +666,15 @@ model AssessmentAssignment {
   perspective ResponsePerspective @default(SELF)
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
+  deletedAt   DateTime?
 
   session     AssessmentSession  @relation("SessionAssignments", fields: [sessionId], references: [id], onDelete: Cascade)
   respondent  User               @relation("UserAssessmentAssignments", fields: [respondentUserId], references: [id])
   subject     User?              @relation("UserAssessmentSubjectAssignments", fields: [subjectUserId], references: [id])
   responses   AssessmentResponse[] @relation("AssignmentResponses")
 
-  /// Ensure no duplicate assignment for the same tuple (final form to be applied after backfill)
+  /// Ensure no duplicate assignment for the same tuple
+  @@unique([sessionId, respondentUserId, subjectUserId, perspective])
   @@index([respondentUserId])
   @@index([subjectUserId])
 }

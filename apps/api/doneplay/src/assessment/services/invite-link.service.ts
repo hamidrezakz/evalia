@@ -145,25 +145,36 @@ export class InviteLinkService {
     // auto-assign self
     let assignmentCreated = false;
     if (link.autoAssignSelf) {
-      const existingA = await this.prisma.assessmentAssignment.findFirst({
+      // Check existing assignment (including soft-deleted)
+      const existingA = await this.prisma.assessmentAssignment.findUnique({
         where: {
-          sessionId: link.sessionId,
-          respondentUserId: userId,
-          perspective: 'SELF' as ResponsePerspective,
-        },
-        select: { id: true },
-      });
-      if (!existingA) {
-        await this.prisma.assessmentAssignment.create({
-          data: {
+          sessionId_respondentUserId_subjectUserId_perspective: {
             sessionId: link.sessionId,
             respondentUserId: userId,
             subjectUserId: userId,
             perspective: 'SELF',
           },
-        });
-        assignmentCreated = true;
-      }
+        },
+        select: { id: true, deletedAt: true },
+      });
+      assignmentCreated = !existingA || !!existingA.deletedAt;
+      await this.prisma.assessmentAssignment.upsert({
+        where: {
+          sessionId_respondentUserId_subjectUserId_perspective: {
+            sessionId: link.sessionId,
+            respondentUserId: userId,
+            subjectUserId: userId,
+            perspective: 'SELF',
+          },
+        },
+        update: { deletedAt: null },
+        create: {
+          sessionId: link.sessionId,
+          respondentUserId: userId,
+          subjectUserId: userId,
+          perspective: 'SELF',
+        },
+      });
     }
     // log use (idempotent per user)
     await this.prisma.sessionInviteLinkUse.upsert({
