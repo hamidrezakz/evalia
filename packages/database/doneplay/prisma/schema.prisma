@@ -185,6 +185,43 @@ enum AIAnalysisKind {
   RISK
 }
 
+/// Access level for organization linkage to a QuestionBank (سطح دسترسی سازمان به بانک سوال)
+enum QuestionBankAccessLevel {
+  USE      /// سازمان می‌تواند استفاده کند (خواندن سوالات در قالب‌ها)
+  EDIT     /// سازمان می‌تواند سوال جدید به بانک اضافه یا ویرایش کند (در صورتی که مالک اصلی نیست، محدودیت‌های کسب و کار در سرویس enforce می‌شوند)
+  ADMIN    /// مدیریت کامل (تغییر متادیتا، آرشیو، تنظیم دسترسی سایر سازمان‌ها)
+}
+
+/// Access level for organization linkage to an AssessmentTemplate (سطح دسترسی سازمان به تمپلیت ارزیابی)
+enum TemplateAccessLevel {
+  USE      /// فقط استفاده در ساخت Session
+  EDIT     /// ویرایش ساختار (افزودن/حذف سوال، تغییر بخش‌ها) – با رعایت policy
+  ADMIN    /// مدیریت کامل + تنظیم دسترسی دیگر سازمان‌ها
+  CLONE    /// فقط مجاز به کلون‌کردن نسخه جدید داخلی (سناریوی مارکت‌پلیس)
+}
+
+/// Access level for organization linkage to an OptionSet (سطح دسترسی سازمان به مجموعه گزینه)
+enum OptionSetAccessLevel {
+  USE      /// استفاده در سوال ها
+  EDIT     /// افزودن/حذف گزینه (در صورت policy)
+  ADMIN    /// مدیریت کامل + اشتراک گذاری
+}
+
+/// Organization capability (ویژگی/توانمندی سازمان) – allows marking multiple orgs as MASTER, etc.
+enum OrganizationCapability {
+  MASTER          /// سازمان مادر که می‌تواند زیرسازمان بسازد
+  BILLING_PROVIDER /// (آینده) مدیریت مالی زیرمجموعه‌ها
+  ANALYTICS_HUB    /// (آینده) تجمیع گزارش‌ها
+}
+
+/// Relationship type between organizations (نوع رابطه سازمان‌ها)
+enum OrganizationRelationshipType {
+  PARENT_CHILD   /// رابطه عادی والد-فرزند
+  FRANCHISE      /// مدل فرانچایز
+  MANAGED        /// مدیریت عملیاتی (outsourced)
+  BRAND_ALIAS    /// نمایه/برند مشترک
+}
+
 /// Soft delete strategy: each soft-deletable model has deletedAt nullable timestamp
 
 // ------------------------------
@@ -241,6 +278,10 @@ model User {
   createdOrganizations Organization[] @relation("OrganizationsCreated")
   /// Service assignments (facilitator / analysis manager) | تخصیص‌های خدماتی
   serviceAssignments OrganizationServiceAssignment[] @relation("UserServiceAssignments")
+  /// Invite links created by this user
+  createdSessionInviteLinks SessionInviteLink[] @relation("UserCreatedSessionInviteLinks")
+  /// Invite link consumptions by this user
+  inviteLinkUses            SessionInviteLinkUse[] @relation("UserInviteLinkUses")
   /// Increment to invalidate previously issued access tokens (JWT tokenVersion strategy)
   tokenVersion  Int           @default(1)
 
@@ -266,6 +307,9 @@ model Organization {
   lockedAt       DateTime?
   createdById    Int?
   createdBy      User?                      @relation("OrganizationsCreated", fields: [createdById], references: [id])
+  /// Optional avatar asset (mirrors User.avatarAssetId)
+  avatarAssetId Int? @unique
+  avatarAsset   Asset? @relation("OrganizationAvatarAsset", fields: [avatarAssetId], references: [id])
   createdAt      DateTime                   @default(now())
   updatedAt      DateTime                   @updatedAt
   deletedAt      DateTime?
@@ -280,6 +324,25 @@ model Organization {
   auditLogs      AuditLog[]                    @relation("OrganizationAuditLogs")
   assets         Asset[]                       @relation("OrganizationAssets")
   serviceAssignments OrganizationServiceAssignment[] @relation("OrganizationServiceAssignments")
+  sessionInviteLinks SessionInviteLink[] @relation("OrganizationSessionInviteLinks")
+  /// New: question banks created by this organization
+  createdQuestionBanks QuestionBank[] @relation("OrganizationCreatedQuestionBanks")
+  /// New: templates created by this organization
+  createdAssessmentTemplates AssessmentTemplate[] @relation("OrganizationCreatedAssessmentTemplates")
+  /// New: links granting access to question banks
+  questionBankLinks QuestionBankOrganizationLink[] @relation("OrganizationQuestionBankLinks")
+  /// New: links granting access to assessment templates
+  assessmentTemplateLinks AssessmentTemplateOrganizationLink[] @relation("OrganizationAssessmentTemplateLinks")
+  /// New: links granting access to option sets
+  optionSetLinks OptionSetOrganizationLink[] @relation("OrganizationOptionSetLinks")
+  /// New: option sets created by this organization
+  createdOptionSets OptionSet[] @relation("OrganizationCreatedOptionSets")
+  /// Capability assignments (e.g., MASTER)
+  organizationCapabilityAssignments OrganizationCapabilityAssignment[] @relation("OrgCapabilityAssignments")
+  /// Relationships where this organization is the PARENT
+  childRelationships OrganizationRelationship[] @relation("OrgRelParent")
+  /// Relationships where this organization is the CHILD
+  parentRelationships OrganizationRelationship[] @relation("OrgRelChild")
 
   @@index([plan])
   @@index([locale])
@@ -399,11 +462,17 @@ model QuestionBank {
   name        String   @unique
   description String?
   isSystem    Boolean  @default(false)
+  /// Optional: سازمانی که این بانک را ایجاد کرده (برای تفکیک مالک اصلی از لینک‌های اشتراکی)
+  createdByOrganizationId Int?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   deletedAt   DateTime?
 
   questions   Question[]
+  /// Links to organizations with access levels
+  orgLinks    QuestionBankOrganizationLink[]
+
+  createdByOrganization Organization? @relation("OrganizationCreatedQuestionBanks", fields: [createdByOrganizationId], references: [id])
 
   @@index([name])
 }
@@ -460,9 +529,15 @@ model OptionSet {
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
   deletedAt   DateTime?
+  /// Optional: سازمان سازنده (اگر global نیست)
+  createdByOrganizationId Int?
 
   options     OptionSetOption[] @relation("OptionSetOptions")
   questions   Question[]        @relation("QuestionsUsingOptionSet")
+  /// Links to organizations with access levels
+  orgLinks    OptionSetOrganizationLink[]
+
+  createdByOrganization Organization? @relation("OrganizationCreatedOptionSets", fields: [createdByOrganizationId], references: [id])
 
   @@index([name])
 }
@@ -492,6 +567,8 @@ model AssessmentTemplate {
   description    String?
   state          AssessmentState       @default(DRAFT)
   meta           Json                  @default("{}")
+  /// Optional: سازمان سازنده (اگر global نیست)
+  createdByOrganizationId Int?
   createdAt      DateTime              @default(now())
   updatedAt      DateTime              @updatedAt
   deletedAt      DateTime?
@@ -499,6 +576,10 @@ model AssessmentTemplate {
   // (v2 removed) organizationLinks join table
   sections       AssessmentTemplateSection[] @relation("TemplateSections")
   sessions       AssessmentSession[]         @relation("TemplateSessions")
+  /// Organization linkage (many-to-many with access levels)
+  orgLinks       AssessmentTemplateOrganizationLink[]
+
+  createdByOrganization Organization? @relation("OrganizationCreatedAssessmentTemplates", fields: [createdByOrganizationId], references: [id])
 
   @@index([state])
   @@index([name])
@@ -531,13 +612,15 @@ model AssessmentTemplateQuestion {
   required       Boolean     @default(true)
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
+  deletedAt      DateTime?
 
   section        AssessmentTemplateSection @relation("TemplateSectionQuestions", fields: [sectionId], references: [id], onDelete: Cascade)
   question       Question                  @relation("QuestionTemplateLinks", fields: [questionId], references: [id])
   responses      AssessmentResponse[]      @relation("TemplateQuestionResponses")
 
-  @@unique([sectionId, questionId])
+  @@unique([sectionId, questionId], map: "AssessmentTemplateQuestion_sectionId_questionId_key")
   @@index([questionId])
+  @@index([sectionId, questionId, deletedAt])
 }
 
 // (v2 removed) OrganizationAssessmentTemplateLink join model
@@ -565,6 +648,7 @@ model AssessmentSession {
   responses      AssessmentResponse[]     @relation("SessionResponses")
   aiJobs         AIAnalysisJob[]          @relation("SessionAIJobs")
   scores         AssessmentAggregateScore[] @relation("SessionAggregateScores")
+  inviteLinks    SessionInviteLink[]       @relation("SessionInviteLinks")
 
   @@index([organizationId, state])
   @@index([templateId])
@@ -582,13 +666,15 @@ model AssessmentAssignment {
   perspective ResponsePerspective @default(SELF)
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
+  deletedAt   DateTime?
 
   session     AssessmentSession  @relation("SessionAssignments", fields: [sessionId], references: [id], onDelete: Cascade)
   respondent  User               @relation("UserAssessmentAssignments", fields: [respondentUserId], references: [id])
   subject     User?              @relation("UserAssessmentSubjectAssignments", fields: [subjectUserId], references: [id])
   responses   AssessmentResponse[] @relation("AssignmentResponses")
 
-  /// Ensure no duplicate assignment for the same tuple (final form to be applied after backfill)
+  /// Ensure no duplicate assignment for the same tuple
+  @@unique([sessionId, respondentUserId, subjectUserId, perspective])
   @@index([respondentUserId])
   @@index([subjectUserId])
 }
@@ -716,6 +802,47 @@ model Notification {
   @@index([userId, status])
 }
 
+/// Link for inviting users to a specific assessment session (لینک دعوت جلسه)
+model SessionInviteLink {
+  id               Int       @id @default(autoincrement())
+  token            String    @unique
+  organizationId   Int
+  sessionId        Int
+  createdByUserId  Int
+  label            String?
+  enabled          Boolean   @default(true)
+  expiresAt        DateTime?
+  maxUses          Int?
+  autoJoinOrg      Boolean   @default(true)
+  autoAssignSelf   Boolean   @default(true)
+  allowedDomains   String[]  @default([])
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  organization     Organization      @relation("OrganizationSessionInviteLinks", fields: [organizationId], references: [id], onDelete: Cascade)
+  session          AssessmentSession @relation("SessionInviteLinks", fields: [sessionId], references: [id], onDelete: Cascade)
+  createdBy        User              @relation("UserCreatedSessionInviteLinks", fields: [createdByUserId], references: [id])
+  uses             SessionInviteLinkUse[] @relation("LinkUses")
+
+  @@index([organizationId, sessionId])
+}
+
+/// Usage log for invite link consumption (مصرف لینک دعوت)
+model SessionInviteLinkUse {
+  id       Int      @id @default(autoincrement())
+  linkId   Int
+  userId   Int
+  usedAt   DateTime @default(now())
+  ip       String?
+  userAgent String?
+
+  link     SessionInviteLink @relation("LinkUses", fields: [linkId], references: [id], onDelete: Cascade)
+  user     User              @relation("UserInviteLinkUses", fields: [userId], references: [id])
+
+  @@unique([linkId, userId])
+  @@index([linkId, usedAt])
+}
+
 /// Audit log entry (لاگ ممیزی)
 model AuditLog {
   id             Int             @id @default(autoincrement())
@@ -754,6 +881,7 @@ model Asset {
 
   organization   Organization? @relation("OrganizationAssets", fields: [organizationId], references: [id])
   users          User[]        @relation("UserAvatarAsset")
+  organizations  Organization[] @relation("OrganizationAvatarAsset")
 
   @@index([organizationId, type])
   @@index([filename])
@@ -790,5 +918,94 @@ model VerificationCode {
 // ------------------------------
 // End of schema
 // ------------------------------
+
+// ------------------------------
+// NEW: Organization linkage models (many-to-many with access levels)
+// ------------------------------
+
+/// Link between QuestionBank and Organization (دسترسی سازمان به بانک سوال)
+model QuestionBankOrganizationLink {
+  id               Int                     @id @default(autoincrement())
+  questionBankId   Int
+  organizationId   Int
+  accessLevel      QuestionBankAccessLevel @default(USE)
+  createdAt        DateTime                @default(now())
+
+  questionBank     QuestionBank            @relation(fields: [questionBankId], references: [id], onDelete: Cascade)
+  organization     Organization            @relation("OrganizationQuestionBankLinks", fields: [organizationId], references: [id])
+
+  @@unique([questionBankId, organizationId])
+  @@index([organizationId])
+  @@index([accessLevel])
+}
+
+/// Link between AssessmentTemplate and Organization (دسترسی سازمان به تمپلیت)
+model AssessmentTemplateOrganizationLink {
+  id             Int                  @id @default(autoincrement())
+  templateId     Int
+  organizationId Int
+  accessLevel    TemplateAccessLevel  @default(USE)
+  createdAt      DateTime             @default(now())
+
+  template       AssessmentTemplate   @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  organization   Organization         @relation("OrganizationAssessmentTemplateLinks", fields: [organizationId], references: [id])
+
+  @@unique([templateId, organizationId])
+  @@index([organizationId])
+  @@index([accessLevel])
+}
+
+/// Link between OptionSet and Organization (دسترسی سازمان به مجموعه گزینه)
+model OptionSetOrganizationLink {
+  id             Int                 @id @default(autoincrement())
+  optionSetId    Int
+  organizationId Int
+  accessLevel    OptionSetAccessLevel @default(USE)
+  createdAt      DateTime            @default(now())
+
+  optionSet      OptionSet          @relation(fields: [optionSetId], references: [id], onDelete: Cascade)
+  organization   Organization       @relation("OrganizationOptionSetLinks", fields: [organizationId], references: [id])
+
+  @@unique([optionSetId, organizationId])
+  @@index([organizationId])
+  @@index([accessLevel])
+}
+
+// ------------------------------
+// NEW: Organization hierarchy & capability models (multi-master design)
+// ------------------------------
+
+/// Assignment of a capability to an organization (قابلیت سازمان)
+model OrganizationCapabilityAssignment {
+  id             Int                   @id @default(autoincrement())
+  organizationId Int
+  capability     OrganizationCapability
+  active         Boolean               @default(true)
+  createdAt      DateTime              @default(now())
+
+  organization   Organization @relation("OrgCapabilityAssignments", fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, capability])
+  @@index([capability])
+  @@index([active])
+}
+
+/// Direct relationship between two organizations (رابطه مستقیم سازمان‌ها)
+model OrganizationRelationship {
+  id                   Int                          @id @default(autoincrement())
+  parentOrganizationId Int
+  childOrganizationId  Int
+  relationshipType     OrganizationRelationshipType @default(PARENT_CHILD)
+  cascadeResources     Boolean                      @default(true) /// اگر true منابع والد به فرزند به صورت ارثی قابل استفاده است
+  createdAt            DateTime                     @default(now())
+
+  parent Organization @relation("OrgRelParent", fields: [parentOrganizationId], references: [id], onDelete: Cascade)
+  child  Organization @relation("OrgRelChild", fields: [childOrganizationId], references: [id], onDelete: Cascade)
+
+  @@unique([parentOrganizationId, childOrganizationId])
+  @@index([childOrganizationId])
+  @@index([relationshipType])
+}
+
 
 

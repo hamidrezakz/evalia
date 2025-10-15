@@ -39,7 +39,11 @@ export class UsersController {
   @Roles('SUPER_ADMIN')
   update(@Param('id') id: string, @Body() body: any) {
     // Accept partial fields; service enforces allowed updates
-    return this.service.update(Number(id), body);
+    const out = this.service.update(Number(id), body);
+    return Promise.resolve(out).then((data) => ({
+      message: 'اطلاعات کاربر بروزرسانی شد',
+      data,
+    }));
   }
 
   @Post()
@@ -51,12 +55,20 @@ export class UsersController {
     'ORG:MANAGER',
   )
   create(@Body() body: any) {
-    return this.service.create(body);
+    const out = this.service.create(body);
+    return Promise.resolve(out).then((data) => ({
+      message: 'کاربر جدید ایجاد شد',
+      data,
+    }));
   }
 
   @Delete(':id')
   @Roles('SUPER_ADMIN')
   remove(@Param('id') id: string) {
-    return this.service.remove(Number(id));
+    const out = this.service.remove(Number(id));
+    return Promise.resolve(out).then((data) => ({
+      message: 'کاربر حذف شد (قابل بازیابی)',
+      data,
+    }));
   }
 }

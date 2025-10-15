@@ -241,6 +241,10 @@ model User {
   createdOrganizations Organization[] @relation("OrganizationsCreated")
   /// Service assignments (facilitator / analysis manager) | تخصیص‌های خدماتی
   serviceAssignments OrganizationServiceAssignment[] @relation("UserServiceAssignments")
+  /// Invite links created by this user
+  createdSessionInviteLinks SessionInviteLink[] @relation("UserCreatedSessionInviteLinks")
+  /// Invite link consumptions by this user
+  inviteLinkUses            SessionInviteLinkUse[] @relation("UserInviteLinkUses")
   /// Increment to invalidate previously issued access tokens (JWT tokenVersion strategy)
   tokenVersion  Int           @default(1)
 
@@ -280,6 +284,7 @@ model Organization {
   auditLogs      AuditLog[]                    @relation("OrganizationAuditLogs")
   assets         Asset[]                       @relation("OrganizationAssets")
   serviceAssignments OrganizationServiceAssignment[] @relation("OrganizationServiceAssignments")
+  sessionInviteLinks SessionInviteLink[] @relation("OrganizationSessionInviteLinks")
 
   @@index([plan])
   @@index([locale])
@@ -531,13 +536,15 @@ model AssessmentTemplateQuestion {
   required       Boolean     @default(true)
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
+  deletedAt      DateTime?
 
   section        AssessmentTemplateSection @relation("TemplateSectionQuestions", fields: [sectionId], references: [id], onDelete: Cascade)
   question       Question                  @relation("QuestionTemplateLinks", fields: [questionId], references: [id])
   responses      AssessmentResponse[]      @relation("TemplateQuestionResponses")
 
-  @@unique([sectionId, questionId])
+  @@unique([sectionId, questionId], map: "AssessmentTemplateQuestion_sectionId_questionId_key")
   @@index([questionId])
+  @@index([sectionId, questionId, deletedAt])
 }
 
 // (v2 removed) OrganizationAssessmentTemplateLink join model
@@ -565,6 +572,7 @@ model AssessmentSession {
   responses      AssessmentResponse[]     @relation("SessionResponses")
   aiJobs         AIAnalysisJob[]          @relation("SessionAIJobs")
   scores         AssessmentAggregateScore[] @relation("SessionAggregateScores")
+  inviteLinks    SessionInviteLink[]       @relation("SessionInviteLinks")
 
   @@index([organizationId, state])
   @@index([templateId])
@@ -582,13 +590,15 @@ model AssessmentAssignment {
   perspective ResponsePerspective @default(SELF)
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
+  deletedAt   DateTime?
 
   session     AssessmentSession  @relation("SessionAssignments", fields: [sessionId], references: [id], onDelete: Cascade)
   respondent  User               @relation("UserAssessmentAssignments", fields: [respondentUserId], references: [id])
   subject     User?              @relation("UserAssessmentSubjectAssignments", fields: [subjectUserId], references: [id])
   responses   AssessmentResponse[] @relation("AssignmentResponses")
 
-  /// Ensure no duplicate assignment for the same tuple (final form to be applied after backfill)
+  /// Ensure no duplicate assignment for the same tuple
+  @@unique([sessionId, respondentUserId, subjectUserId, perspective])
   @@index([respondentUserId])
   @@index([subjectUserId])
 }
@@ -714,6 +724,47 @@ model Notification {
   organization   Organization?  @relation("OrganizationNotifications", fields: [organizationId], references: [id])
 
   @@index([userId, status])
+}
+
+/// Link for inviting users to a specific assessment session (لینک دعوت جلسه)
+model SessionInviteLink {
+  id               Int       @id @default(autoincrement())
+  token            String    @unique
+  organizationId   Int
+  sessionId        Int
+  createdByUserId  Int
+  label            String?
+  enabled          Boolean   @default(true)
+  expiresAt        DateTime?
+  maxUses          Int?
+  autoJoinOrg      Boolean   @default(true)
+  autoAssignSelf   Boolean   @default(true)
+  allowedDomains   String[]  @default([])
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  organization     Organization      @relation("OrganizationSessionInviteLinks", fields: [organizationId], references: [id], onDelete: Cascade)
+  session          AssessmentSession @relation("SessionInviteLinks", fields: [sessionId], references: [id], onDelete: Cascade)
+  createdBy        User              @relation("UserCreatedSessionInviteLinks", fields: [createdByUserId], references: [id])
+  uses             SessionInviteLinkUse[] @relation("LinkUses")
+
+  @@index([organizationId, sessionId])
+}
+
+/// Usage log for invite link consumption (مصرف لینک دعوت)
+model SessionInviteLinkUse {
+  id       Int      @id @default(autoincrement())
+  linkId   Int
+  userId   Int
+  usedAt   DateTime @default(now())
+  ip       String?
+  userAgent String?
+
+  link     SessionInviteLink @relation("LinkUses", fields: [linkId], references: [id], onDelete: Cascade)
+  user     User              @relation("UserInviteLinkUses", fields: [userId], references: [id])
+
+  @@unique([linkId, userId])
+  @@index([linkId, usedAt])
 }
 
 /// Audit log entry (لاگ ممیزی)

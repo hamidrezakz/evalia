@@ -2,6 +2,8 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { PasswordService } from '../auth/password.service';
@@ -15,7 +17,7 @@ export class UsersService {
   constructor(
     private prisma: PrismaService,
     private password: PasswordService,
-    private auth: AuthService,
+    @Inject(forwardRef(() => AuthService)) private auth: AuthService,
   ) {}
 
   async list(dto: ListUsersDto) {

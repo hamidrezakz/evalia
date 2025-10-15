@@ -14,6 +14,10 @@ import {
   Archive,
   Pencil,
   PlayCircle,
+  Search,
+  Hash,
+  CalendarClock,
+  LayoutTemplate,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,40 +31,30 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 // import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
+import { TemplateStateBadge } from "@/components/status-badges";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useAvatarImage } from "@/users/api/useAvatarImage";
+import { useOrganization } from "@/organizations/organization/api/organization-hooks";
+import { parseJalali, formatJalali } from "@/lib/jalali-date";
+import TemplateInfoCard from "./TemplateInfoCard";
+import TemplateUpsertDialog from "./TemplateUpsertDialog";
+import TemplateActionsMenu from "./TemplateActionsMenu";
+// import { cn } from "@/lib/utils";
 import {
   useTemplates,
   useCreateTemplate,
   useUpdateTemplate,
   useDeleteTemplate,
+  templatesKeys,
 } from "@/assessment/api/templates-hooks";
+import { useOrgState } from "@/organizations/organization/context/org-context";
 import TemplateCombobox from "./TemplateCombobox";
 import type {
   Template,
   TemplateState,
 } from "@/assessment/types/templates.types";
 
-const stateLabels: Record<TemplateState, string> = {
-  DRAFT: "پیش‌نویس",
-  ACTIVE: "فعال",
-  CLOSED: "بسته‌شده",
-  ARCHIVED: "آرشیو",
-};
+// State labels handled by global TemplateStateBadge
 
 export type TemplateManagerProps = {
   onSelect?: (t: Template | null) => void;
@@ -74,13 +68,18 @@ export default function TemplateManager({ onSelect }: TemplateManagerProps) {
     null | { mode: "create" } | { mode: "edit"; tpl: Template }
   >(null);
 
-  const { data, isLoading } = useTemplates({ search });
-  const createMut = useCreateTemplate();
-  const updateMut = useUpdateTemplate();
-  const deleteMut = useDeleteTemplate();
+  const { activeOrganizationId } = useOrgState();
+  const { data, isLoading } = useTemplates(activeOrganizationId, { search });
+  const createMut = useCreateTemplate(activeOrganizationId);
+  const updateMut = useUpdateTemplate(activeOrganizationId);
+  const deleteMut = useDeleteTemplate(activeOrganizationId);
+  const orgQ = useOrganization(activeOrganizationId || null);
+  // Build the exact list query key to update cache precisely on local mutations
+  const listQueryKey = activeOrganizationId
+    ? [...templatesKeys.list({ search }), activeOrganizationId]
+    : ("templates:list:disabled" as any);
 
   const list: Template[] = (data as any)?.data || [];
-
   const { register, handleSubmit, reset } = useForm<{
     name: string;
     description?: string;
@@ -106,12 +105,10 @@ export default function TemplateManager({ onSelect }: TemplateManagerProps) {
       try {
         qc.setQueriesData({ queryKey: ["templates", "list"] }, (old: any) => {
           if (!old || !Array.isArray(old?.data)) return old;
-          // avoid duplicates
           if (old.data.some((t: Template) => t.id === created.id)) return old;
           return { ...old, data: [created, ...old.data] };
         });
       } catch {}
-      // Auto-select the newly created template so sections panel updates immediately
       setSelected(created);
       onSelect?.(created);
     } else {
@@ -123,12 +120,29 @@ export default function TemplateManager({ onSelect }: TemplateManagerProps) {
     setDialogOpen(null);
   });
 
+  // Resolve owner organization visuals
+  const orgName = ((orgQ.data as any)?.name as string) || "سازمان";
+  const orgInitials = orgName.slice(0, 2);
+  const orgAvatarRaw: string | null =
+    ((orgQ.data as any)?.avatarUrl as string) || null;
+  const { src: orgAvatarSrc } = useAvatarImage(orgAvatarRaw);
   const onDelete = async (tpl: Template) => {
-    await deleteMut.mutateAsync(tpl.id);
+    // Optimistically clear selection and cancel/remove related queries to avoid stale fetches
     if (selected?.id === tpl.id) {
       setSelected(null);
       onSelect?.(null);
+      try {
+        await qc.cancelQueries({ queryKey: templatesKeys.sections(tpl.id) });
+        await qc.cancelQueries({ queryKey: templatesKeys.full(tpl.id) });
+        await qc.cancelQueries({ queryKey: templatesKeys.byId(tpl.id) });
+      } catch {}
+      try {
+        qc.removeQueries({ queryKey: templatesKeys.sections(tpl.id) });
+        qc.removeQueries({ queryKey: templatesKeys.full(tpl.id) });
+        qc.removeQueries({ queryKey: templatesKeys.byId(tpl.id) });
+      } catch {}
     }
+    await deleteMut.mutateAsync(tpl.id);
   };
 
   return (
@@ -136,6 +150,7 @@ export default function TemplateManager({ onSelect }: TemplateManagerProps) {
       <Panel>
         <PanelHeader className="flex-row items-center justify-between gap-2">
           <PanelTitle className="text-sm flex items-center gap-2 font-semibold">
+            <LayoutTemplate className="h-4 w-4 text-primary" />
             قالب‌های آزمون
           </PanelTitle>
           <PanelAction>
@@ -151,12 +166,6 @@ export default function TemplateManager({ onSelect }: TemplateManagerProps) {
         </PanelHeader>
         <PanelContent className="flex-col gap-3">
           <div className="flex flex-col gap-2">
-            <Input
-              placeholder="جستجو..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-8 text-xs"
-            />
             <TemplateCombobox
               items={list}
               value={selected?.id ?? null}
@@ -169,148 +178,130 @@ export default function TemplateManager({ onSelect }: TemplateManagerProps) {
               placeholder={isLoading ? "در حال بارگذاری..." : "انتخاب قالب"}
             />
             {selected && (
-              <div className="flex items-center justify-end">
-                <DropdownMenu dir="rtl">
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      icon={<MoreVertical className="h-4 w-4" />}
-                      iconPosition="left">
-                      اقدامات
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="min-w-52">
-                    <DropdownMenuLabel>اقدامات</DropdownMenuLabel>
-                    <DropdownMenuItem onClick={() => openEdit(selected)}>
-                      <Edit2 className="h-4 w-4" /> ویرایش
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuLabel>تغییر وضعیت</DropdownMenuLabel>
-                    <DropdownMenuItem
-                      onClick={() =>
-                        updateMut.mutate({
-                          id: selected.id,
-                          body: { state: "ACTIVE" },
-                        })
-                      }>
-                      <PlayCircle className="h-4 w-4" /> فعال
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() =>
-                        updateMut.mutate({
-                          id: selected.id,
-                          body: { state: "DRAFT" },
-                        })
-                      }>
-                      <Pencil className="h-4 w-4" /> پیش‌نویس
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() =>
-                        updateMut.mutate({
-                          id: selected.id,
-                          body: { state: "CLOSED" },
-                        })
-                      }>
-                      <Lock className="h-4 w-4" /> بسته‌شده
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() =>
-                        updateMut.mutate({
-                          id: selected.id,
-                          body: { state: "ARCHIVED" },
-                        })
-                      }>
-                      <Archive className="h-4 w-4" /> آرشیو
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={() =>
-                        createMut.mutate(
-                          {
-                            name: `${selected.name} - کپی`,
-                            description: selected.description ?? undefined,
-                          },
-                          {
-                            onSuccess: (created) => {
-                              try {
-                                qc.setQueriesData(
-                                  { queryKey: ["templates", "list"] },
-                                  (old: any) => {
-                                    if (!old || !Array.isArray(old?.data))
-                                      return old;
-                                    if (
-                                      old.data.some(
-                                        (t: Template) => t.id === created.id
-                                      )
-                                    )
-                                      return old;
-                                    return {
-                                      ...old,
-                                      data: [created, ...old.data],
-                                    };
-                                  }
-                                );
-                              } catch {}
-                              setSelected(created);
-                              onSelect?.(created);
-                            },
+              <TemplateInfoCard
+                template={selected}
+                orgName={orgName}
+                orgAvatarSrc={orgAvatarSrc}
+                orgInitials={orgInitials}
+                orgPlan={(orgQ.data as any)?.plan || null}
+                orgStatus={(orgQ.data as any)?.status || null}
+                onEdit={() => openEdit(selected)}
+                onChangeState={(state) => {
+                  const prev = selected;
+                  // Optimistic UI update
+                  setSelected((p) => (p ? { ...p, state } : p));
+                  try {
+                    if (
+                      Array.isArray(
+                        (qc.getQueryData(listQueryKey) as any)?.data
+                      )
+                    ) {
+                      qc.setQueryData(listQueryKey, (old: any) => {
+                        const mapped = old.data.map((it: Template) =>
+                          it.id === selected.id ? { ...it, state } : it
+                        );
+                        return { ...old, data: mapped };
+                      });
+                    }
+                  } catch {}
+
+                  updateMut.mutate(
+                    { id: selected.id, body: { state } },
+                    {
+                      onError: () => {
+                        // Rollback if server update fails
+                        setSelected(prev || null);
+                        try {
+                          if (
+                            Array.isArray(
+                              (qc.getQueryData(listQueryKey) as any)?.data
+                            ) &&
+                            prev
+                          ) {
+                            qc.setQueryData(listQueryKey, (old: any) => {
+                              const mapped = old.data.map((it: Template) =>
+                                it.id === prev.id
+                                  ? { ...it, state: prev.state }
+                                  : it
+                              );
+                              return { ...old, data: mapped };
+                            });
                           }
-                        )
-                      }>
-                      <Copy className="h-4 w-4" /> کپی از قالب
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      variant="destructive"
-                      onClick={() => selected && onDelete(selected)}
-                      disabled={deleteMut.isPending}>
-                      <Trash2 className="h-4 w-4" /> حذف
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+                        } catch {}
+                      },
+                      onSuccess: (t) => {
+                        // Ensure local matches server in case of drift
+                        setSelected((p) =>
+                          p && p.id === t.id ? { ...p, state: t.state } : p
+                        );
+                        try {
+                          if (
+                            Array.isArray(
+                              (qc.getQueryData(listQueryKey) as any)?.data
+                            )
+                          ) {
+                            qc.setQueryData(listQueryKey, (old: any) => {
+                              const mapped = old.data.map((it: Template) =>
+                                it.id === t.id ? { ...it, state: t.state } : it
+                              );
+                              return { ...old, data: mapped };
+                            });
+                          }
+                        } catch {}
+                      },
+                    }
+                  );
+                }}
+                onDelete={() => selected && onDelete(selected)}
+                isDeleting={deleteMut.isPending}
+              />
             )}
           </div>
         </PanelContent>
       </Panel>
 
-      {/* Create/Edit dialog */}
-      <Dialog
+      <TemplateUpsertDialog
         open={!!dialogOpen}
-        onOpenChange={(o) => setDialogOpen(o ? dialogOpen : null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {dialogOpen?.mode === "create"
-                ? "ایجاد تمپلیت جدید"
-                : "ویرایش تمپلیت"}
-            </DialogTitle>
-          </DialogHeader>
-          <form onSubmit={onSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="tpl-name">نام</Label>
-              <Input id="tpl-name" {...register("name", { required: true })} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="tpl-desc">توضیحات</Label>
-              <Input id="tpl-desc" {...register("description")} />
-            </div>
-            <DialogFooter className="gap-2">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setDialogOpen(null)}>
-                <X className="h-4 w-4 ms-1" /> انصراف
-              </Button>
-              <Button
-                type="submit"
-                disabled={createMut.isPending || updateMut.isPending}>
-                <CheckCircle2 className="h-4 w-4 ms-1" /> ثبت
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+        mode={dialogOpen?.mode === "edit" ? "edit" : "create"}
+        initial={
+          dialogOpen?.mode === "edit"
+            ? {
+                name: dialogOpen.tpl.name,
+                description: dialogOpen.tpl.description || "",
+              }
+            : { name: "", description: "" }
+        }
+        isSubmitting={createMut.isPending || updateMut.isPending}
+        onClose={() => setDialogOpen(null)}
+        onSubmit={async (vals) => {
+          if (!dialogOpen) return;
+          if (dialogOpen.mode === "create") {
+            const created = await createMut.mutateAsync({
+              name: vals.name,
+              description: vals.description || undefined,
+            });
+            try {
+              qc.setQueriesData(
+                { queryKey: ["templates", "list"] },
+                (old: any) => {
+                  if (!old || !Array.isArray(old?.data)) return old;
+                  if (old.data.some((t: Template) => t.id === created.id))
+                    return old;
+                  return { ...old, data: [created, ...old.data] };
+                }
+              );
+            } catch {}
+            setSelected(created);
+            onSelect?.(created);
+          } else {
+            await updateMut.mutateAsync({
+              id: dialogOpen.tpl.id,
+              body: { name: vals.name, description: vals.description || null },
+            });
+          }
+          setDialogOpen(null);
+        }}
+      />
     </>
   );
 }

@@ -1,5 +1,5 @@
 "use client";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Suspense, useEffect, useRef, useMemo } from "react";
 import {
   Card,
@@ -32,14 +32,25 @@ import {
   FloatingSymbol,
 } from "@/components/sections/hero-backgrounds";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useOrganizationBrandBySlug } from "@/organizations/organization/api/organization-hooks";
 import { cn } from "@/lib/utils";
 import { LoadingDots } from "@/components/ui/loading-dots";
+import { useAvatarImage } from "@/users/api/useAvatarImage";
+// Notification preferences removed; success toasts are shown only when server sends message
 
 function LoginPage() {
   const router = useRouter();
   const sp = useSearchParams();
+  const pathname = usePathname();
+  // Accept optional org slug via path: /auth or /auth/[slug]
+  const parts = (pathname || "/").split("/").filter(Boolean);
+  const orgSlug = parts.length >= 2 && parts[0] === "auth" ? parts[1] : null;
+  const brandQ = useOrganizationBrandBySlug(orgSlug, !!orgSlug);
+  const { src: orgAvatarSrc } = useAvatarImage(
+    (brandQ.data?.avatarUrl as string | null | undefined) || null
+  );
   const redirect = sp.get("redirect") || "/dashboard";
-  const machine = useLoginMachine(() => router.replace(redirect));
+  const machine = useLoginMachine(() => router.replace(redirect), orgSlug);
   const { state } = machine;
 
   // Autofocus management
@@ -47,6 +58,8 @@ function LoginPage() {
   useEffect(() => {
     focusRef.current?.focus();
   }, [state.phase]);
+
+  // No page-level notification overrides: UI relies solely on server-provided messages
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -122,7 +135,7 @@ function LoginPage() {
     <div className="flex items-center min-h-[100svh] max-h-[100svh] p-4 relative overflow-hidden">
       {/* Unified decorative background */}
       <div className="pointer-events-none absolute inset-0" aria-hidden>
-         <HeroBackground variant="signal" showMasks={false} />
+        <HeroBackground variant="signal" showMasks={false} />
         {/* Auth specific center glow */}
         <RadialGlow className="opacity-40 md:opacity-60" />
         <BlurBlob
@@ -146,18 +159,34 @@ function LoginPage() {
           <Card className="w-full max-w-sm bg-accent/65 transition-all py-8">
             <CardHeader className="space-y-3 justify-between flex items-top">
               <div className="flex items-center justify-center p-0 m-0 mt-[-0.8rem] gap-2">
-                <Avatar className="size-12 rounded-sm">
-                  <AvatarImage alt="DanPlay" />
-                  <AvatarFallback className="bg-primary/10 text-primary">
-                    <Command className="size-[18px]" />
-                  </AvatarFallback>
+                <Avatar className="size-10 rounded-lg">
+                  {brandQ.isLoading ? (
+                    <AvatarFallback className="bg-muted animate-pulse" />
+                  ) : orgAvatarSrc ? (
+                    <AvatarImage
+                      alt={brandQ.data?.name || "Org"}
+                      src={orgAvatarSrc || undefined}
+                    />
+                  ) : (
+                    <AvatarFallback className="bg-primary/10 text-primary">
+                      <Command className="size-[18px]" />
+                    </AvatarFallback>
+                  )}
                 </Avatar>
                 <div className="text-start space-y-1">
                   <div className="text-base font-bold leading-none">
-                    دآن‌پلی
+                    {brandQ.isLoading ? (
+                      <div className="h-3 w-24 rounded bg-muted animate-pulse" />
+                    ) : (
+                      brandQ.data?.name || "دآن‌پلی"
+                    )}
                   </div>
-                  <div className="text-[9px] text-muted-foreground leading-snug">
-                    پلتفرم ارزیابی و توسعه عملکرد تیم‌ها
+                  <div className="text-[9px] text-muted-foreground leading-snug ltr:font-mono">
+                    {brandQ.isLoading ? (
+                      <div className="h-2 w-16 rounded bg-muted animate-pulse" />
+                    ) : (
+                      orgSlug || "doneplay"
+                    )}
                   </div>
                 </div>
               </div>

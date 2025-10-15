@@ -4,6 +4,12 @@ import { ApiError } from "./error";
 import { ensureRefreshed } from "./refresh";
 import { tokenStorage } from "@/lib/token-storage";
 import { ApiResponse, RequestOptions } from "./types";
+import {
+  notifyError,
+  notifySuccess,
+  notifyWarning,
+  notifyInfo,
+} from "@/lib/notifications";
 
 // Default headers for all API requests
 const defaultHeaders: Record<string, string> = {
@@ -84,6 +90,11 @@ export async function apiRequest<TData = unknown, TBody = unknown>(
       if (typeof j.message === "string") message = j.message;
       else if (typeof j.error === "string") message = j.error;
     }
+    // Error toast level mapping by status
+    const s = res.status;
+    const isWarning = [400, 404, 409, 422, 429].includes(s);
+    if (isWarning) notifyWarning(message);
+    else notifyError(message);
     throw new ApiError(message, res.status, json);
   }
   const envelope = apiResponseSchema.safeParse(json);
@@ -97,6 +108,7 @@ export async function apiRequest<TData = unknown, TBody = unknown>(
   if (responseSchema) {
     const inner = responseSchema.safeParse(envelope.data.data);
     if (!inner.success) {
+      notifyError("Inner data validation failed");
       throw new ApiError(
         "Inner data validation failed",
         res.status,
@@ -104,8 +116,26 @@ export async function apiRequest<TData = unknown, TBody = unknown>(
       );
     }
     // Attach validated inner data back to envelope
-    return { ...envelope.data, data: inner.data } as ApiResponse<TData>;
+    const resp = { ...envelope.data, data: inner.data } as ApiResponse<TData>;
+    // Success toast (message-only). Allow backend to hint type via meta
+    const serverMsg = envelope.data.message;
+    if (typeof serverMsg === "string" && serverMsg.trim().length > 0) {
+      const meta: any = (envelope.data as any).meta;
+      const toastType = meta?.toastType || meta?.severity || meta?.toast?.type;
+      if (toastType === "warning") notifyWarning(serverMsg);
+      else if (toastType === "info") notifyInfo(serverMsg);
+      else notifySuccess(serverMsg);
+    }
+    return resp;
   }
   // Always return the full envelope object
+  const serverMsg = envelope.data.message;
+  if (typeof serverMsg === "string" && serverMsg.trim().length > 0) {
+    const meta: any = (envelope.data as any).meta;
+    const toastType = meta?.toastType || meta?.severity || meta?.toast?.type;
+    if (toastType === "warning") notifyWarning(serverMsg);
+    else if (toastType === "info") notifyInfo(serverMsg);
+    else notifySuccess(serverMsg);
+  }
   return envelope.data as ApiResponse<TData>;
 }

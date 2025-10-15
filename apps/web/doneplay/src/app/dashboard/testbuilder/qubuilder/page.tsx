@@ -1,5 +1,5 @@
 import React from "react";
-import { QuestionBuilder } from "@/assessment/components/QuestionBuilder";
+import { QuestionBuilder } from "@/assessment/components/questions/create/QuestionBuilder";
 
 export const metadata = { title: "Builder سوالات" };
 

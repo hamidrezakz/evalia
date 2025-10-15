@@ -19,20 +19,18 @@ import {
   CheckCircle2,
   Pencil,
   AlertTriangle,
+  CalendarCheck2,
+  Building2,
 } from "lucide-react";
-import {
-  useOrganization,
-  useOrganizations,
-} from "@/organizations/organization/api/organization-hooks";
-import OrgSelectCombobox from "@/organizations/organization/components/OrgSelectCombobox";
+import { useOrganization } from "@/organizations/organization/api/organization-hooks";
 import TeamSelectCombobox from "@/organizations/team/components/TeamSelectCombobox";
+import { useTemplate, useTemplates } from "@/assessment/api/templates-hooks";
 import {
-  useTemplate,
-  useTemplates,
   useCreateSession,
   useUpdateSession,
   useSession,
-} from "@/assessment/api/templates-hooks";
+} from "@/assessment/api/sessions-hooks";
+import { useOrgState } from "@/organizations/organization/context/org-context";
 import { useTeams } from "@/organizations/team/api/team-hooks";
 import { JalaliDatePicker } from "@/components/date/JalaliDateComponents";
 
@@ -69,7 +67,11 @@ export function SessionUpsertDialog(props: {
     initialSession,
   } = props;
   const isEdit = !!sessionId;
-  const { data: sessionData } = useSession(isEdit ? sessionId! : null);
+  const { activeOrganizationId } = useOrgState();
+  const { data: sessionData } = useSession(
+    activeOrganizationId || null,
+    isEdit ? sessionId! : null
+  );
 
   const { register, handleSubmit, setValue, watch, reset } = useForm<FormVals>({
     defaultValues: {
@@ -111,27 +113,22 @@ export function SessionUpsertDialog(props: {
     }
   }, [isEdit, sessionData, reset]);
 
-  // Orgs
-  // Organization listing now handled by centralized OrgSelectCombobox
-  const orgQ = useOrganizations({ pageSize: 50 });
-  const organizations = (orgQ.data as any)?.data || [];
-  const selectedOrgId = watch("organizationId");
-  const selectedOrgQ = useOrganization(selectedOrgId || null);
-  const mergedOrgs = React.useMemo(() => {
-    const sel = selectedOrgQ.data as any;
-    if (!sel) return organizations;
-    const exists = organizations.some((o: any) => o.id === sel.id);
-    return exists ? organizations : [sel, ...organizations];
-  }, [organizations, selectedOrgQ.data]);
+  // Always force active organization (no manual selection)
+  const effectiveOrgId = activeOrganizationId || null;
+  React.useEffect(() => {
+    setValue("organizationId", effectiveOrgId ?? null);
+  }, [effectiveOrgId, setValue]);
+  const activeOrgQ = useOrganization(effectiveOrgId, !!effectiveOrgId);
 
   // Templates
   const [templateSearch, setTemplateSearch] = React.useState("");
-  const { data: templatesData, isLoading: tplLoading } = useTemplates({
-    search: templateSearch,
-  });
+  const { data: templatesData, isLoading: tplLoading } = useTemplates(
+    effectiveOrgId,
+    { search: templateSearch }
+  );
   const templates = templatesData?.data || [];
   const selectedTemplateId = watch("templateId") || null;
-  const selectedTemplateQ = useTemplate(selectedTemplateId);
+  const selectedTemplateQ = useTemplate(effectiveOrgId, selectedTemplateId);
   const mergedTemplates = React.useMemo(() => {
     const sel = selectedTemplateQ.data as any;
     if (!sel) return templates;
@@ -139,8 +136,8 @@ export function SessionUpsertDialog(props: {
     return exists ? templates : [sel, ...templates];
   }, [templates, selectedTemplateQ.data]);
 
-  const createMut = useCreateSession();
-  const updateMut = useUpdateSession();
+  const createMut = useCreateSession(effectiveOrgId);
+  const updateMut = useUpdateSession(effectiveOrgId);
 
   const startAtVal = watch("startAt");
   const endAtVal = watch("endAt");
@@ -155,9 +152,10 @@ export function SessionUpsertDialog(props: {
 
   const onSubmit = handleSubmit(async (vals) => {
     const effOrgId =
-      vals.organizationId ??
-      initialSession?.organizationId ??
-      (sessionData as any)?.organizationId ??
+      effectiveOrgId ||
+      vals.organizationId ||
+      initialSession?.organizationId ||
+      (sessionData as any)?.organizationId ||
       null;
     const effTplId =
       vals.templateId ??
@@ -207,42 +205,59 @@ export function SessionUpsertDialog(props: {
       {trigger}
       <DialogContent className="sm:max-w-3xl p-4 md:p-6 rounded-xl border border-border/60 bg-background/95 backdrop-blur">
         <DialogHeader>
-          <DialogTitle className="text-base font-semibold tracking-tight">
+          <DialogTitle className="flex items-center gap-2 text-base font-bold text-primary tracking-tight">
+            <CalendarCheck2 className="h-5 w-5 text-primary" />
             {isEdit ? "ویرایش جلسه" : "ایجاد جلسه جدید"}
           </DialogTitle>
-          <DialogDescription className="text-xs text-muted-foreground">
+          <DialogDescription className="text-xs text-muted-foreground mt-1">
             {isEdit ? "ویرایش اطلاعات جلسه" : "تمپلیت، محدوده و جزئیات جلسه"}
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-5 mt-2">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div className="space-y-2">
-              <Label>سازمان</Label>
-              <OrgSelectCombobox
-                value={watch("organizationId")}
-                onChange={(id) => {
-                  setValue("organizationId", id ?? null);
-                  setValue("teamScopeId", null);
-                }}
-                disabled={isEdit}
-                placeholder="انتخاب سازمان"
-              />
+            <div className="space-y-1 text-xs md:col-span-3 p-3 rounded-md border border-border/50 bg-muted/20 flex flex-col gap-2">
+              {effectiveOrgId ? (
+                <>
+                  <div className="flex items-center gap-2 text-[11px] font-medium">
+                    <Building2 className="h-3.5 w-3.5 text-primary" />
+                    <span>سازمان جلسه</span>
+                  </div>
+                  <span>
+                    این جلسه به صورت خودکار در سازمان
+                    <span className="font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-md mx-1 inline-flex items-center whitespace-normal break-words">
+                      {activeOrgQ.data?.name || "..."}
+                    </span>
+                    ثبت می‌شود.
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">
+                    برای استفاده از سازمان دیگر ابتدا سازمان فعال را تغییر دهید.
+                  </span>
+                </>
+              ) : (
+                <span className="text-amber-600 text-[11px] flex items-center gap-1">
+                  برای ایجاد جلسه باید یک سازمان فعال انتخاب شود.
+                </span>
+              )}
             </div>
             <div className="space-y-2 md:col-span-1">
               <Label>تمپلیت</Label>
               <Combobox<{ id: number; name: string }>
-                items={mergedTemplates}
+                items={effectiveOrgId ? mergedTemplates : []}
                 value={watch("templateId")}
                 onChange={(v) => setValue("templateId", (v as number) ?? null)}
                 searchable
                 searchValue={templateSearch}
                 onSearchChange={setTemplateSearch}
-                placeholder="انتخاب/جستجوی تمپلیت"
+                placeholder={
+                  effectiveOrgId
+                    ? "انتخاب/جستجوی تمپلیت"
+                    : "اول سازمان فعال را تنظیم کنید"
+                }
                 getKey={(t) => t.id}
                 getLabel={(t) => t.name}
-                loading={tplLoading}
+                loading={tplLoading && !!effectiveOrgId}
                 leadingIcon={FileText}
-                disabled={isEdit}
+                disabled={!effectiveOrgId || isEdit}
               />
             </div>
             <div className="space-y-2 md:col-span-1">
@@ -250,6 +265,7 @@ export function SessionUpsertDialog(props: {
               <Input
                 placeholder="مثلاً سنجش ماهانه تیم ۱"
                 {...register("name", { required: true })}
+                disabled={!effectiveOrgId}
               />
             </div>
           </div>
@@ -281,7 +297,7 @@ export function SessionUpsertDialog(props: {
           </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <TeamScopeField
-              orgId={watch("organizationId")}
+              orgId={effectiveOrgId}
               value={watch("teamScopeId")}
               onChange={(v) => setValue("teamScopeId", v)}
             />
@@ -295,10 +311,27 @@ export function SessionUpsertDialog(props: {
             </div>
           </div>
           <div className="flex items-center justify-between pt-2 border-t border-border/60 mt-2">
-            <span className="text-[11px] text-muted-foreground">
-              {isEdit ? "ویرایش رکورد موجود" : "رکورد جدید"}
-            </span>
             <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                className="h-8 px-4 text-xs"
+                onClick={onSubmit}
+                isLoading={createMut.isPending || updateMut.isPending}
+                disabled={
+                  createMut.isPending ||
+                  updateMut.isPending ||
+                  invalidRange ||
+                  !effectiveOrgId
+                }
+                icon={
+                  isEdit ? (
+                    <Pencil className="h-4 w-4" />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4" />
+                  )
+                }>
+                {isEdit ? "ذخیره تغییرات" : "ثبت جلسه"}
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -307,25 +340,10 @@ export function SessionUpsertDialog(props: {
                 disabled={createMut.isPending || updateMut.isPending}>
                 انصراف
               </Button>
-              <Button
-                size="sm"
-                className="h-8 px-4 text-xs"
-                onClick={onSubmit}
-                isLoading={createMut.isPending || updateMut.isPending}
-                disabled={
-                  createMut.isPending || updateMut.isPending || invalidRange
-                }>
-                {isEdit ? (
-                  <>
-                    <Pencil className="h-4 w-4 ms-1" /> ذخیره تغییرات
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="h-4 w-4 ms-1" /> ثبت جلسه
-                  </>
-                )}
-              </Button>
             </div>
+            <span className="text-[11px] text-muted-foreground">
+              {isEdit ? "ویرایش رکورد موجود" : "رکورد جدید"}
+            </span>
           </div>
         </div>
       </DialogContent>

@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import {
   Plus,
@@ -14,6 +14,7 @@ import {
   Pencil,
   Lock,
   Archive,
+  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -51,6 +52,11 @@ import {
   useDeleteTemplateSection,
   useUpdateTemplate,
 } from "@/assessment/api/templates-hooks";
+import { useOrgState } from "@/organizations/organization/context/org-context";
+import { TemplateStateBadge } from "@/components/status-badges";
+import TemplateStateDropdown from "./TemplateStateDropdown";
+import { useQueryClient } from "@tanstack/react-query";
+import { templatesKeys } from "@/assessment/api/templates-hooks";
 import type {
   Template,
   TemplateSection,
@@ -71,14 +77,19 @@ export type TemplateSectionsPanelProps = {
 export default function TemplateSectionsPanel({
   template,
 }: TemplateSectionsPanelProps) {
+  const qc = useQueryClient();
   const templateId = template?.id ?? null;
-  const { data: sections, isLoading } = useTemplateSections(templateId);
+  const { activeOrganizationId } = useOrgState();
+  const { data: sections, isLoading } = useTemplateSections(
+    activeOrganizationId,
+    templateId
+  );
 
-  const createMut = useCreateTemplateSection();
-  const updateMut = useUpdateTemplateSection();
-  const reorderMut = useReorderTemplateSections();
-  const deleteMut = useDeleteTemplateSection();
-  const updateTemplateMut = useUpdateTemplate();
+  const createMut = useCreateTemplateSection(activeOrganizationId);
+  const updateMut = useUpdateTemplateSection(activeOrganizationId);
+  const reorderMut = useReorderTemplateSections(activeOrganizationId);
+  const deleteMut = useDeleteTemplateSection(activeOrganizationId);
+  const updateTemplateMut = useUpdateTemplate(activeOrganizationId);
 
   const [dialogOpen, setDialogOpen] = useState<
     null | { mode: "create" } | { mode: "edit"; id: number; title: string }
@@ -111,11 +122,24 @@ export default function TemplateSectionsPanel({
     if (!dialogOpen) return;
     if (dialogOpen.mode === "create") {
       await createMut.mutateAsync({ templateId, title: vals.title });
+      // Force refresh to ensure UI updates without manual reload (in addition to hook's onSuccess)
+      try {
+        qc.invalidateQueries({ queryKey: templatesKeys.sections(templateId) });
+      } catch {}
     } else {
-      await updateMut.mutateAsync({
+      const updated = await updateMut.mutateAsync({
         id: dialogOpen.id,
         body: { title: vals.title },
       });
+      // Optimistically reflect the title change in cached list
+      try {
+        qc.setQueryData(templatesKeys.sections(templateId), (old: any) => {
+          if (!Array.isArray(old)) return old;
+          return old.map((s: any) =>
+            s.id === updated.id ? { ...s, title: updated.title } : s
+          );
+        });
+      } catch {}
     }
     setDialogOpen(null);
   });
@@ -137,67 +161,31 @@ export default function TemplateSectionsPanel({
     await deleteMut.mutateAsync(id);
   };
 
+  // Keep local state badge reactive and in-sync immediately
+  const [localState, setLocalState] = useState<TemplateState | null>(
+    template?.state || null
+  );
+  useEffect(() => {
+    setLocalState(template?.state || null);
+  }, [template?.id, template?.state]);
+
+  // Ensure refetch on template change (in case cache is warm but should show fresh list)
+  useEffect(() => {
+    if (templateId) {
+      qc.invalidateQueries({ queryKey: templatesKeys.sections(templateId) });
+    }
+  }, [templateId, qc]);
+
   return (
-    <Panel>
-      <PanelHeader className="flex-row items-center justify-between">
-        <PanelTitle className="text-sm flex items-center gap-2 font-semibold tracking-tight">
-          <LayoutList className="h-4 w-4 text-muted-foreground" />
-          بخش‌های قالب (سکشن‌ها)
-        </PanelTitle>
+    <Panel key={templateId ?? "no-template"}>
+      <PanelHeader className="flex-row items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <LayoutList className="h-4 w-4 text-primary shrink-0" />
+          <PanelTitle className="text-sm font-semibold tracking-tight truncate">
+            سکشن‌ها
+          </PanelTitle>
+        </div>
         <PanelAction>
-          {templateId && (
-            <DropdownMenu dir="rtl">
-              <DropdownMenuTrigger asChild></DropdownMenuTrigger>
-              <DropdownMenuContent className="min-w-48">
-                <DropdownMenuLabel>وضعیت قالب</DropdownMenuLabel>
-                <DropdownMenuItem
-                  onClick={() =>
-                    template &&
-                    updateTemplateMut.mutate({
-                      id: template.id,
-                      body: { state: "ACTIVE" },
-                    })
-                  }>
-                  <PlayCircle className="h-4 w-4" /> فعال
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() =>
-                    template &&
-                    updateTemplateMut.mutate({
-                      id: template.id,
-                      body: { state: "DRAFT" },
-                    })
-                  }>
-                  <Pencil className="h-4 w-4" /> پیش‌نویس
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() =>
-                    template &&
-                    updateTemplateMut.mutate({
-                      id: template.id,
-                      body: { state: "CLOSED" },
-                    })
-                  }>
-                  <Lock className="h-4 w-4" /> بسته‌شده
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() =>
-                    template &&
-                    updateTemplateMut.mutate({
-                      id: template.id,
-                      body: { state: "ARCHIVED" },
-                    })
-                  }>
-                  <Archive className="h-4 w-4" /> آرشیو
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel>اقدامات</DropdownMenuLabel>
-                <DropdownMenuItem onClick={openCreate}>
-                  <Plus className="h-4 w-4" /> افزودن سکشن جدید
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
           <Button
             size="sm"
             onClick={openCreate}
@@ -207,6 +195,14 @@ export default function TemplateSectionsPanel({
         </PanelAction>
       </PanelHeader>
       <PanelContent className="flex-col gap-3 w-full text-xs">
+        {template?.description ? (
+          <div className="flex items-start gap-2 text-[11px] text-muted-foreground">
+            <FileText className="h-3.5 w-3.5 mt-[1px]" />
+            <div className="line-clamp-1" title={template.description}>
+              {template.description}
+            </div>
+          </div>
+        ) : null}
         {!templateId && (
           <div className="text-xs text-muted-foreground">
             ابتدا یک تمپلیت انتخاب کنید.
@@ -220,8 +216,14 @@ export default function TemplateSectionsPanel({
               </div>
             )}
             {!isLoading && ordered.length === 0 && (
-              <div className="text-xs text-muted-foreground">
-                سکشنی یافت نشد
+              <div className="flex flex-col items-center justify-center gap-2 text-xs text-muted-foreground border rounded-md py-6">
+                <div>سکشنی یافت نشد</div>
+                <Button
+                  size="sm"
+                  onClick={openCreate}
+                  disabled={!templateId || createMut.isPending}>
+                  <Plus className="h-4 w-4 ms-1" /> افزودن اولین سکشن
+                </Button>
               </div>
             )}
             <div className="flex flex-col gap-2 w-full">

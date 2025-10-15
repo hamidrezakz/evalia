@@ -10,6 +10,8 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
+import { OrganizationService } from '../organization/organization.service';
+import { OrgRole } from '@prisma/client';
 import { JwtService } from '@nestjs/jwt';
 import { PasswordService } from './password.service';
 import { VerificationService } from './verification.service';
@@ -44,6 +46,7 @@ export class AuthService {
     private readonly jwt: JwtService,
     private readonly password: PasswordService,
     private readonly verification: VerificationService,
+    private readonly organizations?: OrganizationService,
   ) {}
 
   // Only phone used in initial onboarding phase
@@ -83,6 +86,10 @@ export class AuthService {
         passwordHash,
       },
     });
+    // Optionally ensure membership by slug if provided
+    if (dto.orgSlug) {
+      await this.ensureMembershipBySlug(user.id, dto.orgSlug).catch(() => {});
+    }
     return {
       user: this.toPublicUser(user),
       tokens: await this.issueTokens(user.id),
@@ -99,6 +106,10 @@ export class AuthService {
       throw new BadRequestException('Password not set for this user');
     const ok = await this.password.compare(dto.password, user.passwordHash);
     if (!ok) throw new UnauthorizedException('Incorrect password');
+    // Optionally ensure membership by slug if provided
+    if (dto.orgSlug) {
+      await this.ensureMembershipBySlug(user.id, dto.orgSlug).catch(() => {});
+    }
     return {
       user: this.toPublicUser(user),
       tokens: await this.issueTokens(user.id),
@@ -145,6 +156,10 @@ export class AuthService {
     });
     if (user) {
       // existing user -> direct login
+      // Optionally ensure membership by slug if provided
+      if (dto.orgSlug) {
+        await this.ensureMembershipBySlug(user.id, dto.orgSlug).catch(() => {});
+      }
       return {
         user: this.toPublicUser(user),
         tokens: await this.issueTokens(user.id),
@@ -222,6 +237,7 @@ export class AuthService {
 
   private async issueTokens(userId: number) {
     const roles = await this.gatherRoles(userId);
+    const orgIds = roles.org.map((o) => o.orgId);
     // Fetch tokenVersion to embed in JWT (for selective invalidation)
     const userTokenMeta = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -232,6 +248,7 @@ export class AuthService {
       sub: userId,
       type: 'access',
       roles,
+      orgIds,
       tokenVersion,
     });
     const refreshToken = this.jwt.sign(
@@ -301,5 +318,24 @@ export class AuthService {
       tokenVersion: tokenVersionFromToken,
       currentVersion,
     };
+  }
+
+  /** Ensure user has membership for org with slug; idempotent. */
+  private async ensureMembershipBySlug(userId: number, orgSlug: string) {
+    if (!orgSlug || !this.organizations) return;
+    const org = await this.organizations.findBySlugPublic(orgSlug);
+    const existing = await this.prisma.organizationMembership.findUnique({
+      where: { userId_organizationId: { userId, organizationId: org.id } },
+      select: { id: true },
+    });
+    if (!existing) {
+      await this.prisma.organizationMembership.create({
+        data: {
+          userId,
+          organizationId: org.id,
+          roles: ['MEMBER' as OrgRole],
+        },
+      });
+    }
   }
 }

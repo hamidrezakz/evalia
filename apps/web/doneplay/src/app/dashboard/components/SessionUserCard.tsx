@@ -5,7 +5,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
 import { SessionStateBadge } from "@/components/status-badges/SessionStateBadge";
 import { AssignmentProgressBadge } from "@/components/status-badges/AssignmentProgressBadge";
-import { useSessionQuestionCount } from "@/assessment/api/templates-hooks";
+import { useSessionQuestionCount } from "@/assessment/api/sessions-hooks";
+import { useOrgState } from "@/organizations/organization/context";
 import { useAssessmentUserSessions } from "@/assessment/context/assessment-user-sessions";
 import { useRouter } from "next/navigation";
 import {
@@ -32,7 +33,9 @@ export function SessionUserCard({
   className,
   onJoinOverride,
 }: SessionUserCardProps) {
-  const qc = useSessionQuestionCount(session.id);
+  const orgCtx = useOrgState();
+  const activeOrgId = orgCtx.activeOrganizationId || null;
+  const qc = useSessionQuestionCount(activeOrgId, session.id);
   const { setActiveSessionId, setActivePerspective, availablePerspectives } =
     useAssessmentUserSessions();
   const router = useRouter();
@@ -64,14 +67,18 @@ export function SessionUserCard({
     try {
       if (onJoinOverride) {
         await onJoinOverride(session.id);
+        // Override flow stays on the same page – release loading after it resolves
+        setJoining(false);
       } else {
         setActiveSessionId(session.id);
         if ((availablePerspectives?.length ?? 0) > 0) {
           setActivePerspective(availablePerspectives![0] as any);
         }
+        // Navigate to the test page; keep loading until unmount by route change
         router.push("/dashboard/tests/take");
       }
-    } finally {
+    } catch {
+      // In case of any error, release loading to allow retry
       setJoining(false);
     }
   };

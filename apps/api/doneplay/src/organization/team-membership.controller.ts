@@ -6,9 +6,11 @@ import {
   Param,
   Query,
   Body,
+  UseGuards,
 } from '@nestjs/common';
 import { TeamMembershipService } from './team-membership.service';
-import { Roles } from '../common/roles.decorator';
+import { OrgContext } from '../common/org-context.decorator';
+import { OrgContextGuard } from '../common/org-context.guard';
 import { IsInt } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -19,14 +21,15 @@ class AddTeamMemberDto {
 }
 
 @Controller('organizations/:orgId/teams/:teamId/members')
+@UseGuards(OrgContextGuard)
+@OrgContext({
+  sources: { paramKey: 'orgId' },
+  requireOrgRoles: ['OWNER', 'MANAGER'],
+})
 export class TeamMembershipController {
   constructor(private service: TeamMembershipService) {}
 
   @Get()
-  @Roles({
-    any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER'],
-    orgAny: ['OWNER', 'MANAGER'],
-  })
   list(
     @Param('orgId') orgId: string,
     @Param('teamId') teamId: string,
@@ -42,32 +45,32 @@ export class TeamMembershipController {
   }
 
   @Post()
-  @Roles({
-    any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER'],
-    orgAny: ['OWNER', 'MANAGER'],
-  })
   add(
     @Param('orgId') orgId: string,
     @Param('teamId') teamId: string,
     @Body() dto: AddTeamMemberDto,
   ) {
-    return this.service.add(Number(orgId), Number(teamId), dto.userId);
+    const out = this.service.add(Number(orgId), Number(teamId), dto.userId);
+    return Promise.resolve(out).then((data) => ({
+      message: 'عضو جدید به تیم اضافه شد',
+      data,
+    }));
   }
 
   @Delete(':membershipId')
-  @Roles({
-    any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER'],
-    orgAny: ['OWNER', 'MANAGER'],
-  })
   remove(
     @Param('orgId') orgId: string,
     @Param('teamId') teamId: string,
     @Param('membershipId') membershipId: string,
   ) {
-    return this.service.remove(
+    const out = this.service.remove(
       Number(orgId),
       Number(teamId),
       Number(membershipId),
     );
+    return Promise.resolve(out).then((data) => ({
+      message: 'عضویت کاربر از تیم حذف شد',
+      data,
+    }));
   }
 }

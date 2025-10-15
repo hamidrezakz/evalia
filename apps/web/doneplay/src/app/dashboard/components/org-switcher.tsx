@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { useAuthSession } from "@/app/auth/event-context/session-context";
 import { useRouter } from "next/navigation";
+import { useAvatarImage } from "@/users/api/useAvatarImage";
 
 // Re-export OrgAccount type (subset from use-app-sidebar-data)
 export type OrgAccount = SidebarOrgAccount;
@@ -46,6 +47,70 @@ export interface OrgSwitcherProps {
 }
 
 // plan badge is handled by OrgPlanBadge
+
+// Child item component to safely use hooks per row
+function OrgRowItem({
+  acc,
+  isActive,
+  onClick,
+}: {
+  acc: OrgAccount;
+  isActive: boolean;
+  onClick: () => void;
+}) {
+  const { src: rowAvatarSrc } = useAvatarImage(acc.logo);
+  return (
+    <DropdownMenuItem
+      key={acc.id}
+      onClick={onClick}
+      className="gap-2 cursor-pointer group pr-2"
+      data-active={isActive}
+      aria-current={isActive ? "true" : undefined}>
+      <div className="flex items-center gap-2">
+        <Avatar className="size-8 rounded-md border border-border/40 ring-0 group-data-[active=true]:ring-1 group-data-[active=true]:ring-primary/40 transition bg-background">
+          {rowAvatarSrc && <AvatarImage src={rowAvatarSrc} alt={acc.name} />}
+          <AvatarFallback className="rounded-md text-[10px] font-medium text-muted-foreground">
+            {acc.name.slice(0, 2)}
+          </AvatarFallback>
+        </Avatar>
+        <div className="flex flex-col text-right leading-tight">
+          <span className="text-[12px] font-medium flex items-center mt-0.5 gap-1">
+            {acc.name}
+            {acc.status && (
+              <span className="mt-[2px] inline-flex">
+                <OrganizationStatusBadge
+                  status={acc.status as OrgAccount["status"]}
+                  tone="soft"
+                  size="xs"
+                />
+              </span>
+            )}
+            {acc.isPrimary && (
+              <Star
+                className="size-3 text-amber-500"
+                aria-label="سازمان اصلی"
+              />
+            )}
+          </span>
+          <span className="text-[10px] mt-0.5 text-muted-foreground inline-flex items-center gap-1">
+            {acc.plan ? (
+              <span className="mt-[2px] inline-flex">
+                <OrgPlanBadge
+                  plan={acc.plan as OrgAccount["plan"]}
+                  size="xs"
+                  tone="soft"
+                />
+              </span>
+            ) : (
+              <span>بدون پلن</span>
+            )}
+          </span>
+        </div>
+      </div>
+      {isActive && <Check className="ms-auto size-4 text-primary" />}
+    </DropdownMenuItem>
+  );
+}
 
 export const OrgSwitcher = memo(function OrgSwitcher({
   accounts,
@@ -83,6 +148,7 @@ export const OrgSwitcher = memo(function OrgSwitcher({
   );
 
   const { isMobile } = useSidebar();
+  const { src: activeOrgAvatarSrc } = useAvatarImage(activeOrg?.logo);
 
   // Sort organizations: primary first, then active, then alpha
   const orderedAccounts = useMemo(() => {
@@ -95,63 +161,7 @@ export const OrgSwitcher = memo(function OrgSwitcher({
     });
   }, [accounts, activeOrgId]);
 
-  const renderOrgRow = useCallback(
-    (acc: OrgAccount) => {
-      const isActive = acc.id === activeOrgId;
-      return (
-        <DropdownMenuItem
-          key={acc.id}
-          onClick={handleSelect(acc.id)}
-          className="gap-2 cursor-pointer group pr-2"
-          data-active={isActive}
-          aria-current={isActive ? "true" : undefined}>
-          <div className="flex items-center gap-2">
-            <Avatar className="size-8 rounded-md border border-border/40 ring-0 group-data-[active=true]:ring-2 group-data-[active=true]:ring-primary/40 transition">
-              {acc.logo && <AvatarImage src={acc.logo} alt={acc.name} />}
-              <AvatarFallback className="rounded-md text-[10px] font-medium">
-                {acc.name.slice(0, 2)}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex flex-col text-right leading-tight">
-              <span className="text-[12px] font-medium flex items-center mt-0.5 gap-1">
-                {acc.name}
-                {acc.status && (
-                  <span className="mt-[2px] inline-flex">
-                    <OrganizationStatusBadge
-                      status={acc.status as OrgAccount["status"]}
-                      tone="soft"
-                      size="xs"
-                    />
-                  </span>
-                )}
-                {acc.isPrimary && (
-                  <Star
-                    className="size-3 text-amber-500"
-                    aria-label="سازمان اصلی"
-                  />
-                )}
-              </span>
-              <span className="text-[10px] mt-0.5 text-muted-foreground inline-flex items-center gap-1">
-                {acc.plan ? (
-                  <span className="mt-[2px] inline-flex">
-                    <OrgPlanBadge
-                      plan={acc.plan as OrgAccount["plan"]}
-                      size="xs"
-                      tone="soft"
-                    />
-                  </span>
-                ) : (
-                  <span>بدون پلن</span>
-                )}
-              </span>
-            </div>
-          </div>
-          {isActive && <Check className="ms-auto size-4 text-primary" />}
-        </DropdownMenuItem>
-      );
-    },
-    [activeOrgId, handleSelect]
-  );
+  // No hooks inside render functions; use a child component for per-row avatar resolution
 
   return (
     <DropdownMenu dir="rtl">
@@ -160,18 +170,18 @@ export const OrgSwitcher = memo(function OrgSwitcher({
           type="button"
           aria-label="تغییر سازمان فعال"
           className={`group flex w-full items-center gap-2 rounded-md text-right focus:outline-none px-2 py-1.5 transition border border-transparent hover:border-border/60 hover:bg-muted/40 data-[state=open]:bg-muted/50 data-[state=open]:border-border/60 ${className}`}>
-          <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg border border-border/40 shadow-sm group-data-[state=open]:ring-2 group-data-[state=open]:ring-primary/30">
+          <div className="flex aspect-square size-8 items-center justify-center rounded-lg border border-border/40 shadow-sm bg-background group-data-[state=open]:ring-2 group-data-[state=open]:ring-primary/30">
             {!mounted ? (
               <span className="inline-block w-full h-full animate-pulse rounded-md bg-muted" />
-            ) : activeOrg?.logo ? (
-              <Avatar className="size-8 rounded-md">
-                <AvatarImage src={activeOrg.logo} alt={activeOrg.name} />
-                <AvatarFallback className="rounded-md text-xs font-medium text-primary/80">
+            ) : activeOrg ? (
+              <Avatar className="size-8 rounded-md bg-background">
+                {activeOrgAvatarSrc && (
+                  <AvatarImage src={activeOrgAvatarSrc} alt={activeOrg.name} />
+                )}
+                <AvatarFallback className="rounded-md text-xs font-medium text-muted-foreground">
                   {activeOrg.name.slice(0, 2)}
                 </AvatarFallback>
               </Avatar>
-            ) : activeOrg ? (
-              <Command className="size-4" />
             ) : (
               <Plus className="size-4" />
             )}
@@ -245,7 +255,14 @@ export const OrgSwitcher = memo(function OrgSwitcher({
         )}
         {mounted && (
           <DropdownMenuGroup>
-            {orderedAccounts.map(renderOrgRow)}
+            {orderedAccounts.map((acc) => (
+              <OrgRowItem
+                key={acc.id}
+                acc={acc}
+                isActive={acc.id === activeOrgId}
+                onClick={handleSelect(acc.id)}
+              />
+            ))}
           </DropdownMenuGroup>
         )}
         {mounted && (platformRoles.length > 0 || orgRoles.length > 0) && (

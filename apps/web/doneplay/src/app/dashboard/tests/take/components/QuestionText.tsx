@@ -20,12 +20,9 @@ export function QuestionText({
   const text = value?.kind === "TEXT" ? value.text : "";
   return (
     <div className="space-y-2">
-      <Label htmlFor={`q-${id}`} className="text-[15px] font-custom">
-        پاسخ شما
-      </Label>
       <Textarea
         id={`q-${id}`}
-        className="max-w-2xl"
+        className="max-w-2xl placeholder:text-[14px] text-[14px]"
         value={text}
         onChange={(e) =>
           !readOnly && onChange({ kind: "TEXT", text: e.target.value })

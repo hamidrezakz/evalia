@@ -2,6 +2,8 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { AuthService } from '../auth/auth.service';
@@ -13,7 +15,7 @@ import { OrgRole } from '@prisma/client';
 export class MembershipService {
   constructor(
     private prisma: PrismaService,
-    private auth: AuthService,
+    @Inject(forwardRef(() => AuthService)) private auth: AuthService,
   ) {}
 
   async list(

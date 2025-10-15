@@ -55,11 +55,23 @@ export class AssignmentService {
     if (perspective !== 'SELF' && !subjectUserId)
       throw new BadRequestException('subjectUserId required for non-SELF');
     if (subjectUserId) await this.ensureUser(subjectUserId);
-    return this.prisma.assessmentAssignment.create({
-      data: {
+    // Idempotent: restore soft-deleted or no-op if exists, else create
+    const subjectKey: number =
+      perspective === 'SELF' ? respondentUserId : (subjectUserId as number);
+    return this.prisma.assessmentAssignment.upsert({
+      where: {
+        sessionId_respondentUserId_subjectUserId_perspective: {
+          sessionId: dto.sessionId,
+          respondentUserId,
+          subjectUserId: subjectKey,
+          perspective,
+        },
+      },
+      update: { deletedAt: null },
+      create: {
         sessionId: dto.sessionId,
         respondentUserId,
-        subjectUserId: subjectUserId ?? null,
+        subjectUserId: subjectKey,
         perspective,
       },
     });
@@ -87,19 +99,27 @@ export class AssignmentService {
       await Promise.all(subjectIds.map((id: number) => this.ensureUser(id)));
       const existing = await this.prisma.assessmentAssignment.findMany({
         where: { sessionId: dto.sessionId, respondentUserId, perspective },
-        select: { subjectUserId: true },
+        select: { subjectUserId: true, deletedAt: true },
       });
-      const existingSet = new Set<number>(
-        existing.map((e) => (e.subjectUserId as number) || 0),
-      );
-      const toCreate: number[] = subjectIds.filter(
-        (sid: number) => !existingSet.has(sid),
-      );
-      if (!toCreate.length) return { created: 0 };
+      const existingMap = new Map<number, Date | null>();
+      for (const e of existing)
+        existingMap.set(e.subjectUserId as number, e.deletedAt ?? null);
+      const createdCount = subjectIds.filter(
+        (sid) => !existingMap.has(sid) || existingMap.get(sid) !== null,
+      ).length;
       await this.prisma.$transaction(
-        toCreate.map((subjectUserId: number) =>
-          this.prisma.assessmentAssignment.create({
-            data: {
+        subjectIds.map((subjectUserId: number) =>
+          this.prisma.assessmentAssignment.upsert({
+            where: {
+              sessionId_respondentUserId_subjectUserId_perspective: {
+                sessionId: dto.sessionId,
+                respondentUserId,
+                subjectUserId,
+                perspective,
+              },
+            },
+            update: { deletedAt: null },
+            create: {
               sessionId: dto.sessionId,
               respondentUserId,
               subjectUserId,
@@ -108,12 +128,17 @@ export class AssignmentService {
           }),
         ),
       );
-      return { created: toCreate.length };
+      return { created: createdCount };
     }
 
-    // Mode B (legacy / SELF bulk): many respondents -> perspective
+    // Mode B (legacy / SELF bulk): many respondents -> SELF
     if (!Array.isArray(dto.userIds))
       throw new BadRequestException('userIds required');
+    if (perspective !== 'SELF') {
+      throw new BadRequestException(
+        'For non-SELF bulk, use respondentUserId + subjectUserIds (Mode A).',
+      );
+    }
     const userIds: number[] = Array.from(
       new Set(
         (dto.userIds as any[])
@@ -122,39 +147,34 @@ export class AssignmentService {
       ),
     ) as number[];
     await Promise.all(userIds.map((id: number) => this.ensureUser(id)));
-    const existing = await this.prisma.assessmentAssignment.findMany({
-      where: { sessionId: dto.sessionId, perspective },
-      select: { respondentUserId: true, subjectUserId: true },
-    });
-    const existingKey = new Set(
-      existing.map(
-        (e) =>
-          `${e.respondentUserId}:${e.subjectUserId ?? e.respondentUserId}:${perspective}`,
-      ),
-    );
-    const toCreate = userIds.filter(
-      (rid) => !existingKey.has(`${rid}:${rid}:${perspective}`),
-    );
-    if (!toCreate.length) return { created: 0 };
-    await this.prisma.$transaction(
-      toCreate.map((respondentUserId: number) =>
-        this.prisma.assessmentAssignment.create({
-          data: {
+    const results = await this.prisma.$transaction(
+      userIds.map((respondentUserId: number) =>
+        this.prisma.assessmentAssignment.upsert({
+          where: {
+            sessionId_respondentUserId_subjectUserId_perspective: {
+              sessionId: dto.sessionId,
+              respondentUserId,
+              subjectUserId: respondentUserId,
+              perspective: 'SELF',
+            },
+          },
+          update: { deletedAt: null },
+          create: {
             sessionId: dto.sessionId,
             respondentUserId,
-            subjectUserId: perspective === 'SELF' ? respondentUserId : null,
-            perspective,
+            subjectUserId: respondentUserId,
+            perspective: 'SELF',
           },
         }),
       ),
     );
-    return { created: toCreate.length };
+    return { created: results.length };
   }
 
   async list(sessionId: number) {
     await this.ensureSession(sessionId);
     return this.prisma.assessmentAssignment.findMany({
-      where: { sessionId },
+      where: { sessionId, deletedAt: null },
       include: {
         respondent: {
           select: {
@@ -200,7 +220,10 @@ export class AssignmentService {
       where: { id },
     });
     if (!existing) throw new NotFoundException('Assignment not found');
-    await this.prisma.assessmentAssignment.delete({ where: { id } });
-    return { id };
+    const updated = await this.prisma.assessmentAssignment.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
+    return { id: updated.id };
   }
 }

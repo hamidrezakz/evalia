@@ -11,7 +11,9 @@ import { motion, AnimatePresence } from "motion/react";
 import { fadeSlideUp } from "@/lib/motion/presets";
 import { Save, PlusCircle } from "lucide-react";
 import { QuestionTypeEnum } from "@/lib/enums";
+import { QuestionTypeBadge } from "@/components/status-badges";
 import type { CreateQuestionBody } from "@/assessment/api/questions.api";
+// NOTE: bank & option set comboboxes now require orgId implicitly through their internal hooks which were updated to use org context.
 
 // Live draft type exposed upward (some fields may be incomplete while user is typing)
 export interface QuestionDraft extends Partial<CreateQuestionBody> {
@@ -126,7 +128,7 @@ export const QuestionCreateForm: React.FC<QuestionCreateFormProps> = ({
             {qType && (
               <span className="inline-flex items-center gap-1">
                 <strong className="font-medium">نوع:</strong>
-                <span>{QuestionTypeEnum.t(qType as any)}</span>
+                <QuestionTypeBadge type={qType as any} size="xs" tone="soft" />
               </span>
             )}
             {needsOptionSet && !optionSetId && (
@@ -135,7 +137,6 @@ export const QuestionCreateForm: React.FC<QuestionCreateFormProps> = ({
           </div>
           <div className="flex gap-2">
             <Button
-              type="button"
               variant="outline"
               size="sm"
               icon={<PlusCircle className="w-4 h-4" />}
@@ -155,8 +156,7 @@ export const QuestionCreateForm: React.FC<QuestionCreateFormProps> = ({
               size="sm"
               disabled={!isValid}
               isLoading={submitting}
-              icon={<Save className="w-4 h-4" />}
-              iconPosition="left">
+              icon={<Save className="w-4 h-4" />}>
               ذخیره
             </Button>
           </div>

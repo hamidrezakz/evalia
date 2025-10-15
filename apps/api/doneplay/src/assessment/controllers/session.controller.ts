@@ -7,6 +7,8 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
+  Req,
 } from '@nestjs/common';
 import { SessionService } from '../services/session.service';
 import {
@@ -17,25 +19,43 @@ import {
   UserQuestionsQueryDto,
 } from '../dto/session.dto';
 import { Roles } from '../../common/roles.decorator';
-import { Req, ForbiddenException } from '@nestjs/common';
+import { ForbiddenException } from '@nestjs/common';
+import { OrgContextGuard } from '../../common/org-context.guard';
+import { OrgId } from '../../common/org-id.decorator';
 import { Request } from 'express';
+import { OrgContext } from '../../common/org-context.decorator';
 
 @Controller('sessions')
+@UseGuards(OrgContextGuard)
 export class SessionController {
   constructor(private readonly service: SessionService) {}
 
   @Post()
-  @Roles({ any: ['ORG:OWNER', 'ORG:MANAGER', 'ANALYSIS_MANAGER'] })
-  create(@Body() dto: CreateSessionDto) {
-    return this.service.create(dto);
+  @Roles({
+    any: ['ORG:OWNER', 'ORG:MANAGER', 'ANALYSIS_MANAGER', 'SUPER_ADMIN'],
+  })
+  @OrgContext({ requireOrgRoles: ['OWNER', 'MANAGER'] })
+  async create(
+    @Body() dto: CreateSessionDto,
+    @OrgId() orgId: number,
+    @Req() req: any,
+  ) {
+    const created = await this.service.create({
+      ...dto,
+      organizationId: orgId,
+    } as any);
+    return { data: created, message: 'جلسه ایجاد شد' } as any;
   }
 
   // Optional scoring service interface
   @Get()
-  @Roles({
-    any: ['ORG:OWNER', 'ORG:MANAGER', 'ANALYSIS_MANAGER', 'ORG:MEMBER'],
-  })
-  list(@Query() q: ListSessionQueryDto) {
+  // لیست جلسات (orgId اکنون توسط گارد استخراج می‌شود؛ اگر query.organizationId نبود ست می‌کنیم)
+  list(@Query() q: ListSessionQueryDto, @OrgId() orgId?: number) {
+    if (orgId && !q.organizationId) (q as any).organizationId = orgId;
+    // Defensive: if framework parsed repeated organizationId (?organizationId=4&organizationId=4) as array
+    if (Array.isArray((q as any).organizationId)) {
+      (q as any).organizationId = Number((q as any).organizationId[0]);
+    }
     return this.service.list(q);
   }
 
@@ -56,16 +76,31 @@ export class SessionController {
   }
 
   @Patch(':id')
-  @Roles({ any: ['ORG:OWNER', 'ORG:MANAGER', 'ANALYSIS_MANAGER'] })
-  update(@Param('id') id: string, @Body() dto: UpdateSessionDto) {
-    return this.service.update(Number(id), dto);
+  @Roles({
+    any: ['ORG:OWNER', 'ORG:MANAGER', 'ANALYSIS_MANAGER', 'SUPER_ADMIN'],
+  })
+  @OrgContext({ requireOrgRoles: ['OWNER', 'MANAGER'] })
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdateSessionDto,
+    @OrgId() orgId: number,
+  ) {
+    const updated = await this.service.update(Number(id), {
+      ...dto,
+      organizationId: orgId,
+    } as any);
+    return { data: updated, message: 'جلسه بروزرسانی شد' } as any;
   }
 
   @Delete(':id')
-  // Only analysis manager can delete sessions (SUPER_ADMIN still bypasses via guard)
-  @Roles({ any: ['ANALYSIS_MANAGER'] })
-  remove(@Param('id') id: string) {
-    return this.service.softDelete(Number(id));
+  // Extended delete permissions
+  @Roles({
+    any: ['ANALYSIS_MANAGER', 'ORG:OWNER', 'ORG:MANAGER', 'SUPER_ADMIN'],
+  })
+  @OrgContext({ requireOrgRoles: ['OWNER', 'MANAGER'] })
+  async remove(@Param('id') id: string, @OrgId() _orgId: number) {
+    const res = await this.service.softDelete(Number(id));
+    return { data: res, message: 'جلسه حذف شد' } as any;
   }
 
   // --- User-centric endpoints ---
@@ -75,6 +110,7 @@ export class SessionController {
     @Param('userId') userId: string,
     @Query() q: ListUserSessionsQueryDto,
     @Req() req: Request,
+    @OrgId() orgId?: number,
   ) {
     const authUser: any = (req as any).user;
     const targetId = Number(userId);
@@ -89,6 +125,7 @@ export class SessionController {
     if (!Number.isFinite(authId)) throw new ForbiddenException('unauthorized');
 
     // Self access always allowed
+    if (orgId && !q.organizationId) (q as any).organizationId = orgId;
     if (authId === targetId) {
       return this.service.listForUser(targetId, q);
     }
@@ -117,6 +154,15 @@ export class SessionController {
     @Param('userId') userId: string,
   ) {
     return this.service.getUserPerspectives(Number(id), Number(userId));
+  }
+
+  // List available perspectives plus subjects per perspective for a user (member-safe)
+  @Get(':id/user/:userId/perspectives-detailed')
+  listUserPerspectivesDetailed(
+    @Param('id') id: string,
+    @Param('userId') userId: string,
+  ) {
+    return this.service.getUserPerspectivesDetailed(Number(id), Number(userId));
   }
 
   // Get ordered questions (by section, then question order) for a user in a session for a chosen perspective

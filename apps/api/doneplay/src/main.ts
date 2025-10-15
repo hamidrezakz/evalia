@@ -12,7 +12,7 @@ async function bootstrap() {
   app.useLogger(logger);
   // Allow both LAN IP and localhost for frontend
   const origins = (
-    process.env.CORS_ORIGIN || 'http://10.22.114.199:3000,http://localhost:3000'
+    process.env.CORS_ORIGIN || 'http://10.143.135.199:3000,http://localhost:3000'
   )
     .split(',')
     .map((o) => o.trim());

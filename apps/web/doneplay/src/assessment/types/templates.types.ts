@@ -21,6 +21,7 @@ export const templateSchema = z.object({
   name: z.string(),
   description: z.string().nullable().optional(),
   state: templateStateEnum,
+  createdByOrganizationId: z.number().int().positive(),
   meta: z.any().optional(),
   createdAt: z.string(),
   updatedAt: z.string().optional(),
@@ -64,6 +65,7 @@ export const templateQuestionLinkSchema = z.object({
   perspectives: z.array(z.string()),
   required: z.boolean(),
   question: questionSchema.optional(),
+  deletedAt: z.string().nullable().optional(),
 });
 export type TemplateQuestionLink = z.infer<typeof templateQuestionLinkSchema>;
 

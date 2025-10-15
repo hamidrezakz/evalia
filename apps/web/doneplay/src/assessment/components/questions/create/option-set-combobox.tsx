@@ -3,6 +3,7 @@ import * as React from "react";
 import { Combobox } from "@/components/ui/combobox";
 import { ListChecks, ChevronsUpDownIcon } from "lucide-react";
 import { useOptionSets } from "../../../api/hooks";
+import { useOrgState } from "@/organizations/organization/context/org-context";
 
 interface OptionSetComboboxProps {
   value: number | null;
@@ -20,7 +21,8 @@ export const OptionSetCombobox: React.FC<OptionSetComboboxProps> = ({
   className,
 }) => {
   const [search, setSearch] = React.useState("");
-  const { data, isLoading } = useOptionSets({ search });
+  const { activeOrganizationId } = useOrgState();
+  const { data, isLoading } = useOptionSets(activeOrganizationId, { search });
   const sets = data?.data || [];
 
   return (

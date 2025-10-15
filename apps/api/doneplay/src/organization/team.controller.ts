@@ -7,23 +7,30 @@ import {
   Query,
   Patch,
   Delete,
+  UseGuards,
 } from '@nestjs/common';
 import { TeamService } from './team.service';
 import { AddTeamDto } from './dto/add-team.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';
-import { Roles } from '../common/roles.decorator';
+import { OrgContext } from '../common/org-context.decorator';
+import { OrgContextGuard } from '../common/org-context.guard';
 
 @Controller('organizations/:orgId/teams')
+@UseGuards(OrgContextGuard)
+@OrgContext({
+  sources: { paramKey: 'orgId' },
+  requireOrgRoles: ['OWNER', 'MANAGER'],
+})
 export class TeamController {
   constructor(private service: TeamService) {}
 
   @Post()
-  @Roles({
-    any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER'],
-    orgAny: ['OWNER', 'MANAGER'],
-  })
   create(@Param('orgId') orgId: string, @Body() dto: AddTeamDto) {
-    return this.service.create(Number(orgId), dto);
+    const out = this.service.create(Number(orgId), dto);
+    return Promise.resolve(out).then((data) => ({
+      message: 'تیم جدید ایجاد شد',
+      data,
+    }));
   }
 
   @Get()
@@ -49,33 +56,33 @@ export class TeamController {
   }
 
   @Patch(':teamId')
-  @Roles({
-    any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER'],
-    orgAny: ['OWNER', 'MANAGER'],
-  })
   update(
     @Param('orgId') orgId: string,
     @Param('teamId') teamId: string,
     @Body() dto: UpdateTeamDto,
   ) {
-    return this.service.update(Number(orgId), Number(teamId), dto);
+    const out = this.service.update(Number(orgId), Number(teamId), dto);
+    return Promise.resolve(out).then((data) => ({
+      message: 'اطلاعات تیم بروزرسانی شد',
+      data,
+    }));
   }
 
   @Delete(':teamId')
-  @Roles({
-    any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER'],
-    orgAny: ['OWNER', 'MANAGER'],
-  })
   remove(@Param('orgId') orgId: string, @Param('teamId') teamId: string) {
-    return this.service.softDelete(Number(orgId), Number(teamId));
+    const out = this.service.softDelete(Number(orgId), Number(teamId));
+    return Promise.resolve(out).then((data) => ({
+      message: 'تیم حذف شد (قابل بازیابی)',
+      data,
+    }));
   }
 
   @Post(':teamId/restore')
-  @Roles({
-    any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER'],
-    orgAny: ['OWNER', 'MANAGER'],
-  })
   restore(@Param('orgId') orgId: string, @Param('teamId') teamId: string) {
-    return this.service.restore(Number(orgId), Number(teamId));
+    const out = this.service.restore(Number(orgId), Number(teamId));
+    return Promise.resolve(out).then((data) => ({
+      message: 'تیم بازیابی شد',
+      data,
+    }));
   }
 }

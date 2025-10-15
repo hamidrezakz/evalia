@@ -1,6 +1,5 @@
 "use client";
 import React from "react";
-import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -11,6 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { UserCircle2, ChevronDown } from "lucide-react";
 import { ResponsePerspectiveEnum } from "@/lib/enums";
+import { ResponsePerspectiveBadge } from "@/components/status-badges";
 
 interface Props {
   perspectives: string[] | null | undefined;
@@ -25,27 +25,41 @@ export function PerspectiveDropdown({
   onChange,
   disabled,
 }: Props) {
+  const [open, setOpen] = React.useState(false);
   return (
-    <DropdownMenu dir="rtl">
+    <DropdownMenu dir="rtl" open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={disabled}
-          className="inline-flex items-center gap-1 font-normal h-8"
+        <span
+          role="button"
           aria-label="انتخاب پرسپکتیو"
-          aria-haspopup="menu">
-          <UserCircle2 className="size-4" />
-          <span className="text-xs">
-            {active
-              ? ResponsePerspectiveEnum.t(active as any)
-              : "انتخاب پرسپکتیو"}
-          </span>
-          <ChevronDown className="size-3" />
-        </Button>
+          aria-haspopup="menu"
+          aria-expanded={open}
+          aria-disabled={disabled ? true : undefined}
+          tabIndex={disabled ? -1 : 0}
+          className={`inline-flex items-center gap-1 h-8 text-xs select-none outline-none ${
+            disabled ? "opacity-50 pointer-events-none" : "cursor-pointer"
+          }`}>
+          {active ? (
+            <ResponsePerspectiveBadge
+              value={active as any}
+              tone="soft"
+              size="xs"
+            />
+          ) : (
+            <span>انتخاب پرسپکتیو</span>
+          )}
+          <ChevronDown
+            className={`size-3 transition-transform ${
+              open ? "rotate-180" : ""
+            }`}
+          />
+        </span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-48" sideOffset={6}>
-        <DropdownMenuLabel className="text-[11px]">
+        <DropdownMenuLabel className="relative text-[11px] pr-1">
+          <span className="absolute -left-1 -top-1 opacity-10 pointer-events-none">
+            <UserCircle2 className="size-5" />
+          </span>
           انتخاب پرسپکتیو
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
@@ -55,7 +69,11 @@ export function PerspectiveDropdown({
               key={p}
               onClick={() => onChange(p)}
               className="text-[12px] flex items-center gap-2">
-              <span>{ResponsePerspectiveEnum.t(p as any)}</span>
+              <ResponsePerspectiveBadge
+                value={p as any}
+                tone="soft"
+                size="xs"
+              />
             </DropdownMenuItem>
           ))
         ) : (

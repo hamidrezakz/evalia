@@ -35,6 +35,7 @@ export class ResponseService {
     });
     if (
       !tq ||
+      tq.deletedAt ||
       tq.section.deletedAt ||
       tq.section.template.deletedAt ||
       tq.question.deletedAt
@@ -83,11 +84,34 @@ export class ResponseService {
           throw new BadRequestException(
             'optionValue required ("TRUE" or "FALSE")',
           );
-        if (!['TRUE', 'FALSE'].includes(dto.optionValue))
+        // Normalize various truthy/falsy inputs (including Persian) to canonical TRUE/FALSE
+        const raw = String(dto.optionValue).trim();
+        const lower = raw.toLowerCase();
+        const truthy = new Set([
+          'true',
+          '1',
+          'yes',
+          'y',
+          'on',
+          'بله',
+          'بلی',
+          'اره',
+          'آره',
+        ]);
+        const falsy = new Set(['false', '0', 'no', 'n', 'off', 'خیر', 'نه']);
+        let normalized: 'TRUE' | 'FALSE' | null = null;
+        if (raw === 'TRUE' || raw === 'FALSE') {
+          normalized = raw as 'TRUE' | 'FALSE';
+        } else if (truthy.has(lower)) {
+          normalized = 'TRUE';
+        } else if (falsy.has(lower)) {
+          normalized = 'FALSE';
+        }
+        if (!normalized)
           throw new BadRequestException('optionValue must be TRUE or FALSE');
         return {
           scaleValue: null as number | null,
-          optionValue: dto.optionValue as string,
+          optionValue: normalized,
           optionValues: [] as string[],
           textValue: null as string | null,
         };
@@ -270,6 +294,7 @@ export class ResponseService {
     // Total questions for this perspective in the session's template
     const total = await this.prisma.assessmentTemplateQuestion.count({
       where: {
+        deletedAt: null,
         section: {
           templateId,
           deletedAt: null,
@@ -280,7 +305,14 @@ export class ResponseService {
       },
     });
     const answered = await this.prisma.assessmentResponse.count({
-      where: { assignmentId: a.id },
+      where: {
+        assignmentId: a.id,
+        templateQuestion: {
+          deletedAt: null,
+          section: { deletedAt: null, template: { deletedAt: null } },
+          question: { deletedAt: null },
+        },
+      },
     });
     return {
       total,
@@ -379,6 +411,7 @@ export class ResponseService {
     for (const p of uniquePersp) {
       const t = await this.prisma.assessmentTemplateQuestion.count({
         where: {
+          deletedAt: null,
           section: {
             templateId,
             deletedAt: null,
@@ -395,7 +428,14 @@ export class ResponseService {
       0,
     );
     const answered = await this.prisma.assessmentResponse.count({
-      where: { assignmentId: { in: assignments.map((a) => a.id) } },
+      where: {
+        assignmentId: { in: assignments.map((a) => a.id) },
+        templateQuestion: {
+          deletedAt: null,
+          section: { deletedAt: null, template: { deletedAt: null } },
+          question: { deletedAt: null },
+        },
+      },
     });
     const status = !total
       ? 'NO_QUESTIONS'

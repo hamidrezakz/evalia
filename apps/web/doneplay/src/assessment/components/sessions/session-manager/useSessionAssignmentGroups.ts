@@ -1,9 +1,15 @@
 import * as React from "react";
 
-import { useAssignmentsDetailed } from "@/assessment/api/templates-hooks";
+import { useAssignmentsDetailed } from "@/assessment/api/sessions-hooks";
+import { useOrgState } from "@/organizations/organization/context";
 
 export function useSessionAssignmentGroups(sessionId: number | null) {
-  const { data: assignments, isLoading } = useAssignmentsDetailed(sessionId);
+  const orgCtx = useOrgState();
+  const activeOrgId = orgCtx.activeOrganizationId || null;
+  const { data: assignments, isLoading } = useAssignmentsDetailed(
+    activeOrgId,
+    sessionId
+  );
 
   const normalized = React.useMemo(
     () => (Array.isArray(assignments) ? (assignments as any[]) : []),

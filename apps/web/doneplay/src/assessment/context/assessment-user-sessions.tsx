@@ -7,7 +7,8 @@ import React, {
   useState,
 } from "react";
 import { useUserDataContext } from "@/users/context";
-import { useUserSessions } from "@/assessment/api/templates-hooks";
+import { useUserSessions } from "@/assessment/api/sessions-hooks";
+import { useOrgState } from "@/organizations/organization/context/org-context";
 import type { ResponsePerspective } from "@/assessment/types/templates.types";
 import type {
   ListUserSessionsQuery,
@@ -78,7 +79,14 @@ export function AssessmentUserSessionsProvider({
 }) {
   const { userId } = useUserDataContext();
   const [refreshTick, setRefreshTick] = useState(0);
-  const { data, isLoading, error, refetch } = useUserSessions(userId, query);
+  // Use active organization id (required after multi-tenant refactor for user session listing)
+  const { activeOrganizationId } = useOrgState();
+  const activeOrgId: number | null = activeOrganizationId || null;
+  const { data, isLoading, error, refetch } = useUserSessions(
+    activeOrgId,
+    userId,
+    query
+  );
   const sessions: UserSessionListItem[] = useMemo(() => {
     const anyData: any = data as any;
     // Accept either { data: UserSessionListItem[] } or raw array

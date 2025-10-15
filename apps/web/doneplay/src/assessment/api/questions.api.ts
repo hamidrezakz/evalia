@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { apiRequest } from "@/lib/api.client";
+import { appendOrgId } from "./org-path";
 import {
   questionsListEnvelope,
   questionSchema,
@@ -21,9 +22,10 @@ function buildListPath(raw?: Partial<ListQuestionsQuery>): string {
 }
 
 export async function listQuestions(
-  params?: Partial<ListQuestionsQuery>
+  params?: Partial<ListQuestionsQuery>,
+  orgId?: number | null
 ): Promise<{ data: Question[]; meta: unknown }> {
-  const path = buildListPath(params);
+  const path = appendOrgId(buildListPath(params), orgId);
   const res = await apiRequest(path, null, null);
   const validated = questionsListEnvelope.safeParse({
     data: res.data,
@@ -36,10 +38,17 @@ export async function listQuestions(
   return validated.data;
 }
 
-export async function getQuestion(id: number): Promise<Question> {
+export async function getQuestion(
+  id: number,
+  orgId?: number | null
+): Promise<Question> {
   if (!Number.isInteger(id) || id <= 0)
     throw new Error("Question id must be positive");
-  const res = await apiRequest(`/questions/${id}`, null, detailSchema);
+  const res = await apiRequest(
+    appendOrgId(`/questions/${id}`, orgId),
+    null,
+    detailSchema
+  );
   return res as unknown as Question;
 }
 
@@ -77,9 +86,12 @@ export const createQuestionBody = z
     }
   );
 export type CreateQuestionBody = z.infer<typeof createQuestionBody>;
-export async function createQuestion(body: CreateQuestionBody) {
+export async function createQuestion(
+  body: CreateQuestionBody,
+  orgId?: number | null
+) {
   const res = await apiRequest(
-    "/questions",
+    appendOrgId("/questions", orgId),
     createQuestionBody,
     questionSchema,
     { body }
@@ -89,9 +101,13 @@ export async function createQuestion(body: CreateQuestionBody) {
 
 export const updateQuestionBody = createQuestionBody.partial();
 export type UpdateQuestionBody = z.infer<typeof updateQuestionBody>;
-export async function updateQuestion(id: number, body: UpdateQuestionBody) {
+export async function updateQuestion(
+  id: number,
+  body: UpdateQuestionBody,
+  orgId?: number | null
+) {
   const res = await apiRequest(
-    `/questions/${id}`,
+    appendOrgId(`/questions/${id}`, orgId),
     updateQuestionBody,
     questionSchema,
     { method: "PATCH", body }
@@ -99,7 +115,9 @@ export async function updateQuestion(id: number, body: UpdateQuestionBody) {
   return res as unknown as Question;
 }
 
-export async function deleteQuestion(id: number) {
-  await apiRequest(`/questions/${id}`, null, null, { method: "DELETE" });
+export async function deleteQuestion(id: number, orgId?: number | null) {
+  await apiRequest(appendOrgId(`/questions/${id}`, orgId), null, null, {
+    method: "DELETE",
+  });
   return { id };
 }

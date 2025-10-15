@@ -27,6 +27,12 @@ export function useAppSidebarData(): AppSidebarData {
     const membership = o.membership as Record<string, unknown> | undefined;
     const plan = OrgPlanEnum.coerce(o.plan);
     const status = OrganizationStatusEnum.coerce(o.status);
+    // Pass backend-provided avatarUrl through as-is; useAvatarImage handles CDN/API resolution.
+    const logo =
+      typeof (o as any).avatarUrl === "string" &&
+      String((o as any).avatarUrl).trim().length > 0
+        ? String((o as any).avatarUrl).trim()
+        : undefined;
     const rawRoles = Array.isArray(membership?.roles)
       ? (membership?.roles as unknown[])
       : [];
@@ -42,7 +48,7 @@ export function useAppSidebarData(): AppSidebarData {
       status: status || undefined,
       plan: plan || undefined,
       planLabel: plan ? OrgPlanEnum.t(plan) : undefined,
-      logo: typeof o.logo === "string" ? (o.logo as string) : undefined,
+      logo,
       isPrimary: Boolean(o.isPrimary),
       roles,
       roleLabels: roles.map((r) => OrgRoleEnum.t(r)),

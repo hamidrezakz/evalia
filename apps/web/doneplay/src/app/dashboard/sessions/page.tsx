@@ -1,6 +1,7 @@
 "use client";
 import * as React from "react";
 import { SessionManager } from "@/assessment/components/sessions";
+import { useOrgState } from "@/organizations/organization/context/org-context";
 import {
   Panel,
   PanelHeader,
@@ -11,16 +12,18 @@ import {
 import { CalendarRange } from "lucide-react";
 
 export default function SessionsPage() {
+  const { activeOrganizationId } = useOrgState();
   return (
     <div className="space-y-4" dir="rtl">
       <Panel>
         <PanelHeader className="border-b">
           <PanelTitle className="flex items-center gap-2 text-base">
-            <CalendarRange className="h-4 w-4 text-primary" />  همه جلسات پلتفرم
+            <CalendarRange className="h-4 w-4 text-primary" /> جلسات ارزیابی
           </PanelTitle>
           <PanelDescription>
-            مدیریت و مشاهده همه جلسات شما (بدون فیلتر سازمان). برای تمرکز روی یک
-            سازمان، از تب «جلسات سازمان» استفاده کنید.
+            نمایش و مدیریت جلسات سازمان فعال
+            {activeOrganizationId ? ` (#${activeOrganizationId})` : ""}. برای
+            تغییر، سازمان فعال را از بالای سیستم عوض کنید.
           </PanelDescription>
         </PanelHeader>
         <PanelContent className="block p-1 md:p-2">

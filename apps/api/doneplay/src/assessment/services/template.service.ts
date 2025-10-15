@@ -2,7 +2,9 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
+import { TemplateAccessLevel } from '@prisma/client';
 import { PrismaService } from '../../prisma.service';
 // lightweight random suffix generator (avoid external dep if nanoid not installed)
 import { randomBytes } from 'crypto';
@@ -29,7 +31,41 @@ export class TemplateService {
     );
   }
 
-  async create(dto: any) {
+  private levelRank(level: TemplateAccessLevel): number {
+    switch (level) {
+      case 'USE':
+        return 1;
+      case 'CLONE':
+        return 1; // treat as read for now
+      case 'EDIT':
+        return 2;
+      case 'ADMIN':
+        return 3;
+      default:
+        return 0;
+    }
+  }
+
+  private async getAccessibleTemplateOrThrow(
+    id: number,
+    orgId: number,
+    minLevel: TemplateAccessLevel = 'USE',
+  ) {
+    const tpl = await this.prisma.assessmentTemplate.findFirst({
+      where: { id, deletedAt: null },
+      include: { orgLinks: { where: { organizationId: orgId } } },
+    });
+    if (!tpl) throw new NotFoundException('Template not found');
+    if (tpl.createdByOrganizationId === orgId) return tpl;
+    const link = tpl.orgLinks[0];
+    if (!link)
+      throw new ForbiddenException('Resource not in this organization');
+    if (this.levelRank(link.accessLevel) < this.levelRank(minLevel))
+      throw new ForbiddenException('Insufficient access level');
+    return tpl;
+  }
+
+  async create(dto: any, orgId: number, _actorUserId?: number) {
     const slug = dto.slug ? dto.slug : this.genSlug(dto.name);
     const exists = await this.prisma.assessmentTemplate.findUnique({
       where: { slug },
@@ -41,21 +77,38 @@ export class TemplateService {
         slug,
         description: dto.description || null,
         meta: dto.meta || {},
+        createdByOrganizationId: orgId,
+        orgLinks: { create: { organizationId: orgId, accessLevel: 'ADMIN' } },
       },
     });
   }
 
-  async list(query: any) {
+  async list(query: any, orgId: number, _actorUserId?: number) {
     const page = Number(query.page) > 0 ? Number(query.page) : 1;
     const pageSize = Math.min(Number(query.pageSize) || 20, 100);
-    const where: any = { deletedAt: null };
-    if (query.search) {
-      where.OR = [
-        { name: { contains: query.search, mode: 'insensitive' } },
-        { slug: { contains: query.search, mode: 'insensitive' } },
-      ];
-    }
-    if (query.state) where.state = query.state;
+    const orgScope: any = {
+      OR: [
+        { createdByOrganizationId: orgId },
+        { orgLinks: { some: { organizationId: orgId } } },
+      ],
+    };
+    const searchCond = query.search
+      ? {
+          OR: [
+            { name: { contains: query.search, mode: 'insensitive' } },
+            { slug: { contains: query.search, mode: 'insensitive' } },
+          ],
+        }
+      : undefined;
+    const stateCond = query.state ? { state: query.state } : undefined;
+    const where: any = {
+      deletedAt: null,
+      AND: [
+        orgScope,
+        ...(searchCond ? [searchCond] : []),
+        ...(stateCond ? [stateCond] : []),
+      ],
+    };
     const [items, total] = await this.prisma.$transaction([
       this.prisma.assessmentTemplate.findMany({
         where,
@@ -68,38 +121,95 @@ export class TemplateService {
     return { data: items, meta: { page, pageSize, total } };
   }
 
-  async getById(id: number) {
-    const tpl = await this.prisma.assessmentTemplate.findFirst({
-      where: { id, deletedAt: null },
-    });
-    if (!tpl) throw new NotFoundException('Template not found');
-    return tpl;
+  async getById(id: number, orgId: number, _actorUserId?: number) {
+    return this.getAccessibleTemplateOrThrow(id, orgId, 'USE');
   }
 
-  async getFull(id: number) {
-    const tpl = await this.getById(id);
-    const sections = await this.prisma.assessmentTemplateSection.findMany({
+  async getFull(id: number, orgId: number, _actorUserId?: number) {
+    const tpl = await this.getById(id, orgId, _actorUserId);
+    // Fetch sections first
+    const sectionsBase = await this.prisma.assessmentTemplateSection.findMany({
       where: { templateId: id, deletedAt: null },
       orderBy: { order: 'asc' },
-      include: {
-        questions: {
-          orderBy: { order: 'asc' },
-          include: {
-            question: {
-              include: {
-                options: true,
-                optionSet: { include: { options: true } },
-              },
-            },
-          },
-        },
+      select: {
+        id: true,
+        templateId: true,
+        title: true,
+        order: true,
+        createdAt: true,
+        updatedAt: true,
       },
     });
-    return { ...tpl, sections } as any;
+
+    // For each section, fetch ONLY active (non soft-deleted) question links
+    const sectionsWithQuestions = await Promise.all(
+      sectionsBase.map(async (sec) => {
+        let links: any[] = [];
+        try {
+          links = await this.prisma.assessmentTemplateQuestion.findMany({
+            where: { sectionId: sec.id, deletedAt: null } as any,
+            orderBy: { order: 'asc' },
+            include: {
+              question: {
+                include: {
+                  options: true,
+                  optionSet: { include: { options: true } },
+                },
+              },
+            },
+          });
+        } catch (err: any) {
+          // Fallback: client schema might not yet have deletedAt; fetch all then filter manually
+          // eslint-disable-next-line no-console
+          console.warn(
+            '[getFull] fallback (no deletedAt filter) section',
+            sec.id,
+            err?.message,
+          );
+          const rawAll = await this.prisma.assessmentTemplateQuestion.findMany({
+            where: { sectionId: sec.id },
+            orderBy: { order: 'asc' },
+            include: {
+              question: {
+                include: {
+                  options: true,
+                  optionSet: { include: { options: true } },
+                },
+              },
+            },
+          });
+          links = rawAll.filter((l: any) => !l.deletedAt);
+        }
+        // Defensive scrub: ensure DB's authoritative soft-deleted ids removed (covers race conditions)
+        try {
+          const softIds = await this.prisma.$queryRawUnsafe<any[]>(
+            'SELECT id FROM "AssessmentTemplateQuestion" WHERE "sectionId"=$1 AND "deletedAt" IS NOT NULL',
+            sec.id,
+          );
+          if (softIds?.length) {
+            const softSet = new Set(softIds.map((r) => r.id));
+            links = links.filter((l) => !softSet.has(l.id));
+          }
+        } catch (e) {
+          // eslint-disable-next-line no-console
+          console.warn(
+            '[getFull] soft scrub query failed',
+            (e as any)?.message,
+          );
+        }
+        const normalized = links.map((l: any, idx: number) => ({
+          ...l,
+          order: idx,
+        }));
+        return { ...sec, questions: normalized } as any;
+      }),
+    );
+
+    return { ...tpl, sections: sectionsWithQuestions } as any;
   }
 
-  async update(id: number, dto: any) {
-    const existing = await this.getById(id);
+  async update(id: number, dto: any, orgId: number, _actorUserId?: number) {
+    const existing = await this.getAccessibleTemplateOrThrow(id, orgId, 'EDIT');
     if (dto.slug && dto.slug !== existing.slug) {
       const s = await this.prisma.assessmentTemplate.findUnique({
         where: { slug: dto.slug },
@@ -129,8 +239,8 @@ export class TemplateService {
     });
   }
 
-  async softDelete(id: number) {
-    await this.getById(id);
+  async softDelete(id: number, orgId: number, _actorUserId?: number) {
+    await this.getAccessibleTemplateOrThrow(id, orgId, 'ADMIN');
     return this.prisma.assessmentTemplate.update({
       where: { id },
       data: { deletedAt: new Date() },

@@ -7,7 +7,8 @@ export const aiExportKeys = {
     sessionId: number,
     userId: number,
     perspective: string,
-    subjectUserId?: number
+    subjectUserId?: number,
+    orgId?: number | null
   ) =>
     [
       "ai-export",
@@ -15,6 +16,7 @@ export const aiExportKeys = {
       userId,
       perspective,
       subjectUserId || "self",
+      orgId || "no-org",
     ] as const,
 };
 
@@ -22,29 +24,32 @@ export function useUserAiExport(
   sessionId: number | null,
   userId: number | null,
   perspective: string | null,
-  subjectUserId?: number | null
+  subjectUserId?: number | null,
+  orgId?: number | null
 ) {
   // Backend cache TTL ~30s, so we can keep staleTime in sync or slightly shorter.
   // cacheTime larger to retain data between navigations for a short period.
   return useQuery<BackendAiExportPayload | undefined>({
     queryKey:
-      sessionId && userId && perspective
+      sessionId && userId && perspective && orgId
         ? aiExportKeys.byParams(
             sessionId,
             userId,
             perspective,
-            subjectUserId || undefined
+            subjectUserId || undefined,
+            orgId
           )
         : ["ai-export", "disabled"],
-    enabled: !!sessionId && !!userId && !!perspective,
+    enabled: !!sessionId && !!userId && !!perspective && !!orgId,
     queryFn: () => {
-      if (!sessionId || !userId || !perspective)
+      if (!sessionId || !userId || !perspective || !orgId)
         return Promise.resolve(undefined);
       return getUserAiExport(
         sessionId,
         userId,
         perspective,
-        subjectUserId || undefined
+        subjectUserId || undefined,
+        orgId || undefined
       );
     },
     staleTime: 25_000, // slightly below backend TTL to allow natural refresh when user active

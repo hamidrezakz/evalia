@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useAddOrganizationMember } from "@/organizations/member/api/organization-membership-hooks";
-import { UserSelectCombobox } from "@/users/components/UserSelectCombobox";
+import { UserSelectCombobox } from "@/globalcomboxs/UserSelectCombobox";
 import { OrgRoleEnum } from "@/lib/enums";
 import {
   OrgRoleBadge,

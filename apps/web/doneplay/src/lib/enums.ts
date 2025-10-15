@@ -187,6 +187,23 @@ export type VerificationPurpose =
   | "SENSITIVE_ACTION";
 // AIAnalysisKind
 export type AIAnalysisKind = "SUMMARY" | "THEME" | "SENTIMENT" | "RISK";
+// QuestionBankAccessLevel
+export type QuestionBankAccessLevel = "USE" | "EDIT" | "ADMIN";
+// TemplateAccessLevel
+export type TemplateAccessLevel = "USE" | "EDIT" | "ADMIN" | "CLONE";
+// OptionSetAccessLevel
+export type OptionSetAccessLevel = "USE" | "EDIT" | "ADMIN";
+// OrganizationCapability
+export type OrganizationCapability =
+  | "MASTER"
+  | "BILLING_PROVIDER"
+  | "ANALYTICS_HUB";
+// OrganizationRelationshipType
+export type OrganizationRelationshipType =
+  | "PARENT_CHILD"
+  | "FRANCHISE"
+  | "MANAGED"
+  | "BRAND_ALIAS";
 
 // ------------------------------
 // Translation Maps (fa / en)
@@ -321,6 +338,36 @@ const AIAnalysisKindMap: EnumTranslationRecord<AIAnalysisKind> = {
   SENTIMENT: { fa: "احساس", en: "Sentiment" },
   RISK: { fa: "ریسک", en: "Risk" },
 };
+const QuestionBankAccessLevelMap: EnumTranslationRecord<QuestionBankAccessLevel> =
+  {
+    USE: { fa: "استفاده", en: "Use" },
+    EDIT: { fa: "ویرایش", en: "Edit" },
+    ADMIN: { fa: "مدیریت", en: "Admin" },
+  };
+const TemplateAccessLevelMap: EnumTranslationRecord<TemplateAccessLevel> = {
+  USE: { fa: "استفاده", en: "Use" },
+  EDIT: { fa: "ویرایش", en: "Edit" },
+  ADMIN: { fa: "مدیریت", en: "Admin" },
+  CLONE: { fa: "کلون/کپی", en: "Clone" },
+};
+const OptionSetAccessLevelMap: EnumTranslationRecord<OptionSetAccessLevel> = {
+  USE: { fa: "استفاده", en: "Use" },
+  EDIT: { fa: "ویرایش", en: "Edit" },
+  ADMIN: { fa: "مدیریت", en: "Admin" },
+};
+const OrganizationCapabilityMap: EnumTranslationRecord<OrganizationCapability> =
+  {
+    MASTER: { fa: "سازمان مادر", en: "Master" },
+    BILLING_PROVIDER: { fa: "ارائه‌دهنده صورتحساب", en: "Billing provider" },
+    ANALYTICS_HUB: { fa: "مرکز تحلیل", en: "Analytics hub" },
+  };
+const OrganizationRelationshipTypeMap: EnumTranslationRecord<OrganizationRelationshipType> =
+  {
+    PARENT_CHILD: { fa: "والد-فرزند", en: "Parent-Child" },
+    FRANCHISE: { fa: "فرانچایز", en: "Franchise" },
+    MANAGED: { fa: "مدیریت‌شده", en: "Managed" },
+    BRAND_ALIAS: { fa: "برند/نام مستعار", en: "Brand alias" },
+  };
 
 // ------------------------------
 // Translator Instances
@@ -360,6 +407,20 @@ export const VerificationPurposeEnum = createTranslator<VerificationPurpose>(
 );
 export const AIAnalysisKindEnum =
   createTranslator<AIAnalysisKind>(AIAnalysisKindMap);
+export const QuestionBankAccessLevelEnum =
+  createTranslator<QuestionBankAccessLevel>(QuestionBankAccessLevelMap);
+export const TemplateAccessLevelEnum = createTranslator<TemplateAccessLevel>(
+  TemplateAccessLevelMap
+);
+export const OptionSetAccessLevelEnum = createTranslator<OptionSetAccessLevel>(
+  OptionSetAccessLevelMap
+);
+export const OrganizationCapabilityEnum =
+  createTranslator<OrganizationCapability>(OrganizationCapabilityMap);
+export const OrganizationRelationshipTypeEnum =
+  createTranslator<OrganizationRelationshipType>(
+    OrganizationRelationshipTypeMap
+  );
 
 // ------------------------------
 // Unified registry (for meta / dynamic usage)
@@ -383,6 +444,11 @@ export const EnumRegistry = {
   AssetType: AssetTypeEnum,
   PlatformRole: PlatformRoleEnum,
   OrganizationStatus: OrganizationStatusEnum,
+  QuestionBankAccessLevel: QuestionBankAccessLevelEnum,
+  TemplateAccessLevel: TemplateAccessLevelEnum,
+  OptionSetAccessLevel: OptionSetAccessLevelEnum,
+  OrganizationCapability: OrganizationCapabilityEnum,
+  OrganizationRelationshipType: OrganizationRelationshipTypeEnum,
   VerificationIdentifierType: VerificationIdentifierTypeEnum,
   VerificationPurpose: VerificationPurposeEnum,
   AIAnalysisKind: AIAnalysisKindEnum,

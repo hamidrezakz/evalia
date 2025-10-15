@@ -40,6 +40,7 @@ import {
   useDeleteOptionSet,
   useOptionSetOptions,
 } from "../../api/hooks";
+import { useOrgState } from "@/organizations/organization/context/org-context";
 import { OptionSetOptionsEditor } from "./option-set-options-editor";
 
 interface OptionSetPanelProps {
@@ -60,10 +61,13 @@ export const OptionSetPanel: React.FC<OptionSetPanelProps> = ({
     return () => clearTimeout(id);
   }, [searchText]);
 
-  const { data, isLoading, error } = useOptionSets({ search });
-  const createMutation = useCreateOptionSet();
-  const updateMutation = useUpdateOptionSet();
-  const deleteMutation = useDeleteOptionSet();
+  const { activeOrganizationId } = useOrgState();
+  const { data, isLoading, error } = useOptionSets(activeOrganizationId, {
+    search,
+  });
+  const createMutation = useCreateOptionSet(activeOrganizationId);
+  const updateMutation = useUpdateOptionSet(activeOrganizationId);
+  const deleteMutation = useDeleteOptionSet(activeOrganizationId);
 
   const [creating, setCreating] = React.useState(false);
   const [newName, setNewName] = React.useState("");
@@ -77,7 +81,10 @@ export const OptionSetPanel: React.FC<OptionSetPanelProps> = ({
   const sets = data?.data || [];
   const effectiveSelectedId = selectedOptionSetId ?? internalSelectedId;
   const selected = sets.find((s) => s.id === effectiveSelectedId) || null;
-  const optionsQuery = useOptionSetOptions(selected?.id ?? null);
+  const optionsQuery = useOptionSetOptions(
+    activeOrganizationId,
+    selected?.id ?? null
+  );
 
   function selectSet(s: { id: number; name: string }) {
     if (selectedOptionSetId == null) setInternalSelectedId(s.id);
@@ -169,7 +176,7 @@ export const OptionSetPanel: React.FC<OptionSetPanelProps> = ({
                 <Input
                   placeholder="نام دسته"
                   value={newName}
-                  autoFocus   
+                  autoFocus
                   onChange={(e) => setNewName(e.target.value)}
                   className="pl-8"
                 />

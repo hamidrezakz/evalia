@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { apiRequest } from "@/lib/api.client";
+import { appendOrgId } from "./org-path";
 import {
   optionSetsListEnvelope,
   optionSetSchema,
@@ -21,9 +22,10 @@ function buildListPath(raw?: Partial<ListOptionSetsQuery>): string {
 }
 
 export async function listOptionSets(
-  params?: Partial<ListOptionSetsQuery>
+  params?: Partial<ListOptionSetsQuery>,
+  orgId?: number | null
 ): Promise<{ data: OptionSet[]; meta: unknown }> {
-  const path = buildListPath(params);
+  const path = appendOrgId(buildListPath(params), orgId);
   const res = await apiRequest(path, null, null);
   const validated = optionSetsListEnvelope.safeParse({
     data: res.data,
@@ -36,10 +38,17 @@ export async function listOptionSets(
   return validated.data;
 }
 
-export async function getOptionSet(id: number): Promise<OptionSet> {
+export async function getOptionSet(
+  id: number,
+  orgId?: number | null
+): Promise<OptionSet> {
   if (!Number.isInteger(id) || id <= 0)
     throw new Error("Option set id must be positive");
-  const res = await apiRequest(`/option-sets/${id}`, null, optionSetSchema);
+  const res = await apiRequest(
+    appendOrgId(`/option-sets/${id}`, orgId),
+    null,
+    optionSetSchema
+  );
   return res as unknown as OptionSet;
 }
 
@@ -60,9 +69,12 @@ export const createOptionSetBody = z.object({
     .optional(),
 });
 export type CreateOptionSetBody = z.infer<typeof createOptionSetBody>;
-export async function createOptionSet(body: CreateOptionSetBody) {
+export async function createOptionSet(
+  body: CreateOptionSetBody,
+  orgId?: number | null
+) {
   const res = await apiRequest(
-    "/option-sets",
+    appendOrgId("/option-sets", orgId),
     createOptionSetBody,
     optionSetSchema,
     { body }
@@ -72,9 +84,13 @@ export async function createOptionSet(body: CreateOptionSetBody) {
 
 export const updateOptionSetBody = createOptionSetBody.partial();
 export type UpdateOptionSetBody = z.infer<typeof updateOptionSetBody>;
-export async function updateOptionSet(id: number, body: UpdateOptionSetBody) {
+export async function updateOptionSet(
+  id: number,
+  body: UpdateOptionSetBody,
+  orgId?: number | null
+) {
   const res = await apiRequest(
-    `/option-sets/${id}`,
+    appendOrgId(`/option-sets/${id}`, orgId),
     updateOptionSetBody,
     optionSetSchema,
     { method: "PATCH", body }
@@ -82,8 +98,10 @@ export async function updateOptionSet(id: number, body: UpdateOptionSetBody) {
   return res as unknown as OptionSet;
 }
 
-export async function deleteOptionSet(id: number) {
-  await apiRequest(`/option-sets/${id}`, null, null, { method: "DELETE" });
+export async function deleteOptionSet(id: number, orgId?: number | null) {
+  await apiRequest(appendOrgId(`/option-sets/${id}`, orgId), null, null, {
+    method: "DELETE",
+  });
   return { id };
 }
 
@@ -103,10 +121,11 @@ export const bulkReplaceOptionsBody = z.object({
 export type BulkReplaceOptionsBody = z.infer<typeof bulkReplaceOptionsBody>;
 export async function bulkReplaceOptionSetOptions(
   optionSetId: number,
-  body: BulkReplaceOptionsBody
+  body: BulkReplaceOptionsBody,
+  orgId?: number | null
 ): Promise<OptionSetOption[]> {
   const res = await apiRequest(
-    `/option-set-options/${optionSetId}`,
+    appendOrgId(`/option-set-options/${optionSetId}`, orgId),
     bulkReplaceOptionsBody,
     optionSetOptionsListSchema,
     { method: "POST", body }
@@ -115,10 +134,11 @@ export async function bulkReplaceOptionSetOptions(
 }
 
 export async function listOptionSetOptions(
-  optionSetId: number
+  optionSetId: number,
+  orgId?: number | null
 ): Promise<OptionSetOption[]> {
   const res = await apiRequest(
-    `/option-set-options/${optionSetId}`,
+    appendOrgId(`/option-set-options/${optionSetId}`, orgId),
     null,
     optionSetOptionsListSchema
   );
@@ -136,10 +156,11 @@ export type UpdateOptionSetOptionBody = z.infer<
 >;
 export async function updateOptionSetOption(
   id: number,
-  body: UpdateOptionSetOptionBody
+  body: UpdateOptionSetOptionBody,
+  orgId?: number | null
 ) {
   const res = await apiRequest(
-    `/option-set-options/${id}`,
+    appendOrgId(`/option-set-options/${id}`, orgId),
     updateOptionSetOptionBody,
     optionSetOptionSchema,
     { method: "PATCH", body }
@@ -147,9 +168,14 @@ export async function updateOptionSetOption(
   return res as unknown as OptionSetOption;
 }
 
-export async function deleteOptionSetOption(id: number) {
-  await apiRequest(`/option-set-options/${id}`, null, null, {
-    method: "DELETE",
-  });
+export async function deleteOptionSetOption(id: number, orgId?: number | null) {
+  await apiRequest(
+    appendOrgId(`/option-set-options/${id}`, orgId),
+    null,
+    null,
+    {
+      method: "DELETE",
+    }
+  );
   return { id };
 }

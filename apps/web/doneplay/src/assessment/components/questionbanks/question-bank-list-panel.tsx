@@ -40,6 +40,7 @@ import {
   useUpdateQuestionBank,
   useDeleteQuestionBank,
 } from "../../api/hooks";
+import { useOrgState } from "@/organizations/organization/context/org-context";
 import { BankCountBadge } from "./bank-count-badge";
 
 interface QuestionBankListPanelProps {
@@ -54,10 +55,13 @@ export const QuestionBankListPanel: React.FC<QuestionBankListPanelProps> = ({
   className,
 }) => {
   const [search, setSearch] = React.useState("");
-  const { data, isLoading, refetch } = useQuestionBanks({ search });
-  const createMutation = useCreateQuestionBank();
-  const updateMutation = useUpdateQuestionBank();
-  const deleteMutation = useDeleteQuestionBank();
+  const { activeOrganizationId } = useOrgState();
+  const { data, isLoading, refetch } = useQuestionBanks(activeOrganizationId, {
+    search,
+  });
+  const createMutation = useCreateQuestionBank(activeOrganizationId);
+  const updateMutation = useUpdateQuestionBank(activeOrganizationId);
+  const deleteMutation = useDeleteQuestionBank(activeOrganizationId);
   const [creating, setCreating] = React.useState(false);
   const [newName, setNewName] = React.useState("");
   const [editingId, setEditingId] = React.useState<number | null>(null);

@@ -31,7 +31,7 @@ export function SiteHeader({ loading }: { loading?: boolean }) {
   // مپ فارسی برای نمایش breadcrumb
   const labels: Record<string, string> = {
     // لایه اصلی داشبورد
-    dashboard: "داشبورد سازمانی",
+    dashboard: "داشبورد",
     myorg: "سازمان من",
     organizations: "سازمان‌ها",
     users: "کاربران",

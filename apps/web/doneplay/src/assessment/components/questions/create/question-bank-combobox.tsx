@@ -3,6 +3,7 @@ import * as React from "react";
 import { Combobox } from "@/components/ui/combobox";
 import { Library, ChevronsUpDownIcon } from "lucide-react";
 import { useQuestionBanks } from "../../../api/hooks";
+import { useOrgState } from "@/organizations/organization/context/org-context";
 
 interface QuestionBankComboboxProps {
   value: number | null;
@@ -20,7 +21,10 @@ export const QuestionBankCombobox: React.FC<QuestionBankComboboxProps> = ({
   className,
 }) => {
   const [search, setSearch] = React.useState("");
-  const { data, isLoading } = useQuestionBanks({ search });
+  const { activeOrganizationId } = useOrgState();
+  const { data, isLoading } = useQuestionBanks(activeOrganizationId, {
+    search,
+  });
   const banks = data?.data || [];
 
   return (

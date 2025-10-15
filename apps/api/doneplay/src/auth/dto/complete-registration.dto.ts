@@ -13,4 +13,9 @@ export class CompleteRegistrationDto {
   @IsString()
   @MinLength(6)
   password!: string;
+
+  // Optional: organization slug to ensure membership after signup completion
+  @IsString()
+  @IsOptional()
+  orgSlug?: string;
 }

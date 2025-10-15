@@ -21,7 +21,13 @@ import {
   OrganizationStatusBadge,
   OrgPlanBadge,
 } from "@/components/status-badges";
-import { Building2 } from "lucide-react";
+import { Building2, Camera } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useAvatarImage } from "@/users/api/useAvatarImage";
+import { uploadOrganizationAvatar } from "@/organizations/organization/api/organization-avatar.api";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
+import { orgKeys } from "@/organizations/organization/api/organization-query-keys";
 
 export interface OrganizationsTableProps {
   rows: Organization[];
@@ -34,6 +40,66 @@ export function OrganizationsTable({
   className,
   rowActions,
 }: OrganizationsTableProps) {
+  const qc = useQueryClient();
+
+  function OrgAvatarUpload({ org }: { org: Organization }) {
+    const fileRef = React.useRef<HTMLInputElement | null>(null);
+    const rawAvatar: string | null = (org as any).avatarUrl || null;
+    const { src: avatarSrc } = useAvatarImage(rawAvatar);
+    const onClick = () => fileRef.current?.click();
+    const onChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      e.target.value = "";
+      if (!file) return;
+      if (!file.type.startsWith("image/")) {
+        toast.error("فقط فایل تصویری مجاز است.");
+        return;
+      }
+      const MAX_AVATAR_BYTES = 100 * 1024;
+      if (file.size > MAX_AVATAR_BYTES) {
+        toast.error("حجم تصویر آواتار نباید بیشتر از ۱۰۰ کیلوبایت باشد.");
+        return;
+      }
+      try {
+        await uploadOrganizationAvatar(org.id, file);
+        toast.success("آواتار سازمان با موفقیت به‌روزرسانی شد.");
+        await qc.invalidateQueries({ queryKey: orgKeys.byId(org.id) });
+        await qc.invalidateQueries({ queryKey: orgKeys.lists() });
+      } catch (err: any) {
+        toast.error(err?.message || "خطا در آپلود آواتار سازمان");
+      }
+    };
+    return (
+      <div className="relative">
+        <Avatar
+          className="h-10 w-10 md:h-9 md:w-9 rounded-xl border cursor-pointer hover:ring-2 hover:ring-primary/40"
+          onClick={onClick}
+          title="تغییر آواتار سازمان">
+          {avatarSrc && (
+            <AvatarImage src={avatarSrc || undefined} alt={org.name} />
+          )}
+          <AvatarFallback className="rounded-xl text-[10px]">
+            {org.name?.substring(0, 2)?.toUpperCase()}
+          </AvatarFallback>
+        </Avatar>
+        <button
+          type="button"
+          onClick={onClick}
+          className="absolute -bottom-1 -left-1 h-5 w-5 rounded-full bg-background/90 border border-border/60 shadow-sm flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary/50"
+          title="آپلود آواتار">
+          <Camera className="h-3.5 w-3.5" />
+          <span className="sr-only">آپلود آواتار</span>
+        </button>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={onChange}
+        />
+      </div>
+    );
+  }
   return (
     <div className={cn("w-full", className)}>
       {/* Mobile / small screens: card list */}
@@ -46,9 +112,10 @@ export function OrganizationsTable({
               key={o.id}
               className="rounded-2xl border border-border/60 bg-gradient-to-br from-card/80 to-muted/50 backdrop-blur-sm shadow-sm hover:shadow-md transition-shadow px-4 pt-4 pb-3 focus-within:ring-2 ring-primary/40">
               <div className="flex items-start gap-4">
+                <OrgAvatarUpload org={o} />
                 <div className="flex flex-col flex-1 min-w-0 gap-1.5">
                   <div className="flex items-center gap-2 flex-wrap min-w-0">
-                    <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                    {" "}
                     <span
                       className="text-[13px] font-semibold truncate max-w-[25ch] tracking-tight text-right"
                       title={o.name}>
@@ -56,7 +123,7 @@ export function OrganizationsTable({
                     </span>
                   </div>
                   <span className="text-[11px] text-muted-foreground mt-0.5">
-                    #{o.id}
+                    @{o.id}
                   </span>
                 </div>
                 {rowActions
@@ -123,15 +190,18 @@ export function OrganizationsTable({
                 data-row-index={idx}
                 className="group items-center hover:bg-accent/50 focus-visible:outline-none border-b last:border-b-0 transition-colors">
                 <TableCell className="px-3 py-3 align-top">
-                  <div className="flex flex-col min-w-0">
-                    <span
-                      className="font-medium truncate max-w-[18ch]"
-                      title={o.name}>
-                      {o.name}
-                    </span>
-                    <span className="text-[11px] text-muted-foreground">
-                      #{o.id}
-                    </span>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <OrgAvatarUpload org={o} />
+                    <div className="flex flex-col min-w-0">
+                      <span
+                        className="font-medium truncate max-w-[18ch]"
+                        title={o.name}>
+                        {o.name}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">
+                   کد: {o.id}
+                      </span>
+                    </div>
                   </div>
                 </TableCell>
                 <TableCell className="px-3 py-3 align-top">

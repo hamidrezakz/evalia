@@ -70,7 +70,8 @@ export const listQuestionsQuerySchema = z.object({
   type: questionTypeEnum.optional(),
   search: z.string().optional(),
   page: z.coerce.number().int().positive().default(1).optional(),
-  pageSize: z.coerce.number().int().positive().max(100).default(20).optional(),
+  // Increased upper bound from 100 -> 200 (backend aligned)
+  pageSize: z.coerce.number().int().positive().max(200).default(20).optional(),
 });
 export type ListQuestionsQuery = z.infer<typeof listQuestionsQuerySchema>;
 

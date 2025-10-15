@@ -50,101 +50,115 @@ export const questionKeys = {
 };
 
 // Question Banks
-export function useQuestionBanks(params?: any) {
+export function useQuestionBanks(orgId: number | null, params?: any) {
   return useQuery({
-    queryKey: questionKeys.banks.list(params),
-    queryFn: () => listQuestionBanks(params),
+    queryKey: [...questionKeys.banks.list(params), orgId || "no-org"],
+    queryFn: () => listQuestionBanks(params, orgId || undefined),
+    enabled: !!orgId,
   });
 }
-export function useQuestionBank(id: number | null) {
+export function useQuestionBank(orgId: number | null, id: number | null) {
   return useQuery({
     queryKey: id
       ? questionKeys.banks.byId(id)
       : ["question-banks", "detail", "disabled"],
     queryFn: () => {
       if (!id) throw new Error("no id");
-      return getQuestionBank(id);
+      return getQuestionBank(id, orgId || undefined);
     },
-    enabled: !!id,
+    enabled: !!id && !!orgId,
   });
 }
 
 // Questions
-export function useQuestions(params?: any) {
+export function useQuestions(
+  orgId: number | null,
+  params?: any,
+  opts?: { enabledIfNoBank?: boolean }
+) {
+  const requireBank = opts?.enabledIfNoBank === false; // meaning: disable when no bankId
+  const bankIdPresent = params && params.bankId != null;
+  const enabled = requireBank ? !!params?.bankId : true;
   return useQuery({
-    queryKey: questionKeys.questions.list(params),
-    queryFn: () => listQuestions(params),
+    queryKey: [...questionKeys.questions.list(params), orgId || "no-org"],
+    queryFn: () => listQuestions(params, orgId || undefined),
+    enabled,
   });
 }
-export function useQuestion(id: number | null) {
+export function useQuestion(orgId: number | null, id: number | null) {
   return useQuery({
     queryKey: id
-      ? questionKeys.questions.byId(id)
+      ? [...questionKeys.questions.byId(id), orgId || "no-org"]
       : ["questions", "detail", "disabled"],
     queryFn: () => {
       if (!id) throw new Error("no id");
-      return getQuestion(id);
+      return getQuestion(id, orgId || undefined);
     },
-    enabled: !!id,
+    enabled: !!id, // allow regardless of orgId
   });
 }
-export function useCreateQuestion() {
+export function useCreateQuestion(orgId: number | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: CreateQuestionBody) => createQuestion(body),
+    mutationFn: (body: CreateQuestionBody) =>
+      createQuestion(body, orgId || undefined),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: questionKeys.questions.all });
     },
   });
 }
-export function useUpdateQuestion() {
+export function useUpdateQuestion(orgId: number | null) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, body }: { id: number; body: UpdateQuestionBody }) =>
-      updateQuestion(id, body),
+      updateQuestion(id, body, orgId || undefined),
     onSuccess: (q: any) => {
       qc.invalidateQueries({ queryKey: questionKeys.questions.all });
       qc.setQueryData(questionKeys.questions.byId(q.id), q);
     },
   });
 }
-export function useDeleteQuestion() {
+export function useDeleteQuestion(orgId: number | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => deleteQuestion(id),
+    mutationFn: (id: number) => deleteQuestion(id, orgId || undefined),
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: questionKeys.questions.all }),
   });
 }
 
 // Option Sets
-export function useOptionSets(params?: any) {
+export function useOptionSets(orgId: number | null, params?: any) {
   return useQuery({
-    queryKey: questionKeys.optionSets.list(params),
-    queryFn: () => listOptionSets(params),
+    queryKey: [...questionKeys.optionSets.list(params), orgId || "no-org"],
+    queryFn: () => listOptionSets(params, orgId || undefined),
+    enabled: !!orgId,
   });
 }
-export function useOptionSet(id: number | null) {
+export function useOptionSet(orgId: number | null, id: number | null) {
   return useQuery({
     queryKey: id
       ? questionKeys.optionSets.byId(id)
       : ["option-sets", "detail", "disabled"],
     queryFn: () => {
       if (!id) throw new Error("no id");
-      return getOptionSet(id);
+      return getOptionSet(id, orgId || undefined);
     },
-    enabled: !!id,
+    enabled: !!id && !!orgId,
   });
 }
-export function useOptionSetOptions(optionSetId: number | null) {
+export function useOptionSetOptions(
+  orgId: number | null,
+  optionSetId: number | null
+) {
   return useQuery({
     queryKey: optionSetId
-      ? questionKeys.optionSets.options(optionSetId)
+      ? [...questionKeys.optionSets.options(optionSetId), orgId || "no-org"]
       : ["option-sets", "options", "disabled"],
     queryFn: () => {
       if (!optionSetId) throw new Error("no id");
-      return listOptionSetOptions(optionSetId);
+      return listOptionSetOptions(optionSetId, orgId || undefined);
     },
-    enabled: !!optionSetId,
+    enabled: !!optionSetId && !!orgId,
   });
 }

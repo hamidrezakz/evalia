@@ -65,4 +65,8 @@ export class ListQuestionQueryDto {
   @IsOptional() search?: string;
   @IsOptional() page?: number;
   @IsOptional() pageSize?: number;
+  // Allow passing orgId (ignored in service; questions are global currently)
+  @IsOptional() orgId?: number;
+  // Backward compatibility: allow organizationId in query to avoid 400 from validation pipe
+  @IsOptional() organizationId?: number;
 }

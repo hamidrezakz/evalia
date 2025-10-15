@@ -42,13 +42,13 @@ export function useLoginMutation(
   options?: UseMutationOptions<
     ApiResponse<LoginPasswordData>,
     Error,
-    { identifier: string; password: string }
+    { identifier: string; password: string; orgSlug?: string | null }
   >
 ) {
   return useMutation({
     mutationKey: authKeys.mLogin(),
-    mutationFn: ({ identifier, password }) =>
-      loginWithPassword(identifier, password),
+    mutationFn: ({ identifier, password, orgSlug }) =>
+      loginWithPassword(identifier, password, orgSlug),
     ...options,
   });
 }
@@ -71,13 +71,18 @@ export function useVerifyOtpMutation(
   options?: UseMutationOptions<
     ApiResponse<VerifyOtpData>,
     Error,
-    { identifier: string; purpose: string; code: string }
+    {
+      identifier: string;
+      purpose: string;
+      code: string;
+      orgSlug?: string | null;
+    }
   >
 ) {
   return useMutation({
     mutationKey: authKeys.mOtpVerify(),
-    mutationFn: ({ identifier, purpose, code }) =>
-      verifyOtp(identifier, purpose, code),
+    mutationFn: ({ identifier, purpose, code, orgSlug }) =>
+      verifyOtp(identifier, purpose, code, orgSlug),
     ...options,
   });
 }
@@ -91,13 +96,14 @@ export function useCompleteRegistrationMutation(
       firstName: string;
       lastName: string;
       password: string;
+      orgSlug?: string | null;
     }
   >
 ) {
   return useMutation({
     mutationKey: authKeys.mCompleteRegistration(),
-    mutationFn: ({ signupToken, firstName, lastName, password }) =>
-      completeRegistration(signupToken, firstName, lastName, password),
+    mutationFn: ({ signupToken, firstName, lastName, password, orgSlug }) =>
+      completeRegistration(signupToken, firstName, lastName, password, orgSlug),
     ...options,
   });
 }

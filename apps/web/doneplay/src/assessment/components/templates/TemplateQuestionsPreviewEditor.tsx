@@ -19,6 +19,7 @@ import {
   useUpdateTemplateQuestion,
   useDeleteTemplateQuestion,
 } from "@/assessment/api/templates-hooks";
+import { useOrgState } from "@/organizations/organization/context/org-context";
 import { useQueryClient } from "@tanstack/react-query";
 import { templatesKeys } from "@/assessment/api/templates-hooks";
 import { ResponsePerspectiveEnum, type ResponsePerspective } from "@/lib/enums";
@@ -30,8 +31,11 @@ import {
   Save,
   X,
   ListChecks,
+  Hash,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ResponsePerspectiveBadge } from "@/components/status-badges";
+import { QuestionTypeBadge } from "@/components/status-badges/QuestionTypeBadge";
 
 export default function TemplateQuestionsPreviewEditor({
   templateId,
@@ -41,15 +45,19 @@ export default function TemplateQuestionsPreviewEditor({
   templateName?: string | null;
 }) {
   const qc = useQueryClient();
-  const { data, isLoading, error } = useFullTemplate(templateId);
+  const { activeOrganizationId } = useOrgState();
+  const { data, isLoading, error } = useFullTemplate(
+    activeOrganizationId,
+    templateId
+  );
   const sections: any[] = React.useMemo(() => {
     const d: any = data as any;
     if (Array.isArray(d?.sections)) return d.sections;
     if (Array.isArray(d?.data?.sections)) return d.data.sections;
     return [];
   }, [data]);
-  const updateLink = useUpdateTemplateQuestion();
-  const deleteLink = useDeleteTemplateQuestion();
+  const updateLink = useUpdateTemplateQuestion(activeOrganizationId);
+  const deleteLink = useDeleteTemplateQuestion(activeOrganizationId);
 
   async function invalidate() {
     if (templateId) {
@@ -82,7 +90,7 @@ export default function TemplateQuestionsPreviewEditor({
       <Panel className="shadow-sm">
         <PanelHeader>
           <PanelTitle className="flex items-center gap-2 text-base sm:text-lg">
-            <ListChecks className="h-4 w-4 text-muted-foreground" />
+            <ListChecks className="h-3.5 w-3.5 text-primary" />
             پیش‌نمایش و مدیریت سوالات قالب
             {templateName ? (
               <span className="text-sm text-muted-foreground">
@@ -148,17 +156,19 @@ function SectionBlock({
   onDelete: (id: number) => Promise<void>;
 }) {
   const list = (section.questions || [])
+    .filter((q: any) => !q.deletedAt)
     .slice()
     .sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
 
   return (
-    <div className="rounded-lg border p-4">
+    <div className="rounded-lg border bg-card/40 p-4 shadow-sm">
       <div className="mb-3 flex items-center justify-between">
         <h3 className="text-base font-semibold">{section.title}</h3>
         <Badge variant="outline" className="text-[11px]">
           {list.length} سوال
         </Badge>
       </div>
+      <Separator />
       <div className="flex flex-col divide-y">
         {list.length === 0 ? (
           <div className="text-xs text-muted-foreground py-2">
@@ -222,46 +232,39 @@ function QuestionRow({
 
   const perspectiveOptions =
     ResponsePerspectiveEnum.values as ResponsePerspective[];
-  const type = q?.type as string | undefined;
+  const type = q?.type as any | undefined;
 
   return (
     <div className="flex flex-col gap-2 py-3">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
         <div className="flex-1 text-right">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-medium">
-              {index + 1}. {q?.text || "—"}
-            </span>
+            <Badge variant="outline" className="h-5 px-2 text-[10px]">
+              {index + 1}
+            </Badge>
+            <span className="text-sm font-medium">{q?.text || "—"}</span>
             {type ? (
-              <Badge variant="outline" className="text-[10px]">
-                {type}
-              </Badge>
+              <QuestionTypeBadge type={type} size="xs" tone="soft" />
             ) : null}
             {link.required ? (
-              <Badge className="text-[10px]">اجباری</Badge>
+              <Badge
+                variant="outline"
+                className="h-5 px-2 text-[10px] border-amber-400 text-amber-700 dark:text-amber-400">
+                اجباری
+              </Badge>
             ) : (
-              <Badge variant="secondary" className="text-[10px]">
+              <Badge variant="outline" className="h-5 px-2 text-[10px]">
                 اختیاری
               </Badge>
             )}
           </div>
-          <div className="mt-1 flex flex-wrap gap-1">
-            {(perspectiveOptions || []).map((p) => {
-              const isOn = link.perspectives?.includes(p);
-              return (
-                <span
-                  key={p}
-                  className={cn(
-                    "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px]",
-                    isOn
-                      ? "border-primary/50 text-primary bg-primary/5"
-                      : "border-muted-foreground/20 text-muted-foreground"
-                  )}>
-                  {ResponsePerspectiveEnum.t(p as any)}
-                </span>
-              );
-            })}
-          </div>
+          {Array.isArray(link.perspectives) && link.perspectives.length > 0 ? (
+            <div className="mt-1 flex flex-wrap gap-1.5">
+              {link.perspectives.map((p: string) => (
+                <ResponsePerspectiveBadge key={p} value={p as any} />
+              ))}
+            </div>
+          ) : null}
         </div>
         <div className="flex items-center gap-1 sm:flex-none">
           <Button
@@ -270,7 +273,7 @@ function QuestionRow({
             disabled={index === 0}
             title="انتقال به بالا"
             onClick={() => onMove(section, index, -1)}>
-            <MoveUp className="h-4 w-4" />
+            <MoveUp className="h-3.5 w-3.5" />
           </Button>
           <Button
             size="icon"
@@ -278,7 +281,7 @@ function QuestionRow({
             disabled={index === count - 1}
             title="انتقال به پایین"
             onClick={() => onMove(section, index, 1)}>
-            <MoveDown className="h-4 w-4" />
+            <MoveDown className="h-3.5 w-3.5" />
           </Button>
           {!editing ? (
             <Button
@@ -286,7 +289,7 @@ function QuestionRow({
               variant="secondary"
               title="ویرایش"
               onClick={() => setEditing(true)}>
-              <Edit2 className="h-4 w-4" />
+              <Edit2 className="h-3.5 w-3.5" />
             </Button>
           ) : (
             <>
@@ -301,7 +304,7 @@ function QuestionRow({
                   });
                   setEditing(false);
                 }}>
-                <Save className="h-4 w-4" />
+                <Save className="h-3.5 w-3.5" />
               </Button>
               <Button
                 size="icon"
@@ -317,7 +320,7 @@ function QuestionRow({
                       : []) as ResponsePerspective[]
                   );
                 }}>
-                <X className="h-4 w-4" />
+                <X className="h-3.5 w-3.5" />
               </Button>
             </>
           )}
@@ -326,7 +329,7 @@ function QuestionRow({
             variant="destructive"
             title="حذف سوال از بخش"
             onClick={() => onDelete(link.id)}>
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="h-3.5 w-3.5" />
           </Button>
         </div>
       </div>
@@ -335,12 +338,16 @@ function QuestionRow({
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="space-y-1">
             <Label>ترتیب</Label>
-            <Input
-              type="number"
-              inputMode="numeric"
-              value={order}
-              onChange={(e) => setOrder(Number(e.target.value || 0))}
-            />
+            <div className="relative">
+              <Hash className="h-3.5 w-3.5 text-muted-foreground absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <Input
+                type="number"
+                inputMode="numeric"
+                className="pr-7"
+                value={order}
+                onChange={(e) => setOrder(Number(e.target.value || 0))}
+              />
+            </div>
           </div>
           <div className="space-y-1">
             <Label>اجباری</Label>
@@ -356,27 +363,45 @@ function QuestionRow({
           </div>
           <div className="space-y-1 sm:col-span-3">
             <Label>پرسپکتیوها</Label>
-            <div className="flex flex-wrap gap-2">
-              {perspectiveOptions.map((p) => {
-                const isOn = persp.includes(p);
-                return (
-                  <label
-                    key={p}
-                    className="inline-flex items-center gap-2 text-xs">
-                    <Checkbox
-                      checked={isOn}
-                      onCheckedChange={(v) => {
-                        const on = Boolean(v);
-                        const next = on
-                          ? [...persp, p]
-                          : persp.filter((x) => x !== p);
-                        setPersp(next);
-                      }}
-                    />
-                    <span>{ResponsePerspectiveEnum.t(p as any)}</span>
-                  </label>
-                );
-              })}
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex flex-wrap gap-2">
+                {perspectiveOptions.map((p) => {
+                  const isOn = persp.includes(p);
+                  return (
+                    <label
+                      key={p}
+                      className="inline-flex items-center gap-2 text-xs">
+                      <Checkbox
+                        checked={isOn}
+                        onCheckedChange={(v) => {
+                          const on = Boolean(v);
+                          const next = on
+                            ? [...persp, p]
+                            : persp.filter((x) => x !== p);
+                          setPersp(next);
+                        }}
+                      />
+                      <ResponsePerspectiveBadge value={p as any} />
+                    </label>
+                  );
+                })}
+              </div>
+              <div className="ms-auto flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-2 text-[11px]"
+                  onClick={() => setPersp(perspectiveOptions)}>
+                  انتخاب همه
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-[11px]"
+                  onClick={() => setPersp([])}>
+                  پاک‌سازی
+                </Button>
+              </div>
             </div>
           </div>
         </div>

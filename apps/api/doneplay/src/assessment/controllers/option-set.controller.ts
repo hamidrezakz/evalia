@@ -4,45 +4,78 @@ import {
   Post,
   Body,
   Param,
-  Query,
   Patch,
   Delete,
+  UseGuards,
+  Req,
 } from '@nestjs/common';
 import { OptionSetService } from '../services/option-set.service';
-import {
-  CreateOptionSetDto,
-  ListOptionSetQueryDto,
-  UpdateOptionSetDto,
-} from '../dto/option-set.dto';
+import { CreateOptionSetDto, UpdateOptionSetDto } from '../dto/option-set.dto';
 import { Roles } from '../../common/roles.decorator';
+import { OrgContextGuard } from '../../common/org-context.guard';
+import { OrgId } from '../../common/org-id.decorator';
+import { OrgContext } from '../../common/org-context.decorator';
 
 @Controller('option-sets')
+@UseGuards(OrgContextGuard)
 export class OptionSetController {
   constructor(private readonly service: OptionSetService) {}
 
-  @Roles({ any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER'] })
+  @Roles({
+    any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER', 'ORG:OWNER', 'ORG:MANAGER'],
+  })
+  @OrgContext({ requireOrgRoles: ['OWNER', 'MANAGER'] })
   @Post()
-  create(@Body() dto: CreateOptionSetDto) {
-    return this.service.create(dto);
+  async create(
+    @Body() dto: CreateOptionSetDto,
+    @OrgId() orgId: number,
+    @Req() req: any,
+  ) {
+    const userId = req?.user?.userId;
+    const created = await this.service.create(dto, orgId, userId);
+    return { data: created, message: 'مجموعه گزینه ایجاد شد' } as any;
   }
 
   @Get()
-  list(@Query() query: ListOptionSetQueryDto) {
-    return this.service.list(query);
+  list(@OrgId() orgId: number, @Req() req: any) {
+    const userId = req?.user?.userId;
+    return this.service.list({}, orgId, userId);
   }
 
   @Get(':id')
-  get(@Param('id') id: string) {
-    return this.service.getById(Number(id));
+  get(@Param('id') id: string, @OrgId() orgId: number, @Req() req: any) {
+    const userId = req?.user?.userId;
+    return this.service.getById(Number(id), orgId, userId);
   }
-  @Roles({ any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER'] })
+
+  @Roles({
+    any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER', 'ORG:OWNER', 'ORG:MANAGER'],
+  })
+  @OrgContext({ requireOrgRoles: ['OWNER', 'MANAGER'] })
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateOptionSetDto) {
-    return this.service.update(Number(id), dto);
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdateOptionSetDto,
+    @OrgId() orgId: number,
+    @Req() req: any,
+  ) {
+    const userId = req?.user?.userId;
+    const updated = await this.service.update(Number(id), dto, orgId, userId);
+    return { data: updated, message: 'مجموعه گزینه بروزرسانی شد' } as any;
   }
-  @Roles({ any: ['SUPER_ADMIN'] })
+
+  @Roles({
+    any: ['SUPER_ADMIN', 'ANALYSIS_MANAGER', 'ORG:OWNER', 'ORG:MANAGER'],
+  })
+  @OrgContext({ requireOrgRoles: ['OWNER', 'MANAGER'] })
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.service.softDelete(Number(id));
+  async remove(
+    @Param('id') id: string,
+    @OrgId() orgId: number,
+    @Req() req: any,
+  ) {
+    const userId = req?.user?.userId;
+    const res = await this.service.softDelete(Number(id), orgId, userId);
+    return { data: res, message: 'مجموعه گزینه حذف شد' } as any;
   }
 }

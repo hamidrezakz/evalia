@@ -19,6 +19,15 @@ import {
   changeOrganizationStatus,
   ensureOrgSlugAvailable,
   listUserOrganizations,
+  listParentOrganizations,
+  listOrganizationCapabilities,
+  addOrganizationCapability,
+  removeOrganizationCapability,
+  listOrganizationChildren,
+  listOrganizationParents,
+  createOrganizationRelationship,
+  deleteOrganizationRelationship,
+  getOrganizationBySlugPublic,
 } from "./organization.api";
 import { orgKeys } from "./organization-query-keys";
 import type {
@@ -29,6 +38,12 @@ import type {
   ChangeOrganizationStatusInput,
 } from "../types/organization.types";
 import type { Organization as Org } from "../types/organization.types";
+import type {
+  AddOrganizationCapabilityInput,
+  RemoveOrganizationCapabilityInput,
+  CreateOrganizationRelationshipInput,
+  DeleteOrganizationRelationshipInput,
+} from "./organization.api";
 
 // Centralized default cache policies
 const STALE_TIME_LIST = 60 * 1000; // 1 min
@@ -40,15 +55,40 @@ const STALE_TIME_USER_ORGS = 2 * 60 * 1000; // 2 min
  * Paginated/filtered organization listing.
  * Provide the same params object identity to benefit from caching.
  */
-export function useOrganizations(params?: Partial<Record<string, unknown>>) {
+export function useOrganizations(
+  params?: Partial<Record<string, unknown>>,
+  opts?: { enabled?: boolean }
+) {
+  const enabled = opts?.enabled ?? true;
   return useQuery({
     queryKey: orgKeys.list(params),
     queryFn: async () => {
       const envelope = await listOrganizations(params || {});
       return envelope; // { data, meta }
     },
+    enabled,
     staleTime: STALE_TIME_LIST,
-    // If using React Query v4 and want transition smoothing, re-add keepPreviousData: true
+  });
+}
+
+/** List organizations that are parent in any relationship (distinct). */
+export function useParentOrganizations(
+  params?: Partial<Record<string, unknown>>,
+  opts?: { enabled?: boolean }
+) {
+  const enabled = opts?.enabled ?? true;
+  return useQuery({
+    queryKey: [
+      ...orgKeys.lists(),
+      "parents-only",
+      params ? JSON.stringify(params) : "all",
+    ],
+    queryFn: async () => {
+      const envelope = await listParentOrganizations((params || {}) as any);
+      return envelope; // { data, meta }
+    },
+    enabled,
+    staleTime: STALE_TIME_LIST,
   });
 }
 
@@ -297,5 +337,128 @@ export function useRestoreOrganizationAction() {
       qc.invalidateQueries({ queryKey: orgKeys.lists() });
       qc.invalidateQueries({ queryKey: orgKeys.userMembership() });
     },
+  });
+}
+
+// -------- Capabilities --------
+
+export function useOrganizationCapabilities(
+  orgId: number | null,
+  enabled = true
+) {
+  return useQuery({
+    queryKey: orgKeys.capabilities(orgId || -1),
+    queryFn: () => {
+      if (!orgId) throw new Error("No organization id");
+      return listOrganizationCapabilities(orgId);
+    },
+    enabled: !!orgId && enabled,
+    staleTime: STALE_TIME_DETAIL,
+  });
+}
+
+export function useAddOrganizationCapability(orgId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: AddOrganizationCapabilityInput) =>
+      addOrganizationCapability(orgId, input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: orgKeys.capabilities(orgId) });
+    },
+  });
+}
+
+export function useRemoveOrganizationCapability(orgId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: RemoveOrganizationCapabilityInput) =>
+      removeOrganizationCapability(orgId, input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: orgKeys.capabilities(orgId) });
+    },
+  });
+}
+
+// -------- Relationships --------
+
+export function useOrganizationChildren(
+  orgId: number | null,
+  enabled = true,
+  params?: Partial<Record<string, unknown>>
+) {
+  return useQuery({
+    queryKey: [
+      ...orgKeys.children(orgId || -1),
+      params ? JSON.stringify(params) : "all",
+    ],
+    queryFn: () => {
+      if (!orgId) throw new Error("No organization id");
+      return listOrganizationChildren(orgId, (params || {}) as any);
+    },
+    enabled: !!orgId && enabled,
+    staleTime: STALE_TIME_DETAIL,
+  });
+}
+
+export function useOrganizationParents(orgId: number | null, enabled = true) {
+  return useQuery({
+    queryKey: orgKeys.parents(orgId || -1),
+    queryFn: () => {
+      if (!orgId) throw new Error("No organization id");
+      return listOrganizationParents(orgId);
+    },
+    enabled: !!orgId && enabled,
+    staleTime: STALE_TIME_DETAIL,
+  });
+}
+
+export function useCreateOrganizationRelationship() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateOrganizationRelationshipInput) =>
+      createOrganizationRelationship(input),
+    onSuccess: (_res, input) => {
+      // Invalidate both sides' lists
+      qc.invalidateQueries({
+        queryKey: orgKeys.children(input.parentOrganizationId),
+      });
+      qc.invalidateQueries({
+        queryKey: orgKeys.parents(input.childOrganizationId),
+      });
+    },
+  });
+}
+
+export function useDeleteOrganizationRelationship() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: DeleteOrganizationRelationshipInput) =>
+      deleteOrganizationRelationship(input),
+    onSuccess: (_res, input) => {
+      qc.invalidateQueries({
+        queryKey: orgKeys.children(input.parentOrganizationId),
+      });
+      qc.invalidateQueries({
+        queryKey: orgKeys.parents(input.childOrganizationId),
+      });
+    },
+  });
+}
+
+// -------- Public branding (by slug) --------
+
+export function useOrganizationBrandBySlug(
+  slug: string | null,
+  enabled = true
+) {
+  return useQuery({
+    queryKey: ["organizations", "brand-by-slug", slug || "-"],
+    queryFn: async () => {
+      if (!slug) throw new Error("No slug provided");
+      const res = await getOrganizationBySlugPublic(slug);
+      return (res as any)?.data ? (res as any).data : (res as any);
+    },
+    enabled: !!slug && enabled,
+    staleTime: 5 * 60 * 1000,
   });
 }

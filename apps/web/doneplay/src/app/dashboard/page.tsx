@@ -11,20 +11,13 @@ import {
   PanelDescription,
   PanelContent,
 } from "@/components/ui/panel";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  parseJalali,
-  formatJalali,
-  formatJalaliRelative,
-} from "@/lib/jalali-date";
 import { Layers } from "lucide-react";
-import { useUserSessions } from "@/assessment/api/templates-hooks";
-import { SessionStateEnum } from "@/lib/enums";
+import { useUserSessions } from "@/assessment/api/sessions-hooks";
 import { useAssessmentUserSessions } from "@/assessment/context/assessment-user-sessions";
 import { useRouter } from "next/navigation";
 import { useQueries } from "@tanstack/react-query";
 import { getUserProgress } from "@/assessment/api/sessions.api";
-import { sessionsKeys } from "@/assessment/api/templates-hooks";
+import { sessionsKeys } from "@/assessment/api/sessions-hooks";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   DashboardHeaderSkeleton,
@@ -51,7 +44,12 @@ export default function DashboardLandingPage() {
   const loading = userQuery.isLoading || orgCtx.loading;
   const user = userQuery.data as any;
   const orgs = orgCtx.organizations || [];
-  const userSessionsQ = useUserSessions(userId, { pageSize: 12 });
+  // Determine active organization early (before hooks needing orgId)
+  const activeOrg =
+    orgs.find((o: any) => o.id === orgCtx.activeOrganizationId) || orgs[0];
+  // Active organization id (explicit scoping for multi-tenant queries)
+  const activeOrgId = orgCtx.activeOrganizationId || activeOrg?.id || null;
+  const userSessionsQ = useUserSessions(activeOrgId, userId, { pageSize: 12 });
   const sessions = (userSessionsQ.data as any)?.data || [];
   const sessionsLoadingDetailed =
     !mounted ||
@@ -69,10 +67,14 @@ export default function DashboardLandingPage() {
   const completedCount = sessions.filter(
     (s: any) => s.state === "COMPLETED"
   ).length;
-  // Active organization and role
-  const activeOrg =
-    orgs.find((o: any) => o.id === orgCtx.activeOrganizationId) || orgs[0];
-  const rolesCount = orgCtx.activeRole ? 1 : 0;
+  // Active organization and role (activeOrg already computed above)
+  // Count all available roles: platform roles + roles in the active organization
+  const activeOrgRoles = orgCtx.activeOrganizationId
+    ? orgCtx.organizationRoles[orgCtx.activeOrganizationId] || []
+    : [];
+  const platformRoles = orgCtx.platformRoles || [];
+  const rolesCount =
+    (platformRoles?.length || 0) + (activeOrgRoles?.length || 0);
 
   // Progress-based completion (per user, not just session.state)
   const progressQs = useQueries({
@@ -83,7 +85,11 @@ export default function DashboardLandingPage() {
         undefined,
         undefined
       ),
-      queryFn: () => getUserProgress({ sessionId: s.id, userId: userId! }),
+      queryFn: () =>
+        getUserProgress(
+          { sessionId: s.id, userId: userId! },
+          activeOrgId || undefined
+        ),
       enabled: !!userId && !!s?.id,
       staleTime: 30 * 1000,
     })),
@@ -150,12 +156,12 @@ export default function DashboardLandingPage() {
           <PanelHeader>
             <PanelTitle className="text-sm inline-flex items-center gap-2">
               <Layers className="h-4 w-4 text-muted-foreground" />
-              آزمون‌های من
+              ارزیابی‌های من
               {sessionsReady &&
               Array.isArray(sessions) &&
               sessions.length > 0 ? (
                 <span className="text-[11px] font-normal text-muted-foreground">
-                  ({formatFa(sessions.length)} آزمون)
+                  ({formatFa(sessions.length)} ارزیابی)
                 </span>
               ) : null}
             </PanelTitle>

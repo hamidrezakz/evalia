@@ -51,7 +51,8 @@ export async function getUserAiExport(
   sessionId: number,
   userId: number,
   perspective: string,
-  subjectUserId?: number
+  subjectUserId?: number,
+  orgId?: number | null
 ): Promise<BackendAiExportPayload> {
   const url = `/sessions/${sessionId}/user/${userId}/ai-export?perspective=${encodeURIComponent(
     perspective
@@ -59,7 +60,7 @@ export async function getUserAiExport(
     subjectUserId
       ? `&subjectUserId=${encodeURIComponent(String(subjectUserId))}`
       : ""
-  }`;
+  }${orgId ? `&organizationId=${orgId}` : ""}`;
   const res = await apiRequest(url, null, null);
   // backend returns { success, data } envelope
   const data = (res as any)?.data ?? res;

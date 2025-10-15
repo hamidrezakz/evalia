@@ -4,6 +4,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { ListChecks, SquareCheck } from "lucide-react";
 import type { Question } from "@/assessment/types/question-banks.types";
 import { useQuestions } from "@/assessment/api/hooks";
+import { useOrgState } from "@/organizations/organization/context";
 
 export interface QuestionSearchComboboxProps {
   value: number | null;
@@ -32,7 +33,9 @@ export const QuestionSearchCombobox: React.FC<QuestionSearchComboboxProps> = ({
     return () => clearTimeout(t);
   }, [search]);
 
-  const { data, isLoading } = useQuestions({
+  const orgCtx = useOrgState();
+  const activeOrgId = orgCtx.activeOrganizationId || null;
+  const { data, isLoading } = useQuestions(activeOrgId, {
     search: debounced,
     pageSize,
     bankId: bankId ?? undefined,

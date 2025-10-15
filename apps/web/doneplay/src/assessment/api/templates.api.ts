@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { apiRequest } from "@/lib/api.client";
+import { appendOrgId } from "./org-path";
 import {
   templateSchema,
   templatesListEnvelope,
@@ -23,9 +24,10 @@ function buildListPath(raw?: Partial<ListTemplatesQuery>) {
 }
 
 export async function listTemplates(
-  params?: Partial<ListTemplatesQuery>
+  params?: Partial<ListTemplatesQuery>,
+  orgId?: number | null
 ): Promise<{ data: Template[]; meta: unknown }> {
-  const path = buildListPath(params);
+  const path = appendOrgId(buildListPath(params), orgId);
   const res = await apiRequest(path, null, null);
   const parsed = templatesListEnvelope.safeParse({
     data: res.data,
@@ -35,13 +37,23 @@ export async function listTemplates(
     throw new Error("Template list validation failed: " + parsed.error.message);
   return parsed.data;
 }
-export async function getTemplate(id: number): Promise<Template> {
-  const res = await apiRequest(`/templates/${id}`, null, templateSchema);
+export async function getTemplate(
+  id: number,
+  orgId?: number | null
+): Promise<Template> {
+  const res = await apiRequest(
+    appendOrgId(`/templates/${id}`, orgId),
+    null,
+    templateSchema
+  );
   return res as unknown as Template;
 }
-export async function getFullTemplate(id: number): Promise<FullTemplate> {
+export async function getFullTemplate(
+  id: number,
+  orgId?: number | null
+): Promise<FullTemplate> {
   const res = await apiRequest(
-    `/templates/${id}/full`,
+    appendOrgId(`/templates/${id}/full`, orgId),
     null,
     fullTemplateSchema
   );
@@ -54,9 +66,12 @@ export const createTemplateBody = z.object({
   meta: z.any().optional(),
 });
 export type CreateTemplateBody = z.infer<typeof createTemplateBody>;
-export async function createTemplate(body: CreateTemplateBody) {
+export async function createTemplate(
+  body: CreateTemplateBody,
+  orgId?: number | null
+) {
   const res = await apiRequest(
-    "/templates",
+    appendOrgId("/templates", orgId),
     createTemplateBody,
     templateSchema,
     { body }
@@ -70,17 +85,23 @@ export const updateTemplateBody = z.object({
   meta: z.any().optional(),
 });
 export type UpdateTemplateBody = z.infer<typeof updateTemplateBody>;
-export async function updateTemplate(id: number, body: UpdateTemplateBody) {
+export async function updateTemplate(
+  id: number,
+  body: UpdateTemplateBody,
+  orgId?: number | null
+) {
   const res = await apiRequest(
-    `/templates/${id}`,
+    appendOrgId(`/templates/${id}`, orgId),
     updateTemplateBody,
     templateSchema,
     { method: "PATCH", body }
   );
   return res as unknown as Template;
 }
-export async function deleteTemplate(id: number) {
-  await apiRequest(`/templates/${id}`, null, null, { method: "DELETE" });
+export async function deleteTemplate(id: number, orgId?: number | null) {
+  await apiRequest(appendOrgId(`/templates/${id}`, orgId), null, null, {
+    method: "DELETE",
+  });
   return { id };
 }
 
@@ -90,18 +111,24 @@ export const createSectionBody = z.object({
   title: z.string().min(1),
 });
 export type CreateSectionBody = z.infer<typeof createSectionBody>;
-export async function createTemplateSection(body: CreateSectionBody) {
+export async function createTemplateSection(
+  body: CreateSectionBody,
+  orgId?: number | null
+) {
   const res = await apiRequest(
-    "/template-sections",
+    appendOrgId("/template-sections", orgId),
     createSectionBody,
     templateSectionSchema,
     { body }
   );
   return res as unknown as TemplateSection;
 }
-export async function listTemplateSections(templateId: number) {
+export async function listTemplateSections(
+  templateId: number,
+  orgId?: number | null
+) {
   const res = await apiRequest(
-    `/template-sections/${templateId}`,
+    appendOrgId(`/template-sections/${templateId}`, orgId),
     null,
     z.array(templateSectionSchema)
   );
@@ -113,10 +140,11 @@ export const updateSectionBody = z.object({
 export type UpdateSectionBody = z.infer<typeof updateSectionBody>;
 export async function updateTemplateSection(
   id: number,
-  body: UpdateSectionBody
+  body: UpdateSectionBody,
+  orgId?: number | null
 ) {
   const res = await apiRequest(
-    `/template-sections/${id}`,
+    appendOrgId(`/template-sections/${id}`, orgId),
     updateSectionBody,
     templateSectionSchema,
     { method: "PATCH", body }
@@ -129,18 +157,19 @@ export const reorderSectionsBody = z.object({
 export type ReorderSectionsBody = z.infer<typeof reorderSectionsBody>;
 export async function reorderTemplateSections(
   templateId: number,
-  body: ReorderSectionsBody
+  body: ReorderSectionsBody,
+  orgId?: number | null
 ) {
   await apiRequest(
-    `/template-sections/${templateId}/reorder`,
+    appendOrgId(`/template-sections/${templateId}/reorder`, orgId),
     reorderSectionsBody,
     null,
     { method: "POST", body }
   );
   return { templateId };
 }
-export async function deleteTemplateSection(id: number) {
-  await apiRequest(`/template-sections/${id}`, null, null, {
+export async function deleteTemplateSection(id: number, orgId?: number | null) {
+  await apiRequest(appendOrgId(`/template-sections/${id}`, orgId), null, null, {
     method: "DELETE",
   });
   return { id };
@@ -155,18 +184,24 @@ export const addTemplateQuestionBody = z.object({
   order: z.number().int().nonnegative().optional(),
 });
 export type AddTemplateQuestionBody = z.infer<typeof addTemplateQuestionBody>;
-export async function addTemplateQuestion(body: AddTemplateQuestionBody) {
+export async function addTemplateQuestion(
+  body: AddTemplateQuestionBody,
+  orgId?: number | null
+) {
   const res = await apiRequest(
-    "/template-questions",
+    appendOrgId("/template-questions", orgId),
     addTemplateQuestionBody,
     templateQuestionLinkSchema,
     { body }
   );
   return res as unknown as TemplateQuestionLink;
 }
-export async function listTemplateSectionQuestions(sectionId: number) {
+export async function listTemplateSectionQuestions(
+  sectionId: number,
+  orgId?: number | null
+) {
   const res = await apiRequest(
-    `/template-questions/${sectionId}`,
+    appendOrgId(`/template-questions/${sectionId}`, orgId),
     null,
     z.array(templateQuestionLinkSchema)
   );
@@ -178,10 +213,11 @@ export type UpdateTemplateQuestionBody = z.infer<
 >;
 export async function updateTemplateQuestion(
   id: number,
-  body: UpdateTemplateQuestionBody
+  body: UpdateTemplateQuestionBody,
+  orgId?: number | null
 ) {
   const res = await apiRequest(
-    `/template-questions/${id}`,
+    appendOrgId(`/template-questions/${id}`, orgId),
     updateTemplateQuestionBody,
     templateQuestionLinkSchema,
     { method: "PATCH", body }
@@ -204,19 +240,28 @@ export type BulkSetSectionQuestionsBody = z.infer<
 >;
 export async function bulkSetTemplateSectionQuestions(
   sectionId: number,
-  body: BulkSetSectionQuestionsBody
+  body: BulkSetSectionQuestionsBody,
+  orgId?: number | null
 ) {
   const res = await apiRequest(
-    `/template-questions/${sectionId}/bulk-set`,
+    appendOrgId(`/template-questions/${sectionId}/bulk-set`, orgId),
     bulkSetSectionQuestionsBody,
     z.array(templateQuestionLinkSchema),
     { method: "POST", body }
   );
   return res as unknown as TemplateQuestionLink[];
 }
-export async function deleteTemplateQuestion(id: number) {
-  await apiRequest(`/template-questions/${id}`, null, null, {
-    method: "DELETE",
-  });
+export async function deleteTemplateQuestion(
+  id: number,
+  orgId?: number | null
+) {
+  await apiRequest(
+    appendOrgId(`/template-questions/${id}`, orgId),
+    null,
+    null,
+    {
+      method: "DELETE",
+    }
+  );
   return { id };
 }

@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class LoginPasswordDto {
   @IsString()
@@ -8,4 +8,9 @@ export class LoginPasswordDto {
   @IsString()
   @IsNotEmpty()
   password!: string;
+
+  // Optional: organization slug to ensure membership upon successful login
+  @IsString()
+  @IsOptional()
+  orgSlug?: string;
 }

@@ -15,11 +15,9 @@ import {
   useSessions,
   useDeleteSession,
   useUpdateSession,
-} from "@/assessment/api/templates-hooks";
-import {
-  useOrganization,
-  useOrganizations,
-} from "@/organizations/organization/api/organization-hooks";
+} from "@/assessment/api/sessions-hooks";
+import { useOrganization } from "@/organizations/organization/api/organization-hooks";
+import { useOrgState } from "@/organizations/organization/context/org-context";
 import { Panel, PanelContent } from "@/components/ui/panel";
 import QuickAssignmentDialog from "./QuickAssignmentDialog";
 import SessionManagerHeader from "./session-manager/SessionManagerHeader";
@@ -27,23 +25,13 @@ import SessionCard from "./session-manager/SessionCard";
 import SessionCardSkeleton from "./session-manager/SessionCardSkeleton";
 import SessionsEmptyState from "./session-manager/SessionsEmptyState";
 
-// ---------------- Manager ----------------
-export default function SessionManager({
-  organizationId,
-}: {
-  organizationId?: number;
-}) {
-  const isScoped = !!organizationId;
-  const [selectedOrgId, setSelectedOrgId] = React.useState<number | null>(
-    organizationId || null
-  );
-  React.useEffect(
-    () => setSelectedOrgId(organizationId || null),
-    [organizationId]
-  );
-
-  // Fetch scoped org name when in scoped mode to display it instead of combobox
-  const scopedOrgQ = useOrganization(isScoped ? organizationId! : null);
+// ---------------- Manager (Active-Organization Only) ----------------
+export default function SessionManager() {
+  // Always derive organization from context
+  const { activeOrganizationId } = useOrgState();
+  const selectedOrgId = activeOrganizationId || null;
+  const isScoped = !!selectedOrgId;
+  const scopedOrgQ = useOrganization(selectedOrgId, !!selectedOrgId);
 
   const [open, setOpen] = React.useState(false);
   const [editingId, setEditingId] = React.useState<number | null>(null);
@@ -59,7 +47,7 @@ export default function SessionManager({
     any | null
   >(null);
 
-  const sessionsQ = useSessions({
+  const sessionsQ = useSessions(selectedOrgId, {
     organizationId: selectedOrgId || undefined,
     search: search || undefined,
     pageSize: 100,
@@ -79,8 +67,8 @@ export default function SessionManager({
     [sessions, stateFilters]
   );
 
-  const delMut = useDeleteSession();
-  const updateMut = useUpdateSession();
+  const delMut = useDeleteSession(selectedOrgId);
+  const updateMut = useUpdateSession(selectedOrgId);
 
   function handleEdit(s: any) {
     setEditingId(s.id);
@@ -107,7 +95,8 @@ export default function SessionManager({
     }
   }
 
-  const userOrgsQ = useOrganizations({ pageSize: 100 });
+  // Organization list not needed in this simplified mode
+  const userOrgsQ = { isLoading: false } as any;
 
   return (
     <>
@@ -117,17 +106,17 @@ export default function SessionManager({
           filteredCount={filteredSessions.length}
           stateFilters={stateFilters}
           onStateFiltersChange={(filters) => setStateFilters(filters)}
-          toolbarOpen={toolbarOpen}
-          onToolbarToggle={() => setToolbarOpen((o) => !o)}
-          search={search}
-          onSearchChange={(value) => setSearch(value)}
           selectedOrgId={selectedOrgId}
-          onOrganizationChange={(id) => setSelectedOrgId(id)}
+          onOrganizationChange={() => {}}
           scopedOrganizationName={scopedOrgQ.data?.name}
-          canCreateSession={!isScoped}
+          canCreateSession={true}
           onCreateSession={handleCreate}
           onClearFilters={() => setStateFilters([])}
           organizationLoading={userOrgsQ.isLoading}
+          toolbarOpen={toolbarOpen}
+          onToolbarToggle={() => setToolbarOpen((o) => !o)}
+          search={search}
+          onSearchChange={(v) => setSearch(v)}
         />
         <PanelContent className="p-4 flex flex-col gap-4">
           {updateError ? (
@@ -142,7 +131,7 @@ export default function SessionManager({
               ))}
             {!sessionsQ.isLoading && filteredSessions.length === 0 && (
               <SessionsEmptyState
-                canCreateSession={!isScoped}
+                canCreateSession={true}
                 onResetFilters={() => {
                   setSearch("");
                   setStateFilters([]);
@@ -195,7 +184,7 @@ export default function SessionManager({
         onOpenChange={setOpen}
         sessionId={editingId}
         initialSession={editingData || undefined}
-        defaultOrganizationId={organizationId || null}
+        defaultOrganizationId={selectedOrgId}
         onSuccess={() => {
           setOpen(false);
           sessionsQ.refetch();

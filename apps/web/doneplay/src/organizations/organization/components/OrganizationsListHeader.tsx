@@ -12,6 +12,7 @@ import {
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import { OrganizationStatusEnum } from "@/lib/enums";
+import OrgSelectCombobox from "@/globalcomboxs/OrgSelectCombobox";
 
 export interface OrganizationsListHeaderProps {
   q: string;
@@ -19,6 +20,12 @@ export interface OrganizationsListHeaderProps {
   status: string | null;
   onStatusChange: (v: string | null) => void;
   onAddClick: () => void;
+  /** Selected parent organization id (when listing children) */
+  parentOrganizationId?: number | null;
+  /** Change handler for parent organization selection */
+  onParentChange?: (parentOrgId: number | null) => void;
+  /** Hide the parent selector UI (default: false) */
+  hideParentSelector?: boolean;
 }
 
 export function OrganizationsListHeader({
@@ -27,7 +34,11 @@ export function OrganizationsListHeader({
   status,
   onStatusChange,
   onAddClick,
+  parentOrganizationId,
+  onParentChange,
+  hideParentSelector,
 }: OrganizationsListHeaderProps) {
+  const showParentSelector = !hideParentSelector;
   return (
     <div className="flex flex-col gap-3" dir="rtl">
       <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
@@ -42,6 +53,18 @@ export function OrganizationsListHeader({
             className="pl-8 text-[12px] h-8 md:h-8 rounded-lg"
           />
         </div>
+        {/* Parent Organization selector (optional) */}
+        {showParentSelector && (
+          <div className="w-full sm:max-w-xs">
+            <OrgSelectCombobox
+              parentsOnly
+              value={parentOrganizationId ?? null}
+              onChange={(id) => onParentChange?.(id)}
+              placeholder="انتخاب سازمان مادر"
+              className="h-8 md:h-8 rounded-lg min-w-[9rem] text-[12px] font-medium"
+            />
+          </div>
+        )}
         {/* Status Filter */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

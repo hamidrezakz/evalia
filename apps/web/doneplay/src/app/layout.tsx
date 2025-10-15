@@ -3,6 +3,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 import { QueryProvider } from "./QueryProvider";
 import { siteConfig } from "./site-config";
+import { Toaster } from "sonner";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
@@ -69,6 +70,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
             disableTransitionOnChange>
             {children}
           </ThemeProvider>
+          <Toaster richColors position="bottom-right" dir="rtl" />
         </QueryProvider>
       </body>
     </html>

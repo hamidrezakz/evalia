@@ -9,4 +9,12 @@ export const orgKeys = {
   detail: () => [...orgKeys.all, "detail"] as const,
   byId: (id: number) => [...orgKeys.detail(), id] as const,
   userMembership: () => [...orgKeys.all, "user-membership"] as const,
+  capabilities: (orgId: number) =>
+    [...orgKeys.byId(orgId), "capabilities"] as const,
+  relationships: (orgId: number) =>
+    [...orgKeys.byId(orgId), "relationships"] as const,
+  children: (orgId: number) =>
+    [...orgKeys.relationships(orgId), "children"] as const,
+  parents: (orgId: number) =>
+    [...orgKeys.relationships(orgId), "parents"] as const,
 };

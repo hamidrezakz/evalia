@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class VerifyOtpDto {
   @IsString()
@@ -12,4 +12,9 @@ export class VerifyOtpDto {
   @IsString()
   @IsNotEmpty()
   code!: string;
+
+  // Optional: organization slug to ensure membership upon successful login
+  @IsString()
+  @IsOptional()
+  orgSlug?: string;
 }
