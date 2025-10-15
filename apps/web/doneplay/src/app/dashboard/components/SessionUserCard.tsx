@@ -67,14 +67,18 @@ export function SessionUserCard({
     try {
       if (onJoinOverride) {
         await onJoinOverride(session.id);
+        // Override flow stays on the same page – release loading after it resolves
+        setJoining(false);
       } else {
         setActiveSessionId(session.id);
         if ((availablePerspectives?.length ?? 0) > 0) {
           setActivePerspective(availablePerspectives![0] as any);
         }
+        // Navigate to the test page; keep loading until unmount by route change
         router.push("/dashboard/tests/take");
       }
-    } finally {
+    } catch {
+      // In case of any error, release loading to allow retry
       setJoining(false);
     }
   };

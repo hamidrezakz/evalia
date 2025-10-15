@@ -11,15 +11,8 @@ import {
   PanelDescription,
   PanelContent,
 } from "@/components/ui/panel";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  parseJalali,
-  formatJalali,
-  formatJalaliRelative,
-} from "@/lib/jalali-date";
 import { Layers } from "lucide-react";
 import { useUserSessions } from "@/assessment/api/sessions-hooks";
-import { SessionStateEnum } from "@/lib/enums";
 import { useAssessmentUserSessions } from "@/assessment/context/assessment-user-sessions";
 import { useRouter } from "next/navigation";
 import { useQueries } from "@tanstack/react-query";
@@ -75,7 +68,13 @@ export default function DashboardLandingPage() {
     (s: any) => s.state === "COMPLETED"
   ).length;
   // Active organization and role (activeOrg already computed above)
-  const rolesCount = orgCtx.activeRole ? 1 : 0;
+  // Count all available roles: platform roles + roles in the active organization
+  const activeOrgRoles = orgCtx.activeOrganizationId
+    ? orgCtx.organizationRoles[orgCtx.activeOrganizationId] || []
+    : [];
+  const platformRoles = orgCtx.platformRoles || [];
+  const rolesCount =
+    (platformRoles?.length || 0) + (activeOrgRoles?.length || 0);
 
   // Progress-based completion (per user, not just session.state)
   const progressQs = useQueries({
@@ -157,12 +156,12 @@ export default function DashboardLandingPage() {
           <PanelHeader>
             <PanelTitle className="text-sm inline-flex items-center gap-2">
               <Layers className="h-4 w-4 text-muted-foreground" />
-              آزمون‌های من
+              ارزیابی‌های من
               {sessionsReady &&
               Array.isArray(sessions) &&
               sessions.length > 0 ? (
                 <span className="text-[11px] font-normal text-muted-foreground">
-                  ({formatFa(sessions.length)} آزمون)
+                  ({formatFa(sessions.length)} ارزیابی)
                 </span>
               ) : null}
             </PanelTitle>

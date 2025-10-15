@@ -26,6 +26,7 @@ import { uploadMyAvatar } from "@/users/api/user-avatar.api";
 import { useQueryClient } from "@tanstack/react-query";
 import { usersKeys } from "@/users/api/users-query-keys";
 import { useAvatarImage } from "@/users/api/useAvatarImage";
+import { formatFa } from "@/lib/metrics";
 
 interface StatItemProps {
   icon: React.ComponentType<any>;
@@ -272,26 +273,56 @@ export function DashboardUserHeaderPanel({
         <div className="grid gap-4 md:grid-cols-4 sm:grid-cols-2">
           <StatItem
             icon={Building2}
-            label="تعداد سازمان‌ها"
-            value={totalOrgs}
+            label="سازمان‌های عضو"
+            value={
+              <span className="inline-flex items-center gap-1">
+                <span>{formatFa(totalOrgs)}</span>
+                {mounted && activeOrg ? (
+                  <span className="text-[9px] text-muted-foreground inline-flex items-center gap-1">
+                    <span>(</span>
+                    <span>سازمان فعال:</span>
+                    <span className="font-medium">{activeOrg.name}</span>
+                    <span>)</span>
+                  </span>
+                ) : null}
+              </span>
+            }
             loading={!mounted || orgLoading}
           />
           <StatItem
             icon={Layers}
-            label="نقش‌های متمایز"
-            value={rolesCount}
+            label="نقش‌های کاربری"
+            value={
+              <span className="inline-flex items-center gap-1">
+                <span>{formatFa(rolesCount)}</span>
+                {mounted && activeRole ? (
+                  <span className="text-[9px] text-muted-foreground inline-flex items-center gap-1">
+                    <span>(</span>
+                    <span>نقش فعال:</span>
+                    <span className="font-medium">
+                      {activeRoleSource === "platform"
+                        ? PlatformRoleEnum.t(activeRole as any)
+                        : OrgRoleEnum.t(activeRole as any)}
+                    </span>
+                    <span>)</span>
+                  </span>
+                ) : null}
+              </span>
+            }
             loading={!mounted || orgLoading}
           />
           <StatItem
             icon={Users2}
             label="آزمون‌های من"
-            value={totalUserSessions}
+            value={formatFa(totalUserSessions)}
             loading={!mounted || sessionsLoading}
           />
           <StatItem
             icon={Crown}
             label="تکمیل شده / درصد"
-            value={`${completedByProgress} (${avgPercent}%)`}
+            value={`${formatFa(completedByProgress)} (${formatFa(avgPercent, {
+              percent: true,
+            })})`}
             loading={!mounted || sessionsLoading}
           />
         </div>
