@@ -291,13 +291,34 @@ export class OrganizationService {
     const orgs = await this.prisma.organization.findMany({
       where: { id: { in: orgIds }, deletedAt: null },
       orderBy: { createdAt: 'desc' },
+      include: { avatarAsset: { select: { url: true } } },
     });
     // Map roles onto organizations for convenience (optional add later: multiple roles?)
     const map = new Map<number, { roles: string[]; membershipId: number }>();
     memberships.forEach((m) =>
       map.set(m.organizationId, { roles: m.roles, membershipId: m.id }),
     );
-    return orgs.map((o) => ({ ...o, membership: map.get(o.id) }));
+    // Normalize shape and expose avatarUrl like other endpoints (list/findById)
+    return orgs.map((o) => ({
+      id: o.id,
+      name: (o as any).name,
+      slug: (o as any).slug,
+      plan: (o as any).plan,
+      status: (o as any).status,
+      locale: (o as any).locale,
+      timezone: (o as any).timezone,
+      billingEmail: (o as any).billingEmail,
+      createdAt: (o as any).createdAt,
+      deletedAt: (o as any).deletedAt,
+      updatedAt: (o as any).updatedAt,
+      primaryOwnerId: (o as any).primaryOwnerId,
+      settings: (o as any).settings,
+      trialEndsAt: (o as any).trialEndsAt,
+      lockedAt: (o as any).lockedAt,
+      createdById: (o as any).createdById,
+      avatarUrl: (o as any).avatarAsset?.url ?? null,
+      membership: map.get(o.id),
+    }));
   }
 
   private isUniqueViolation(e: any, indexName: string) {
