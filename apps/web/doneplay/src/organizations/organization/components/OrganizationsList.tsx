@@ -132,6 +132,8 @@ export function OrganizationsList({
           rowActions={(o) => {
             const status = o.status as string;
             return {
+              organizationSlug: o.slug,
+              organizationName: o.name,
               canEdit: canEdit?.(o.id),
               canDelete: canDelete?.(o.id),
               canActivate:

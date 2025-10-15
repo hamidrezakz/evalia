@@ -51,7 +51,7 @@ export default function Home() {
         }
         primaryAction={{
           label: "ورود به داشبورد",
-          href: "/dashboard",
+          href: "/auth",
           icon: <LogIn className="size-4" />,
         }}
         secondaryAction={{

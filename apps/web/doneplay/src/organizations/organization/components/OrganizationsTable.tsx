@@ -17,10 +17,6 @@ import MembersDropdown from "./dropdowns/MembersDropdown";
 import TeamsDropdown from "./dropdowns/TeamsDropdown";
 import PlanCell from "./dropdowns/PlanCell";
 import StatusCell from "./dropdowns/StatusCell";
-import {
-  OrganizationStatusBadge,
-  OrgPlanBadge,
-} from "@/components/status-badges";
 import { Building2, Camera } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAvatarImage } from "@/users/api/useAvatarImage";
