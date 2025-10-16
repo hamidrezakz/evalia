@@ -7,6 +7,7 @@ import {
 } from "@/assessment/api/invite-links.api";
 import { useAuthSession } from "@/app/auth/hooks/useAuthSession";
 import { LoadingDots } from "@/components/ui/loading-dots";
+import { refreshTokens } from "@/lib/api/refresh";
 
 export default function InviteTokenPage() {
   const params = useParams<{ token: string }>();
@@ -16,6 +17,8 @@ export default function InviteTokenPage() {
   const [orgSlug, setOrgSlug] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Track when we've finished attempting to resolve the token (success or fail)
+  const [resolved, setResolved] = useState<boolean>(false);
 
   // Step 1: resolve token (no auth required)
   useEffect(() => {
@@ -31,6 +34,8 @@ export default function InviteTokenPage() {
         setError(
           typeof e?.message === "string" ? e.message : "لینک نامعتبر است"
         );
+      } finally {
+        if (mounted) setResolved(true);
       }
     }
     if (token) run();
@@ -41,16 +46,15 @@ export default function InviteTokenPage() {
 
   // Step 2: if not authenticated, bounce to /auth/[slug]?redirect=current
   useEffect(() => {
-    // If user is not authenticated, redirect to auth immediately.
-    // Prefer org-specific auth route when orgSlug is available; otherwise fallback to generic /auth.
-    if (!session.isAuthenticated) {
+    // Redirect to auth only after we've resolved the token (so orgSlug is known if available).
+    if (!session.isAuthenticated && resolved) {
       const redirect = encodeURIComponent(`/invite/${token}`);
       const path = orgSlug
         ? `/auth/${encodeURIComponent(orgSlug)}?redirect=${redirect}`
         : `/auth?redirect=${redirect}`;
       router.replace(path);
     }
-  }, [orgSlug, session.isAuthenticated, token, router]);
+  }, [orgSlug, session.isAuthenticated, token, router, resolved]);
 
   // Step 3: when authenticated, consume and redirect to tests take
   useEffect(() => {
@@ -58,6 +62,11 @@ export default function InviteTokenPage() {
       try {
         const res = await consumeInviteLink(token);
         const data: any = res.data || {};
+        // Ensure JWT reflects any new org membership/roles created during consume
+        // before proceeding to pages that rely on authorization.
+        try {
+          await refreshTokens();
+        } catch {}
         const next =
           (data.redirectTo as string) ||
           `/dashboard/tests/take${
