@@ -270,7 +270,7 @@ export function DashboardUserHeaderPanel({
         </div>
       </PanelHeader>
       <PanelContent className="flex flex-col gap-6">
-        <div className="grid gap-4 md:grid-cols-4 sm:grid-cols-2">
+        <div className="grid gap-4 xl:grid-cols-4 sm:grid-cols-2">
           <StatItem
             icon={Building2}
             label="سازمان‌های عضو"
